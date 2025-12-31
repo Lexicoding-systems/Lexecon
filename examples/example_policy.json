@@ -1,0 +1,81 @@
+{
+  "mode": "strict",
+  "terms": [
+    {
+      "term_id": "actor:user",
+      "term_type": "actor",
+      "label": "User",
+      "description": "Human user",
+      "metadata": {}
+    },
+    {
+      "term_id": "actor:model",
+      "term_type": "actor",
+      "label": "AI Model",
+      "description": "AI language model agent",
+      "metadata": {}
+    },
+    {
+      "term_id": "action:read",
+      "term_type": "action",
+      "label": "Read Data",
+      "description": "Read access to data",
+      "metadata": {}
+    },
+    {
+      "term_id": "action:write",
+      "term_type": "action",
+      "label": "Write Data",
+      "description": "Write or modify data",
+      "metadata": {}
+    },
+    {
+      "term_id": "action:search",
+      "term_type": "action",
+      "label": "Search",
+      "description": "Search or query data",
+      "metadata": {}
+    },
+    {
+      "term_id": "data:pii",
+      "term_type": "data_class",
+      "label": "PII",
+      "description": "Personally Identifiable Information",
+      "metadata": {}
+    }
+  ],
+  "relations": [
+    {
+      "relation_id": "permits:actor:user:action:read",
+      "relation_type": "permits",
+      "source": "actor:user",
+      "target": "action:read",
+      "conditions": [],
+      "metadata": {}
+    },
+    {
+      "relation_id": "permits:actor:user:action:write",
+      "relation_type": "permits",
+      "source": "actor:user",
+      "target": "action:write",
+      "conditions": [],
+      "metadata": {}
+    },
+    {
+      "relation_id": "permits:actor:model:action:search",
+      "relation_type": "permits",
+      "source": "actor:model",
+      "target": "action:search",
+      "conditions": [],
+      "metadata": {}
+    },
+    {
+      "relation_id": "forbids:actor:model:action:write",
+      "relation_type": "forbids",
+      "source": "actor:model",
+      "target": "action:write",
+      "conditions": [],
+      "metadata": {}
+    }
+  ]
+}

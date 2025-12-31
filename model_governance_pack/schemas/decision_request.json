@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lexecon Decision Request",
+  "type": "object",
+  "required": ["actor", "proposed_action", "tool", "user_intent"],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "description": "Unique identifier for this request"
+    },
+    "actor": {
+      "type": "string",
+      "description": "Actor requesting the action (e.g., 'model', 'user')"
+    },
+    "proposed_action": {
+      "type": "string",
+      "description": "Description of the proposed action"
+    },
+    "tool": {
+      "type": "string",
+      "description": "Tool to be used for the action"
+    },
+    "user_intent": {
+      "type": "string",
+      "description": "User's intent or purpose for this action"
+    },
+    "data_classes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Data classifications involved (e.g., 'pii', 'sensitive')"
+    },
+    "risk_level": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Risk level (1=low, 5=critical)"
+    },
+    "requested_output_type": {
+      "type": "string",
+      "description": "Type of output requested"
+    },
+    "policy_mode": {
+      "type": "string",
+      "enum": ["permissive", "strict", "paranoid"],
+      "description": "Policy evaluation mode"
+    },
+    "context": {
+      "type": "object",
+      "description": "Additional context for the decision"
+    }
+  }
+}

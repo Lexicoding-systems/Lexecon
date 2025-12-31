@@ -1,0 +1,15 @@
+{
+  "request_id": "req_example_001",
+  "actor": "model",
+  "proposed_action": "Execute web_search",
+  "tool": "web_search",
+  "user_intent": "Research AI governance best practices",
+  "data_classes": [],
+  "risk_level": 1,
+  "requested_output_type": "tool_action",
+  "policy_mode": "strict",
+  "context": {
+    "query": "AI governance frameworks 2025",
+    "max_results": 10
+  }
+}
