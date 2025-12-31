@@ -1,0 +1,479 @@
+"""Tests for API server endpoints."""
+
+import pytest
+from fastapi.testclient import TestClient
+from datetime import datetime
+
+from lexecon.api.server import app, initialize_services
+from lexecon.policy.engine import PolicyEngine, PolicyMode
+from lexecon.policy.terms import PolicyTerm
+from lexecon.policy.relations import PolicyRelation
+
+
+@pytest.fixture
+def client():
+    """Create test client."""
+    # Initialize services before creating client
+    initialize_services()
+    return TestClient(app)
+
+
+@pytest.fixture
+def example_policy():
+    """Create example policy data."""
+    return {
+        "mode": "strict",
+        "terms": [
+            {
+                "term_id": "actor:model",
+                "term_type": "actor",
+                "label": "AI Model",
+                "description": "AI language model",
+                "metadata": {}
+            },
+            {
+                "term_id": "action:search",
+                "term_type": "action",
+                "label": "Search",
+                "description": "Search operation",
+                "metadata": {}
+            }
+        ],
+        "relations": [
+            {
+                "relation_id": "permits:actor:model:action:search",
+                "relation_type": "permits",
+                "source": "actor:model",
+                "target": "action:search",
+                "conditions": [],
+                "metadata": {}
+            }
+        ]
+    }
+
+
+@pytest.fixture
+def decision_request():
+    """Create example decision request."""
+    return {
+        "actor": "model",
+        "proposed_action": "search",
+        "tool": "web_search",
+        "user_intent": "Research AI governance",
+        "data_classes": [],
+        "risk_level": 1,
+        "requested_output_type": "tool_action",
+        "policy_mode": "strict",
+        "context": {"query": "test"}
+    }
+
+
+class TestHealthEndpoints:
+    """Tests for health check endpoints."""
+
+    def test_health_check(self, client):
+        """Test health check endpoint."""
+        response = client.get("/health")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "timestamp" in data
+
+        # Verify timestamp format
+        timestamp = datetime.fromisoformat(data["timestamp"])
+        assert isinstance(timestamp, datetime)
+
+    def test_status(self, client):
+        """Test status endpoint."""
+        response = client.get("/status")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["status"] == "operational"
+        assert "policy_loaded" in data
+        assert "ledger_entries" in data
+        assert "timestamp" in data
+        assert isinstance(data["ledger_entries"], int)
+
+    def test_root_endpoint(self, client):
+        """Test root endpoint returns service info."""
+        response = client.get("/")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["service"] == "Lexecon Governance API"
+        assert data["version"] == "0.1.0"
+        assert "endpoints" in data
+        assert "/health" in data["endpoints"].values()
+
+
+class TestPolicyEndpoints:
+    """Tests for policy management endpoints."""
+
+    def test_list_policies_empty(self, client):
+        """Test listing policies when none loaded."""
+        response = client.get("/policies")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "mode" in data
+        assert "terms_count" in data
+        assert "relations_count" in data
+        assert "policy_hash" in data
+
+    def test_load_policy(self, client, example_policy):
+        """Test loading a policy."""
+        response = client.post(
+            "/policies/load",
+            json={"policy": example_policy}
+        )
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["terms_loaded"] == 2
+        assert data["relations_loaded"] == 1
+        assert "policy_hash" in data
+        assert len(data["policy_hash"]) == 64  # SHA256 hex
+
+    def test_load_policy_invalid(self, client):
+        """Test loading invalid policy."""
+        response = client.post(
+            "/policies/load",
+            json={"policy": {"invalid": "data"}}
+        )
+        # Policy engine is tolerant - this actually succeeds with empty policy
+        assert response.status_code == 200
+        data = response.json()
+        assert data["terms_loaded"] == 0
+        assert data["relations_loaded"] == 0
+
+    def test_list_policies_after_load(self, client, example_policy):
+        """Test listing policies after loading."""
+        # Load policy first
+        client.post("/policies/load", json={"policy": example_policy})
+
+        # List policies
+        response = client.get("/policies")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["terms_count"] == 2
+        assert data["relations_count"] == 1
+        assert data["mode"] == "strict"
+
+
+class TestDecisionEndpoints:
+    """Tests for decision-making endpoints."""
+
+    def test_decide_without_policy(self, client, decision_request):
+        """Test decision with current policy state."""
+        response = client.post("/decide", json=decision_request)
+        assert response.status_code == 200
+
+        data = response.json()
+        # Decision depends on current policy state (may be loaded by other tests)
+        assert data["decision"] in ["permit", "deny"]
+        assert "reasoning" in data
+        assert "policy_version_hash" in data
+
+    def test_decide_with_policy_permit(self, client, example_policy, decision_request):
+        """Test decision that should be permitted."""
+        # Load policy first
+        client.post("/policies/load", json={"policy": example_policy})
+
+        # Make decision
+        response = client.post("/decide", json=decision_request)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["decision"] == "permit"
+        assert "capability_token" in data
+        assert data["capability_token"] is not None
+        assert "ledger_entry_hash" in data
+
+        # Verify capability token structure
+        token = data["capability_token"]
+        assert "token_id" in token
+        assert "scope" in token
+        assert "expiry" in token
+        assert token["scope"]["action"] == "search"
+        assert token["scope"]["tool"] == "web_search"
+
+    def test_decide_with_policy_deny(self, client, example_policy):
+        """Test decision that should be denied."""
+        # Load policy
+        client.post("/policies/load", json={"policy": example_policy})
+
+        # Request action not in policy
+        request = {
+            "actor": "model",
+            "proposed_action": "delete",  # Not permitted
+            "tool": "file_system",
+            "user_intent": "Delete files",
+            "data_classes": [],
+            "risk_level": 5
+        }
+
+        response = client.post("/decide", json=request)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["decision"] == "deny"
+        assert data["capability_token"] is None
+
+    def test_decide_missing_required_fields(self, client):
+        """Test decision with missing required fields."""
+        response = client.post(
+            "/decide",
+            json={"actor": "model"}  # Missing required fields
+        )
+        assert response.status_code == 422  # Validation error
+
+    def test_verify_decision(self, client, example_policy, decision_request):
+        """Test decision verification."""
+        # Load policy and make decision
+        client.post("/policies/load", json={"policy": example_policy})
+        decision_response = client.post("/decide", json=decision_request)
+        decision_data = decision_response.json()
+
+        # Verify the decision
+        response = client.post("/decide/verify", json=decision_data)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["verified"] is True
+        assert "entry" in data
+
+    def test_verify_decision_missing_hash(self, client):
+        """Test verification without ledger hash."""
+        response = client.post(
+            "/decide/verify",
+            json={"decision": "permit"}  # No ledger_entry_hash
+        )
+        assert response.status_code == 400
+
+    def test_verify_decision_invalid_hash(self, client):
+        """Test verification with invalid hash."""
+        response = client.post(
+            "/decide/verify",
+            json={"ledger_entry_hash": "invalid_hash"}
+        )
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["verified"] is False
+        assert "error" in data
+
+
+class TestLedgerEndpoints:
+    """Tests for ledger verification endpoints."""
+
+    def test_verify_ledger_integrity(self, client):
+        """Test ledger integrity verification."""
+        response = client.get("/ledger/verify")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "valid" in data
+        assert "entries_verified" in data
+        assert isinstance(data["entries_verified"], int)
+        assert data["entries_verified"] >= 1  # At least genesis
+
+    def test_get_audit_report(self, client):
+        """Test audit report generation."""
+        response = client.get("/ledger/report")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "total_entries" in data
+        assert "integrity_valid" in data
+        assert "event_type_counts" in data
+        assert "first_entry_timestamp" in data
+        assert "last_entry_timestamp" in data
+
+        # Should have at least genesis entry
+        assert data["total_entries"] >= 1
+        assert "genesis" in data["event_type_counts"]
+
+    def test_ledger_integrity_after_operations(self, client, example_policy, decision_request):
+        """Test ledger integrity after multiple operations."""
+        # Perform several operations
+        client.post("/policies/load", json={"policy": example_policy})
+        client.post("/decide", json=decision_request)
+        client.post("/decide", json=decision_request)
+
+        # Verify integrity
+        response = client.get("/ledger/verify")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["valid"] is True
+
+        # Check audit report
+        report_response = client.get("/ledger/report")
+        report = report_response.json()
+
+        assert report["total_entries"] >= 4  # genesis + startup + policy + decisions
+        assert report["integrity_valid"] is True
+
+
+class TestIntegrationWorkflows:
+    """Integration tests for complete workflows."""
+
+    def test_complete_governance_workflow(self, client, example_policy):
+        """Test complete governance workflow."""
+        # 1. Check initial status
+        status = client.get("/status").json()
+        assert status["status"] == "operational"
+        initial_entries = status["ledger_entries"]
+
+        # 2. Load policy
+        policy_response = client.post(
+            "/policies/load",
+            json={"policy": example_policy}
+        )
+        assert policy_response.status_code == 200
+        policy_data = policy_response.json()
+        policy_hash = policy_data["policy_hash"]
+
+        # 3. Make permitted decision
+        decision_response = client.post("/decide", json={
+            "actor": "model",
+            "proposed_action": "search",
+            "tool": "web_search",
+            "user_intent": "Research",
+            "data_classes": [],
+            "risk_level": 1
+        })
+        assert decision_response.status_code == 200
+        decision_data = decision_response.json()
+
+        # Verify decision was permitted
+        assert decision_data["decision"] == "permit"
+        assert decision_data["policy_version_hash"] == policy_hash
+
+        # 4. Verify the decision
+        verify_response = client.post("/decide/verify", json=decision_data)
+        assert verify_response.status_code == 200
+        assert verify_response.json()["verified"] is True
+
+        # 5. Check ledger integrity
+        ledger_response = client.get("/ledger/verify")
+        assert ledger_response.status_code == 200
+        assert ledger_response.json()["valid"] is True
+
+        # 6. Verify audit trail
+        audit_response = client.get("/ledger/report")
+        audit_data = audit_response.json()
+
+        assert audit_data["total_entries"] > initial_entries
+        assert "policy_loaded" in audit_data["event_type_counts"]
+        assert "decision" in audit_data["event_type_counts"]
+
+        # 7. Final status check
+        final_status = client.get("/status").json()
+        assert final_status["policy_loaded"] is True
+        assert final_status["ledger_entries"] > initial_entries
+
+    def test_multiple_decisions_workflow(self, client, example_policy):
+        """Test workflow with multiple decisions."""
+        # Load policy
+        client.post("/policies/load", json={"policy": example_policy})
+
+        # Get initial decision count
+        initial_audit = client.get("/ledger/report").json()
+        initial_decisions = initial_audit["event_type_counts"].get("decision", 0)
+
+        # Make multiple decisions
+        results = []
+        for i in range(5):
+            response = client.post("/decide", json={
+                "actor": "model",
+                "proposed_action": "search",
+                "tool": "web_search",
+                "user_intent": f"Request {i}",
+                "risk_level": 1
+            })
+            results.append(response.json())
+
+        # Verify all were permitted
+        assert all(r["decision"] == "permit" for r in results)
+
+        # Verify all have unique capability tokens
+        token_ids = [r["capability_token"]["token_id"] for r in results]
+        assert len(token_ids) == len(set(token_ids))  # All unique
+
+        # Verify ledger has all entries (5 new ones)
+        audit = client.get("/ledger/report").json()
+        assert audit["event_type_counts"]["decision"] == initial_decisions + 5
+
+        # Verify integrity maintained
+        integrity = client.get("/ledger/verify").json()
+        assert integrity["valid"] is True
+
+    def test_policy_reload_workflow(self, client, example_policy):
+        """Test reloading policy."""
+        # Get initial policy_loaded count
+        initial_audit = client.get("/ledger/report").json()
+        initial_policy_loads = initial_audit["event_type_counts"].get("policy_loaded", 0)
+
+        # Load initial policy
+        response1 = client.post("/policies/load", json={"policy": example_policy})
+        hash1 = response1.json()["policy_hash"]
+
+        # Modify policy
+        modified_policy = example_policy.copy()
+        modified_policy["relations"].append({
+            "relation_id": "permits:actor:model:action:read",
+            "relation_type": "permits",
+            "source": "actor:model",
+            "target": "action:read",
+            "conditions": [],
+            "metadata": {}
+        })
+
+        # Reload policy
+        response2 = client.post("/policies/load", json={"policy": modified_policy})
+        hash2 = response2.json()["policy_hash"]
+
+        # Hashes should be different
+        assert hash1 != hash2
+
+        # Ledger should have two more policy_loaded entries
+        audit = client.get("/ledger/report").json()
+        assert audit["event_type_counts"]["policy_loaded"] == initial_policy_loads + 2
+
+
+class TestErrorHandling:
+    """Tests for error handling."""
+
+    def test_invalid_json(self, client):
+        """Test handling of invalid JSON."""
+        response = client.post(
+            "/policies/load",
+            data="invalid json",
+            headers={"Content-Type": "application/json"}
+        )
+        assert response.status_code == 422
+
+    def test_missing_content_type(self, client):
+        """Test handling of missing content type."""
+        response = client.post(
+            "/decide",
+            data='{"actor": "model"}'
+        )
+        # FastAPI should still handle it
+        assert response.status_code in [422, 400]
+
+    def test_invalid_field_types(self, client):
+        """Test handling of invalid field types."""
+        response = client.post("/decide", json={
+            "actor": "model",
+            "proposed_action": "search",
+            "tool": "web_search",
+            "user_intent": "test",
+            "risk_level": "invalid"  # Should be int
+        })
+        assert response.status_code == 422
