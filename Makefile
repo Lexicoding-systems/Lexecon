@@ -11,10 +11,10 @@ help:
 	@echo "  make build        - Build package"
 
 install:
-	pip install -e .
+	pip3 install -e .
 
 install-dev:
-	pip install -e ".[dev]"
+	pip3 install -e ".[dev]"
 
 test:
 	pytest
