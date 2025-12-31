@@ -1587,7 +1587,7 @@ We follow the [Contributor Covenant Code of Conduct](https://www.contributor-cov
 
 **Do not open public issues for security vulnerabilities.**
 
-Email: security@lexicoding.systems
+Email: jacobporter@lexicoding.tech
 
 We will respond within 48 hours and work with you to address the issue.
 
@@ -1644,11 +1644,11 @@ SOFTWARE.
 
 ## Support & Community
 
-- **Documentation**: https://lexecon.readthedocs.io
+- **Documentation**: 
 - **GitHub Issues**: https://github.com/Lexicoding-systems/Lexecon/issues
 - **GitHub Discussions**: https://github.com/Lexicoding-systems/Lexecon/discussions
-- **Email**: contact@lexicoding.systems
-- **Twitter**: [@LexicodingSys](https://twitter.com/LexicodingSys)
+- **Email**: Jacobporter@lexicoding.tech
+- **Twitter**: 
 
 ---
 
