@@ -1,0 +1,74 @@
+# Automatic PR labeling configuration
+
+# Component labels
+"component: policy":
+  - src/lexecon/policy/**/*
+  - tests/**/test_policy*
+
+"component: decision":
+  - src/lexecon/decision/**/*
+  - tests/**/test_decision*
+
+"component: capability":
+  - src/lexecon/capability/**/*
+  - tests/**/test_capability*
+
+"component: ledger":
+  - src/lexecon/ledger/**/*
+  - tests/**/test_ledger*
+
+"component: api":
+  - src/lexecon/api/**/*
+  - tests/**/test_api*
+
+"component: cli":
+  - src/lexecon/cli/**/*
+  - tests/**/test_cli*
+
+"component: identity":
+  - src/lexecon/identity/**/*
+  - tests/**/test_identity*
+
+# Type labels
+"type: documentation":
+  - "**/*.md"
+  - docs/**/*
+  - "**/*.rst"
+
+"type: tests":
+  - tests/**/*
+  - "**/*test*.py"
+
+"type: dependencies":
+  - requirements*.txt
+  - pyproject.toml
+  - setup.py
+
+"type: ci/cd":
+  - .github/workflows/**/*
+  - .github/actions/**/*
+
+"type: config":
+  - "**/*.yml"
+  - "**/*.yaml"
+  - "**/*.toml"
+  - "**/*.ini"
+  - .flake8
+  - Makefile
+
+# Size labels
+"size: small":
+  - changed-files:
+    - 1-10
+
+"size: medium":
+  - changed-files:
+    - 11-50
+
+"size: large":
+  - changed-files:
+    - 51-200
+
+"size: x-large":
+  - changed-files:
+    - 201-999
