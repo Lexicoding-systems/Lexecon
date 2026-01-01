@@ -464,19 +464,19 @@ Lexecon supports SOC 2 Trust Service Criteria:
 
 ### What's coming next?
 
-**v0.2.0** (Q1 2024):
+**v0.2.0** (Q1 2026):
 - Token revocation
 - Hot policy reloading
 - Web UI dashboard
 - Enhanced monitoring
 
-**v0.3.0** (Q2 2024):
+**v0.3.0** (Q2 2026):
 - Multi-node consensus
 - Policy marketplace
 - Advanced analytics
 - GraphQL API
 
-**v1.0.0** (Q3 2024):
+**v1.0.0** (Q3 2026):
 - Production-ready
 - Performance optimizations
 - Extended model support

@@ -186,7 +186,7 @@ lexecon decide \
   "decision": "ALLOWED",
   "reason": "Action 'search_web' is explicitly permitted for actor 'model'",
   "capability_token": "cap_xyz789...",
-  "expires_at": "2024-01-15T10:30:00Z",
+  "expires_at": "2026-01-15T10:30:00Z",
   "policy_version": "1.0.0",
   "signature": "ed25519:...",
   "chain_hash": "sha256:..."

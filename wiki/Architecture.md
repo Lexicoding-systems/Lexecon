@@ -139,7 +139,7 @@ Request → Validation → Policy Evaluation → Token Minting → Ledger Record
     "decision": "ALLOWED",
     "reason": "Action explicitly permitted",
     "capability_token": "cap_...",
-    "expires_at": "2024-01-15T10:30:00Z",
+    "expires_at": "2026-01-15T10:30:00Z",
     "policy_version": "1.0.0",
     "signature": "ed25519:...",
     "chain_hash": "sha256:..."
@@ -166,8 +166,8 @@ Issues and verifies cryptographic authorization tokens.
   "decision_id": "dec_xyz789",
   "action": "search_web",
   "actor": "model",
-  "issued_at": "2024-01-15T10:00:00Z",
-  "expires_at": "2024-01-15T10:30:00Z",
+  "issued_at": "2026-01-15T10:00:00Z",
+  "expires_at": "2026-01-15T10:30:00Z",
   "policy_version": "1.0.0",
   "signature": "..."
 }
@@ -205,7 +205,7 @@ Maintains tamper-evident record of all decisions.
 ```json
 {
   "entry_id": "ent_001",
-  "timestamp": "2024-01-15T10:00:00Z",
+  "timestamp": "2026-01-15T10:00:00Z",
   "event_type": "decision_made",
   "decision_id": "dec_xyz",
   "actor": "model",

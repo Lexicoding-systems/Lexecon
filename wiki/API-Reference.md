@@ -58,11 +58,11 @@ Request a governance decision for a proposed action.
   "decision": "ALLOWED",
   "reason": "Action explicitly permitted by policy",
   "capability_token": "cap_xyz789...",
-  "expires_at": "2024-01-15T10:30:00Z",
+  "expires_at": "2026-01-15T10:30:00Z",
   "policy_version": "1.0.0",
   "signature": "ed25519:...",
   "chain_hash": "sha256:...",
-  "timestamp": "2024-01-15T10:00:00Z"
+  "timestamp": "2026-01-15T10:00:00Z"
 }
 ```
 
@@ -123,7 +123,7 @@ Verify a capability token.
   "decision_id": "dec_abc123",
   "action": "web_search",
   "actor": "model",
-  "expires_at": "2024-01-15T10:30:00Z",
+  "expires_at": "2026-01-15T10:30:00Z",
   "policy_version": "1.0.0"
 }
 ```
@@ -190,7 +190,7 @@ Query the audit ledger.
   "entries": [
     {
       "entry_id": "ent_001",
-      "timestamp": "2024-01-15T10:00:00Z",
+      "timestamp": "2026-01-15T10:00:00Z",
       "event_type": "decision_made",
       "decision_id": "dec_xyz",
       "actor": "model",
@@ -214,7 +214,7 @@ curl http://localhost:8000/ledger?limit=10
 curl http://localhost:8000/ledger?actor=model
 
 # Filter by time range
-curl "http://localhost:8000/ledger?start_time=2024-01-15T00:00:00Z&end_time=2024-01-15T23:59:59Z"
+curl "http://localhost:8000/ledger?start_time=2026-01-15T00:00:00Z&end_time=2026-01-15T23:59:59Z"
 ```
 
 ---
@@ -230,7 +230,7 @@ View loaded policy.
   "version": "1.0.0",
   "name": "Basic Safety Policy",
   "mode": "strict",
-  "loaded_at": "2024-01-15T09:00:00Z",
+  "loaded_at": "2026-01-15T09:00:00Z",
   "terms": {
     "actions": [...],
     "actors": [...],
@@ -260,7 +260,7 @@ Get node information.
 {
   "node_id": "my-governance-node",
   "public_key": "8f3a2c1d...",
-  "created_at": "2024-01-15T08:00:00Z",
+  "created_at": "2026-01-15T08:00:00Z",
   "ledger_entries": 42,
   "policy_loaded": true,
   "version": "0.1.0"

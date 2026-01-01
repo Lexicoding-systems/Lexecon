@@ -403,12 +403,12 @@ du -sh ~/.lexecon/nodes/my-node/ledger/
 **Solutions:**
 1. **Archive old entries:**
    ```bash
-   lexecon ledger archive --before 2024-01-01
+   lexecon ledger archive --before 2026-01-01
    ```
 
 2. **Export and rotate:**
    ```bash
-   lexecon ledger export --output archive_2024.json
+   lexecon ledger export --output archive_2026.json
    lexecon ledger rotate --keep-days 90
    ```
 
