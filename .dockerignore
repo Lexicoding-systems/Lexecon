@@ -1,0 +1,106 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+pytestdebug.log
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation
+docs/_build/
+docs/.doctrees/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Development
+.pre-commit-config.yaml
+.secrets.baseline
+Makefile
+
+# Examples and tests (exclude from production image)
+examples/
+tests/
+*.test.py
+test_*.py
+
+# Logs
+*.log
+logs/
+
+# Data
+data/
+*.db
+*.sqlite
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# README and docs (keep minimal)
+CONTRIBUTING.md
+CHANGELOG.md
+
+# Docker
+Docker*
+!Dockerfile
+docker-compose*.yml
+
+# Kubernetes
+kubernetes/
+helm/
+*.yaml
+*.yml
+!pyproject.toml

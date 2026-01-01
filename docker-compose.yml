@@ -1,0 +1,72 @@
+# Docker Compose for Lexecon local development
+version: '3.8'
+
+services:
+  lexecon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lexecon-app
+    ports:
+      - "8000:8000"
+    environment:
+      - LEXECON_NODE_ID=docker-node
+      - LEXECON_LOG_LEVEL=DEBUG
+      - LEXECON_LOG_FORMAT=json
+      - LEXECON_POLICY_MODE=strict
+    volumes:
+      - lexecon-data:/data/.lexecon
+      - ./examples:/app/examples:ro
+    networks:
+      - lexecon-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: lexecon-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deployment/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - lexecon-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: lexecon-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./deployment/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./deployment/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - lexecon-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+networks:
+  lexecon-network:
+    driver: bridge
+
+volumes:
+  lexecon-data:
+  prometheus-data:
+  grafana-data:
