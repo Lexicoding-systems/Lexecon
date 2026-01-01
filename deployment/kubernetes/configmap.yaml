@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lexecon-config
+  labels:
+    app: lexecon
+data:
+  log_level: "INFO"
+  policy_mode: "strict"
+  server_workers: "4"
+  
+  # Policy configuration
+  default_policy_mode: "strict"
+  cache_evaluations: "true"
+  
+  # Capability token configuration
+  default_ttl: "300"
+  max_ttl: "3600"
+  
+  # Ledger configuration
+  auto_verify: "true"
+  integrity_check_interval: "3600"

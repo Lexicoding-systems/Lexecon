@@ -1,0 +1,102 @@
+# Default values for lexecon
+replicaCount: 3
+
+image:
+  repository: lexecon/lexecon
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: lexecon.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: lexecon-tls
+      hosts:
+        - lexecon.example.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+persistence:
+  enabled: true
+  storageClass: standard
+  accessMode: ReadWriteOnce
+  size: 10Gi
+
+config:
+  logLevel: INFO
+  policyMode: strict
+  serverWorkers: 4
+  cacheEvaluations: true
+  defaultTTL: 300
+  maxTTL: 3600
+  autoVerify: true
+  integrityCheckInterval: 3600
+
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+
+grafana:
+  enabled: true
+  dashboards:
+    enabled: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

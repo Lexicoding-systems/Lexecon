@@ -1,0 +1,18 @@
+apiVersion: v2
+name: lexecon
+description: A Helm chart for Lexecon AI Governance System
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ai-governance
+  - compliance
+  - security
+  - cryptography
+maintainers:
+  - name: Lexicoding Systems
+    email: contact@lexicoding.systems
+    url: https://github.com/Lexicoding-systems
+sources:
+  - https://github.com/Lexicoding-systems/Lexecon
+home: https://github.com/Lexicoding-systems/Lexecon
