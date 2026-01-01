@@ -21,8 +21,33 @@ class PolicyDecision:
         self.reason = reason
         self.permitted = allowed  # Backwards compatibility
         self.reasoning = reason  # Backwards compatibility
+        self._extra = kwargs
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+    def __getitem__(self, key: str):
+        """Support dictionary-style access for backwards compatibility."""
+        if key == "permitted":
+            return self.permitted
+        elif key == "allowed":
+            return self.allowed
+        elif key == "reason":
+            return self.reason
+        elif key == "reasoning":
+            return self.reasoning
+        elif hasattr(self, key):
+            return getattr(self, key)
+        elif key in self._extra:
+            return self._extra[key]
+        else:
+            raise KeyError(key)
+
+    def get(self, key: str, default=None):
+        """Support dict.get() for backwards compatibility."""
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
 
 class PolicyMode(Enum):
@@ -41,16 +66,31 @@ class PolicyEngine:
     """
 
     def __init__(self, mode=PolicyMode.STRICT):
-        # Handle both string and PolicyMode enum inputs
-        if isinstance(mode, str):
-            self.mode = PolicyMode(mode)
-        elif isinstance(mode, PolicyMode):
-            self.mode = mode
+        # Handle both string and PolicyMode enum inputs, or a full policy dict
+        if isinstance(mode, dict):
+            # If passed a policy dict, extract the mode and load the policy
+            policy_dict = mode
+            mode_value = policy_dict.get("mode", "strict")
+            if isinstance(mode_value, str):
+                self.mode = PolicyMode(mode_value)
+            else:
+                self.mode = mode_value
+            self.terms: Dict[str, PolicyTerm] = {}
+            self.relations: List[PolicyRelation] = []
+            self._policy_hash: Optional[str] = None
+            # Load the policy
+            self.load_policy(policy_dict)
         else:
-            self.mode = PolicyMode.STRICT
-        self.terms: Dict[str, PolicyTerm] = {}
-        self.relations: List[PolicyRelation] = []
-        self._policy_hash: Optional[str] = None
+            # Normal mode initialization
+            if isinstance(mode, str):
+                self.mode = PolicyMode(mode)
+            elif isinstance(mode, PolicyMode):
+                self.mode = mode
+            else:
+                self.mode = PolicyMode.STRICT
+            self.terms: Dict[str, PolicyTerm] = {}
+            self.relations: List[PolicyRelation] = []
+            self._policy_hash: Optional[str] = None
 
     def add_term(self, term: PolicyTerm) -> None:
         """Add a policy term to the engine."""
@@ -113,8 +153,8 @@ class PolicyEngine:
             context = {}
 
         # Find relevant relations
-        permits = self._find_relations(RelationType.PERMITS, actor, action)
-        forbids = self._find_relations(RelationType.FORBIDS, actor, action)
+        permits = self._find_relations(RelationType.PERMITS, actor, action, data_classes)
+        forbids = self._find_relations(RelationType.FORBIDS, actor, action, data_classes)
 
         # Evaluate based on mode
         if self.mode == PolicyMode.STRICT:
@@ -138,26 +178,87 @@ class PolicyEngine:
         )
 
     def _find_relations(
-        self, relation_type: RelationType, actor: str, action: str
+        self, relation_type: RelationType, actor: str, action: str, data_classes: List[str] = None
     ) -> List[PolicyRelation]:
-        """Find relations matching the given criteria."""
+        """Find relations matching the given criteria.
+
+        Matches by both term ID and term label/name.
+        Also checks data_classes against the relation's object field if present.
+        """
+        if data_classes is None:
+            data_classes = []
+
         matching = []
         for relation in self.relations:
             if relation.relation_type != relation_type:
                 continue
-            # Simple matching - can be enhanced with pattern matching
-            if actor in relation.source and action in relation.target:
+
+            # Check if actor matches the source term
+            actor_matches = self._term_matches(actor, relation.source)
+            # Check if action matches the target term
+            action_matches = self._term_matches(action, relation.target)
+
+            # Check if data_class matches the object field (if present)
+            object_matches = True  # Default to true if no object specified
+            if "object" in relation.metadata:
+                # If relation has an object field, at least one data_class must match
+                if data_classes:
+                    object_matches = any(
+                        self._term_matches(dc, relation.metadata["object"]) for dc in data_classes
+                    )
+                else:
+                    # Relation specifies an object but no data_classes provided - no match
+                    object_matches = False
+
+            if actor_matches and action_matches and object_matches:
                 matching.append(relation)
         return matching
+
+    def _term_matches(self, value: str, term_id: str) -> bool:
+        """Check if a value matches a term by ID or label.
+
+        Args:
+            value: The value to match (e.g., "model" or "actor:model")
+            term_id: The term ID to match against (e.g., "actor:model")
+
+        Returns:
+            True if value matches the term ID or the term's label
+        """
+        # Exact match with term ID
+        if value == term_id:
+            return True
+
+        # Check if the value matches the term's label
+        term = self.terms.get(term_id)
+        if term and term.label == value:
+            return True
+
+        # Substring match for backwards compatibility (e.g., "model" in "actor:model")
+        if value in term_id:
+            return True
+
+        return False
 
     def _generate_reasoning(
         self, decision: bool, permits: List[PolicyRelation], forbids: List[PolicyRelation]
     ) -> str:
         """Generate human-readable reasoning for the decision."""
         if decision:
+            reasons = []
+            for permit in permits[:3]:  # Show up to 3 reasons
+                if "justification" in permit.metadata:
+                    reasons.append(permit.metadata["justification"])
+            if reasons:
+                return f"Permitted: {'; '.join(reasons)}"
             return f"Permitted by {len(permits)} rule(s), no conflicts"
         else:
             if len(forbids) > 0:
+                reasons = []
+                for forbid in forbids[:3]:  # Show up to 3 reasons
+                    if "justification" in forbid.metadata:
+                        reasons.append(forbid.metadata["justification"])
+                if reasons:
+                    return f"Denied: {'; '.join(reasons)}"
                 return f"Denied by {len(forbids)} prohibition(s)"
             else:
                 return "Action not explicitly permitted"

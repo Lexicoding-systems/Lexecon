@@ -36,6 +36,28 @@ class NodeIdentity:
         """Get the fingerprint of the node's public key."""
         return self.key_manager.get_public_key_fingerprint()
 
+    def verify_signature(self, data: str, signature: str) -> bool:
+        """Verify a signature using the node's public key.
+
+        Args:
+            data: The data that was signed (as a string, e.g., a hash)
+            signature: The signature to verify
+
+        Returns:
+            True if signature is valid, False otherwise
+        """
+        if self.key_manager.public_key is None:
+            return False
+        # For string data (like hashes), we need to verify against the string directly
+        try:
+            import base64
+            signature_bytes = base64.b64decode(signature)
+            message = data.encode() if isinstance(data, str) else str(data).encode()
+            self.key_manager.public_key.verify(signature_bytes, message)
+            return True
+        except Exception:
+            return False
+
 
 class KeyManager:
     """

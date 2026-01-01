@@ -89,11 +89,33 @@ class PolicyTerm:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PolicyTerm":
-        """Deserialize term from dictionary."""
+        """Deserialize term from dictionary.
+
+        Supports both full format and simplified format:
+        - Full: {"term_id": "...", "term_type": "...", "label": "...", "description": "..."}
+        - Simplified: {"id": "...", "type": "...", "name": "..."}
+        """
+        # Handle term_id field (can be "term_id" or "id")
+        term_id = data.get("term_id") or data.get("id")
+        if not term_id:
+            raise ValueError("Missing term_id or id field")
+
+        # Handle term_type field (can be "term_type" or "type")
+        term_type_value = data.get("term_type") or data.get("type")
+        if not term_type_value:
+            raise ValueError("Missing term_type or type field")
+        term_type = TermType(term_type_value)
+
+        # Handle label field (can be "label" or "name")
+        label = data.get("label") or data.get("name", "")
+
+        # Description is optional
+        description = data.get("description", "")
+
         return cls(
-            term_id=data["term_id"],
-            term_type=TermType(data["term_type"]),
-            label=data["label"],
-            description=data["description"],
+            term_id=term_id,
+            term_type=term_type,
+            label=label,
+            description=description,
             metadata=data.get("metadata", {}),
         )

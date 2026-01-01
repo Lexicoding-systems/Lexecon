@@ -36,14 +36,17 @@ class DecisionRequestModel(BaseModel):
 
 
 class PolicyLoadModel(BaseModel):
-    """Model for loading policy."""
+    """Model for loading policy - supports both wrapped and direct formats."""
 
-    name: str = Field(..., description="Policy name")
-    version: str = Field(default="1.0", description="Policy version")
-    mode: str = Field(..., description="Policy mode")
-    terms: List[Dict[str, Any]] = Field(default_factory=list, description="Policy terms")
-    relations: List[Dict[str, Any]] = Field(default_factory=list, description="Policy relations")
-    constraints: List[Dict[str, Any]] = Field(default_factory=list, description="Policy constraints")
+    # Support wrapped format {"policy": {...}}
+    policy: Optional[Dict[str, Any]] = Field(default=None, description="Policy data (wrapped format)")
+    # Support direct format
+    name: Optional[str] = Field(default=None, description="Policy name")
+    version: Optional[str] = Field(default="1.0", description="Policy version")
+    mode: Optional[str] = Field(default=None, description="Policy mode")
+    terms: Optional[List[Dict[str, Any]]] = Field(default=None, description="Policy terms")
+    relations: Optional[List[Dict[str, Any]]] = Field(default=None, description="Policy relations")
+    constraints: Optional[List[Dict[str, Any]]] = Field(default=None, description="Policy constraints")
 
 
 class HealthResponse(BaseModel):
@@ -60,6 +63,7 @@ class StatusResponse(BaseModel):
 
     status: str
     node_id: str
+    policy_loaded: bool  # For backwards compatibility
     policies_loaded: bool
     policy_hash: Optional[str]
     ledger_entries: int
@@ -120,10 +124,12 @@ async def get_status():
     """Get system status."""
     initialize_services()
 
+    policy_loaded_status = policy_engine is not None and len(policy_engine.terms) > 0
     return {
         "status": "operational",
         "node_id": node_id,
-        "policies_loaded": policy_engine is not None and len(policy_engine.terms) > 0,
+        "policy_loaded": policy_loaded_status,  # For backwards compatibility
+        "policies_loaded": policy_loaded_status,
         "policy_hash": policy_engine.get_policy_hash() if policy_engine else None,
         "ledger_entries": len(ledger.entries),
         "uptime_seconds": time.time() - startup_time,
@@ -154,8 +160,17 @@ async def load_policy(policy_load: PolicyLoadModel):
     initialize_services()
 
     try:
-        # Convert PolicyLoadModel to dict for policy engine
-        policy_dict = policy_load.model_dump()
+        # Support both wrapped {"policy": {...}} and direct format
+        if policy_load.policy is not None:
+            # Wrapped format - be tolerant, policy engine will handle it
+            policy_dict = policy_load.policy
+        else:
+            # Direct format - convert PolicyLoadModel to dict and validate
+            policy_dict = policy_load.model_dump(exclude={"policy"}, exclude_none=True)
+            # Validate that direct format has required fields
+            if "terms" not in policy_dict and "relations" not in policy_dict:
+                raise ValueError("Policy must contain at least 'terms' or 'relations' field")
+
         policy_engine.load_policy(policy_dict)
 
         # Log to ledger
@@ -222,8 +237,16 @@ async def make_decision(request_model: DecisionRequestModel):
 
 
 @app.post("/decide/verify")
-async def verify_decision(decision_response: Dict[str, Any]):
+async def verify_decision(request_data: Dict[str, Any]):
     """Verify a decision response."""
+    # Handle both direct format and wrapped format
+    if "decision_response" in request_data:
+        # Wrapped format: {"decision_response": {...}, "original_request": {...}}
+        decision_response = request_data["decision_response"]
+    else:
+        # Direct format: the decision response itself
+        decision_response = request_data
+
     ledger_entry_hash = decision_response.get("ledger_entry_hash")
 
     if not ledger_entry_hash:

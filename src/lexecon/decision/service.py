@@ -80,6 +80,21 @@ class DecisionResponse:
         self.signature = signature
         self.timestamp = timestamp or datetime.utcnow().isoformat()
 
+    @property
+    def decision_hash(self) -> str:
+        """Generate a hash of the decision for verification purposes."""
+        import hashlib
+        import json
+
+        decision_data = {
+            "request_id": self.request_id,
+            "decision": self.decision,
+            "policy_version_hash": self.policy_version_hash,
+            "timestamp": self.timestamp,
+        }
+        canonical_json = json.dumps(decision_data, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(canonical_json.encode()).hexdigest()
+
     def to_dict(self) -> Dict[str, Any]:
         """Serialize response to dictionary."""
         # Map internal fields to API-expected field names
@@ -147,19 +162,71 @@ class DecisionService:
             capability_token=capability_token,
         )
 
+        # Create ledger entry if ledger is available
+        if self.ledger:
+            ledger_entry = self.ledger.append(
+                "decision",
+                {
+                    "request_id": request.request_id,
+                    "decision": decision,
+                    "actor": request.actor,
+                    "action": request.proposed_action,
+                },
+            )
+            response.ledger_entry_hash = ledger_entry.entry_hash
+
+        # Sign decision if identity is available
+        if self.identity:
+            # Sign the decision hash for verification
+            # Note: decision_hash is a string, so we need to sign it as such
+            decision_hash = response.decision_hash
+            import base64
+            import json
+            from cryptography.hazmat.primitives import serialization
+
+            # Sign the hash string directly
+            message = decision_hash.encode()
+            signature_bytes = self.identity.key_manager.private_key.sign(message)
+            response.signature = base64.b64encode(signature_bytes).decode()
+
         return response
 
-    def evaluate(self, actor: str, action: str, data_classes=None, risk_level=1):
+    def evaluate(
+        self,
+        actor: str,
+        action: str = None,
+        proposed_action: str = None,
+        tool: str = None,
+        user_intent: str = None,
+        data_classes=None,
+        risk_level=1,
+    ):
         """
-        Evaluate a decision (convenience method for tests).
+        Evaluate a decision (convenience method).
 
-        Returns the policy decision directly.
+        Can be used in two ways:
+        1. Simple policy evaluation: evaluate(actor="...", action="...", data_classes=[...], risk_level=1)
+        2. Full decision request: evaluate(actor="...", proposed_action="...", tool="...", user_intent="...", risk_level=1)
         """
         if data_classes is None:
             data_classes = []
-        return self.policy_engine.evaluate(
-            actor=actor, action=action, data_classes=data_classes, risk_level=risk_level
-        )
+
+        # If full parameters are provided, create a DecisionRequest and evaluate it
+        if proposed_action is not None or tool is not None:
+            request = DecisionRequest(
+                actor=actor,
+                proposed_action=proposed_action or action or "",
+                tool=tool or "",
+                user_intent=user_intent or "",
+                data_classes=data_classes,
+                risk_level=risk_level,
+            )
+            return self.evaluate_request(request)
+        else:
+            # Simple evaluation - return policy decision directly
+            return self.policy_engine.evaluate(
+                actor=actor, action=action, data_classes=data_classes, risk_level=risk_level
+            )
 
     def _generate_capability_token(
         self, request: DecisionRequest, policy_version_hash: str

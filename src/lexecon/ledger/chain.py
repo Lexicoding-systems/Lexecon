@@ -129,10 +129,10 @@ class LedgerChain:
             "chain_head_hash": self.entries[-1].entry_hash,
         }
 
-    def get_entry(self, entry_id: str) -> Optional[LedgerEntry]:
-        """Get entry by ID."""
+    def get_entry(self, entry_id_or_hash: str) -> Optional[LedgerEntry]:
+        """Get entry by ID or hash."""
         for entry in self.entries:
-            if entry.entry_id == entry_id:
+            if entry.entry_id == entry_id_or_hash or entry.entry_hash == entry_id_or_hash:
                 return entry
         return None
 
