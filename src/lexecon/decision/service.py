@@ -68,6 +68,7 @@ class DecisionResponse:
         policy_version_hash: str,
         capability_token: Optional[Dict[str, Any]] = None,
         ledger_entry_hash: Optional[str] = None,
+        signature: Optional[str] = None,
         timestamp: Optional[str] = None,
     ):
         self.request_id = request_id
@@ -76,17 +77,23 @@ class DecisionResponse:
         self.policy_version_hash = policy_version_hash
         self.capability_token = capability_token
         self.ledger_entry_hash = ledger_entry_hash
+        self.signature = signature
         self.timestamp = timestamp or datetime.utcnow().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize response to dictionary."""
+        # Map internal fields to API-expected field names
+        allowed = self.decision in ["allow", "permit"]
         return {
             "request_id": self.request_id,
+            "allowed": allowed,
             "decision": self.decision,
-            "reasoning": self.reasoning,
+            "reason": self.reasoning,
+            "reasoning": self.reasoning,  # Keep for backwards compatibility
             "policy_version_hash": self.policy_version_hash,
             "capability_token": self.capability_token,
             "ledger_entry_hash": self.ledger_entry_hash,
+            "signature": self.signature or "",
             "timestamp": self.timestamp,
         }
 
@@ -98,8 +105,12 @@ class DecisionService:
     Evaluates requests, generates capability tokens, and maintains audit trail.
     """
 
-    def __init__(self, policy_engine: PolicyEngine):
+    def __init__(
+        self, policy_engine: PolicyEngine, ledger=None, identity=None
+    ):  # Added optional parameters for backwards compatibility
         self.policy_engine = policy_engine
+        self.ledger = ledger
+        self.identity = identity
 
     def evaluate_request(self, request: DecisionRequest) -> DecisionResponse:
         """
@@ -113,28 +124,42 @@ class DecisionService:
             actor=request.actor,
             action=request.proposed_action,
             data_classes=request.data_classes,
+            risk_level=request.risk_level,
             context=request.context,
         )
 
-        decision = "permit" if evaluation["permitted"] else "deny"
-        reasoning = evaluation["reasoning"]
+        # evaluation is now a PolicyDecision object, use attributes
+        decision = "permit" if evaluation.allowed else "deny"
+        reasoning = evaluation.reason
 
         # Generate capability token if permitted
         capability_token = None
-        if evaluation["permitted"]:
+        if evaluation.allowed:
             capability_token = self._generate_capability_token(
-                request=request, policy_version_hash=evaluation["policy_version_hash"]
+                request=request, policy_version_hash=evaluation.policy_version_hash
             )
 
         response = DecisionResponse(
             request_id=request.request_id,
             decision=decision,
             reasoning=reasoning,
-            policy_version_hash=evaluation["policy_version_hash"],
+            policy_version_hash=evaluation.policy_version_hash,
             capability_token=capability_token,
         )
 
         return response
+
+    def evaluate(self, actor: str, action: str, data_classes=None, risk_level=1):
+        """
+        Evaluate a decision (convenience method for tests).
+
+        Returns the policy decision directly.
+        """
+        if data_classes is None:
+            data_classes = []
+        return self.policy_engine.evaluate(
+            actor=actor, action=action, data_classes=data_classes, risk_level=risk_level
+        )
 
     def _generate_capability_token(
         self, request: DecisionRequest, policy_version_hash: str

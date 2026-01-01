@@ -123,7 +123,9 @@ class LedgerChain:
 
         return {
             "valid": True,
+            "entries_checked": len(self.entries),
             "entries_verified": len(self.entries),
+            "chain_intact": True,
             "chain_head_hash": self.entries[-1].entry_hash,
         }
 

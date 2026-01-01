@@ -13,6 +13,30 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 
+class NodeIdentity:
+    """
+    Represents a node's identity in the governance system.
+
+    Each node has a unique identifier and associated cryptographic keys.
+    """
+
+    def __init__(self, node_id: str, key_manager: Optional["KeyManager"] = None):
+        self.node_id = node_id
+        self.key_manager = key_manager or KeyManager.generate()
+
+    def get_node_id(self) -> str:
+        """Get the node identifier."""
+        return self.node_id
+
+    def sign(self, data: Dict[str, Any]) -> str:
+        """Sign data using the node's private key."""
+        return self.key_manager.sign(data)
+
+    def get_public_key_fingerprint(self) -> str:
+        """Get the fingerprint of the node's public key."""
+        return self.key_manager.get_public_key_fingerprint()
+
+
 class KeyManager:
     """
     Manages Ed25519 key pairs for signing and verification.

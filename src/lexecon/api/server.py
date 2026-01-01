@@ -5,6 +5,8 @@ Provides endpoints for health checks, policy management, decision requests,
 and audit operations.
 """
 
+import time
+import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -36,13 +38,20 @@ class DecisionRequestModel(BaseModel):
 class PolicyLoadModel(BaseModel):
     """Model for loading policy."""
 
-    policy: Dict[str, Any] = Field(..., description="Policy data")
+    name: str = Field(..., description="Policy name")
+    version: str = Field(default="1.0", description="Policy version")
+    mode: str = Field(..., description="Policy mode")
+    terms: List[Dict[str, Any]] = Field(default_factory=list, description="Policy terms")
+    relations: List[Dict[str, Any]] = Field(default_factory=list, description="Policy relations")
+    constraints: List[Dict[str, Any]] = Field(default_factory=list, description="Policy constraints")
 
 
 class HealthResponse(BaseModel):
     """Health check response."""
 
     status: str
+    version: str
+    node_id: str
     timestamp: str
 
 
@@ -50,9 +59,11 @@ class StatusResponse(BaseModel):
     """System status response."""
 
     status: str
-    policy_loaded: bool
+    node_id: str
+    policies_loaded: bool
     policy_hash: Optional[str]
     ledger_entries: int
+    uptime_seconds: float
     timestamp: str
 
 
@@ -68,6 +79,8 @@ policy_engine: Optional[PolicyEngine] = None
 decision_service: Optional[DecisionService] = None
 ledger: LedgerChain = LedgerChain()
 key_manager: Optional[KeyManager] = None
+node_id: str = str(uuid.uuid4())
+startup_time: float = time.time()
 
 
 def initialize_services():
@@ -94,7 +107,12 @@ async def startup_event():
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {
+        "status": "healthy",
+        "version": "0.1.0",
+        "node_id": node_id,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
 
 @app.get("/status", response_model=StatusResponse)
@@ -104,9 +122,11 @@ async def get_status():
 
     return {
         "status": "operational",
-        "policy_loaded": policy_engine is not None and len(policy_engine.terms) > 0,
+        "node_id": node_id,
+        "policies_loaded": policy_engine is not None and len(policy_engine.terms) > 0,
         "policy_hash": policy_engine.get_policy_hash() if policy_engine else None,
         "ledger_entries": len(ledger.entries),
+        "uptime_seconds": time.time() - startup_time,
         "timestamp": datetime.utcnow().isoformat(),
     }
 
@@ -120,6 +140,7 @@ async def list_policies():
         raise HTTPException(status_code=500, detail="Policy engine not initialized")
 
     return {
+        "policies": [],  # TODO: Implement policy storage/retrieval
         "mode": policy_engine.mode.value,
         "terms_count": len(policy_engine.terms),
         "relations_count": len(policy_engine.relations),
@@ -133,7 +154,9 @@ async def load_policy(policy_load: PolicyLoadModel):
     initialize_services()
 
     try:
-        policy_engine.load_policy(policy_load.policy)
+        # Convert PolicyLoadModel to dict for policy engine
+        policy_dict = policy_load.model_dump()
+        policy_engine.load_policy(policy_dict)
 
         # Log to ledger
         ledger.append(

@@ -13,6 +13,18 @@ from lexecon.policy.relations import PolicyRelation, RelationType
 from lexecon.policy.terms import PolicyTerm
 
 
+class PolicyDecision:
+    """Represents a policy evaluation decision."""
+
+    def __init__(self, allowed: bool, reason: str, **kwargs):
+        self.allowed = allowed
+        self.reason = reason
+        self.permitted = allowed  # Backwards compatibility
+        self.reasoning = reason  # Backwards compatibility
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
 class PolicyMode(Enum):
     """Policy evaluation modes."""
 
@@ -28,8 +40,14 @@ class PolicyEngine:
     Maintains the policy graph (terms + relations) and evaluates requests.
     """
 
-    def __init__(self, mode: PolicyMode = PolicyMode.STRICT):
-        self.mode = mode
+    def __init__(self, mode=PolicyMode.STRICT):
+        # Handle both string and PolicyMode enum inputs
+        if isinstance(mode, str):
+            self.mode = PolicyMode(mode)
+        elif isinstance(mode, PolicyMode):
+            self.mode = mode
+        else:
+            self.mode = PolicyMode.STRICT
         self.terms: Dict[str, PolicyTerm] = {}
         self.relations: List[PolicyRelation] = []
         self._policy_hash: Optional[str] = None
@@ -81,6 +99,7 @@ class PolicyEngine:
         action: str,
         resource: Optional[str] = None,
         data_classes: List[str] = None,
+        risk_level: int = 1,
         context: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """
@@ -108,14 +127,15 @@ class PolicyEngine:
             # Additional checks for high-risk operations
             decision = len(permits) > 0 and len(forbids) == 0
 
-        return {
-            "permitted": decision,
-            "mode": self.mode.value,
-            "permits_count": len(permits),
-            "forbids_count": len(forbids),
-            "policy_version_hash": self.get_policy_hash(),
-            "reasoning": self._generate_reasoning(decision, permits, forbids),
-        }
+        reasoning = self._generate_reasoning(decision, permits, forbids)
+        return PolicyDecision(
+            allowed=decision,
+            reason=reasoning,
+            mode=self.mode.value,
+            permits_count=len(permits),
+            forbids_count=len(forbids),
+            policy_version_hash=self.get_policy_hash(),
+        )
 
     def _find_relations(
         self, relation_type: RelationType, actor: str, action: str
@@ -140,7 +160,7 @@ class PolicyEngine:
             if len(forbids) > 0:
                 return f"Denied by {len(forbids)} prohibition(s)"
             else:
-                return "Denied by default (no explicit permission)"
+                return "Action not explicitly permitted"
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize policy to dictionary."""
