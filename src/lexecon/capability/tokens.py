@@ -5,9 +5,9 @@ Tokens are cryptographically signed and time-limited.
 """
 
 import uuid
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -27,11 +27,7 @@ class CapabilityToken:
 
     @classmethod
     def create(
-        cls,
-        action: str,
-        tool: str,
-        policy_version_hash: str,
-        ttl_minutes: int = 5
+        cls, action: str, tool: str, policy_version_hash: str, ttl_minutes: int = 5
     ) -> "CapabilityToken":
         """Create a new capability token."""
         now = datetime.utcnow()
@@ -40,7 +36,7 @@ class CapabilityToken:
             scope={"action": action, "tool": tool},
             expiry=now + timedelta(minutes=ttl_minutes),
             policy_version_hash=policy_version_hash,
-            granted_at=now
+            granted_at=now,
         )
 
     def is_valid(self) -> bool:
@@ -52,10 +48,7 @@ class CapabilityToken:
         if not self.is_valid():
             return False
 
-        return (
-            self.scope.get("action") == action and
-            self.scope.get("tool") == tool
-        )
+        return self.scope.get("action") == action and self.scope.get("tool") == tool
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize token to dictionary."""
@@ -65,7 +58,7 @@ class CapabilityToken:
             "expiry": self.expiry.isoformat(),
             "policy_version_hash": self.policy_version_hash,
             "granted_at": self.granted_at.isoformat(),
-            "signature": self.signature
+            "signature": self.signature,
         }
 
     @classmethod
@@ -77,7 +70,7 @@ class CapabilityToken:
             expiry=datetime.fromisoformat(data["expiry"]),
             policy_version_hash=data["policy_version_hash"],
             granted_at=datetime.fromisoformat(data["granted_at"]),
-            signature=data.get("signature")
+            signature=data.get("signature"),
         )
 
 
@@ -104,11 +97,7 @@ class CapabilityTokenStore:
 
     def cleanup_expired(self) -> int:
         """Remove expired tokens. Returns count of removed tokens."""
-        expired = [
-            token_id
-            for token_id, token in self.tokens.items()
-            if not token.is_valid()
-        ]
+        expired = [token_id for token_id, token in self.tokens.items() if not token.is_valid()]
         for token_id in expired:
             del self.tokens[token_id]
         return len(expired)

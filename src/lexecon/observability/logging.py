@@ -1,12 +1,12 @@
 """Structured logging configuration for Lexecon."""
 
+import json
 import logging
 import sys
-import json
-from datetime import datetime
-from typing import Any, Dict, Optional
 import traceback
 from contextvars import ContextVar
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 # Context variables for request tracking
 request_id_var: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
@@ -85,9 +85,7 @@ def configure_logging(
     if format == "json":
         formatter = StructuredFormatter()
     else:
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     handler.setFormatter(formatter)
     root.addHandler(handler)
@@ -109,9 +107,7 @@ def get_logger(name: str) -> logging.Logger:
 class LoggerAdapter(logging.LoggerAdapter):
     """Logger adapter with extra fields support."""
 
-    def process(
-        self, msg: str, kwargs: Dict[str, Any]
-    ) -> tuple[str, Dict[str, Any]]:
+    def process(self, msg: str, kwargs: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
         """Process log message with extra fields."""
         if "extra" not in kwargs:
             kwargs["extra"] = {}

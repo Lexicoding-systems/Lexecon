@@ -1,8 +1,8 @@
 """Health check endpoints for Lexecon."""
 
-from typing import Dict, Any, List
-from enum import Enum
 import time
+from enum import Enum
+from typing import Any, Dict, List
 
 
 class HealthStatus(str, Enum):
@@ -54,9 +54,7 @@ class HealthCheck:
         for name, check_func in self.checks.items():
             try:
                 status, details = check_func()
-                checks_results.append(
-                    {"name": name, "status": status, "details": details}
-                )
+                checks_results.append({"name": name, "status": status, "details": details})
 
                 # Update overall status
                 if status == HealthStatus.UNHEALTHY:

@@ -5,12 +5,13 @@ Terms represent entities, actions, data classes, and other policy primitives.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Any
 from enum import Enum
+from typing import Any, Dict
 
 
 class TermType(Enum):
     """Types of policy terms."""
+
     ACTION = "action"
     ACTOR = "actor"
     DATA_CLASS = "data_class"
@@ -43,7 +44,7 @@ class PolicyTerm:
             term_id=f"action:{term_id}",
             term_type=TermType.ACTION,
             label=label,
-            description=description
+            description=description,
         )
 
     @classmethod
@@ -53,7 +54,7 @@ class PolicyTerm:
             term_id=f"actor:{term_id}",
             term_type=TermType.ACTOR,
             label=label,
-            description=description
+            description=description,
         )
 
     @classmethod
@@ -63,7 +64,7 @@ class PolicyTerm:
             term_id=f"data:{term_id}",
             term_type=TermType.DATA_CLASS,
             label=label,
-            description=description
+            description=description,
         )
 
     @classmethod
@@ -73,7 +74,7 @@ class PolicyTerm:
             term_id=f"resource:{term_id}",
             term_type=TermType.RESOURCE,
             label=label,
-            description=description
+            description=description,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -83,7 +84,7 @@ class PolicyTerm:
             "term_type": self.term_type.value,
             "label": self.label,
             "description": self.description,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     @classmethod
@@ -94,5 +95,5 @@ class PolicyTerm:
             term_type=TermType(data["term_type"]),
             label=data["label"],
             description=data["description"],
-            metadata=data.get("metadata", {})
+            metadata=data.get("metadata", {}),
         )

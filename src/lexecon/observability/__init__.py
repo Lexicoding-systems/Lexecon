@@ -1,8 +1,8 @@
 """Observability utilities for Lexecon."""
 
-from .logging import get_logger, configure_logging
+from .logging import configure_logging, get_logger
 from .metrics import metrics, record_decision, record_policy_load
-from .tracing import tracer, trace_function
+from .tracing import trace_function, tracer
 
 __all__ = [
     "get_logger",

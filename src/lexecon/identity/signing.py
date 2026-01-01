@@ -7,12 +7,10 @@ Manages key pairs for signing decisions and verifying integrity.
 import base64
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional
-from cryptography.hazmat.primitives.asymmetric.ed25519 import (
-    Ed25519PrivateKey,
-    Ed25519PublicKey
-)
+from typing import Any, Dict, Optional
+
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 
 class KeyManager:
@@ -41,14 +39,14 @@ class KeyManager:
         private_pem = self.private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
+            encryption_algorithm=serialization.NoEncryption(),
         )
         private_key_path.write_bytes(private_pem)
 
         # Save public key
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
         public_key_path.write_bytes(public_pem)
 
@@ -56,10 +54,7 @@ class KeyManager:
     def load_keys(cls, private_key_path: Path) -> "KeyManager":
         """Load private key from disk."""
         private_pem = private_key_path.read_bytes()
-        private_key = serialization.load_pem_private_key(
-            private_pem,
-            password=None
-        )
+        private_key = serialization.load_pem_private_key(private_pem, password=None)
         return cls(private_key=private_key)
 
     @classmethod
@@ -115,8 +110,9 @@ class KeyManager:
 
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
         import hashlib
+
         return hashlib.sha256(public_pem).hexdigest()[:16]

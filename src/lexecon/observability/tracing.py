@@ -1,17 +1,17 @@
 """OpenTelemetry tracing for Lexecon."""
 
-from typing import Any, Callable, Optional
-from functools import wraps
 import time
+from functools import wraps
+from typing import Any, Callable, Optional
 
 try:
     from opentelemetry import trace
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import (
         BatchSpanProcessor,
         ConsoleSpanExporter,
     )
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
     TRACING_AVAILABLE = True
 except ImportError:

@@ -1,14 +1,15 @@
 """Tests for model governance adapters."""
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add model_governance_pack to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../model_governance_pack/adapters"))
 
-from base import GovernanceAdapter, GovernanceError
-from verification import GovernanceVerifier
+from base import GovernanceAdapter, GovernanceError  # noqa: E402
+from verification import GovernanceVerifier  # noqa: E402
 
 
 class MockGovernanceAdapter(GovernanceAdapter):
@@ -16,17 +17,12 @@ class MockGovernanceAdapter(GovernanceAdapter):
 
     def intercept_tool_call(self, tool_name: str, tool_args: dict, **kwargs):
         decision = self.request_decision(
-            tool_name=tool_name,
-            tool_args=tool_args,
-            user_intent=kwargs.get("user_intent", "")
+            tool_name=tool_name, tool_args=tool_args, user_intent=kwargs.get("user_intent", "")
         )
         return decision
 
     def wrap_response(self, decision: dict, result=None):
-        return {
-            "decision": decision,
-            "result": result
-        }
+        return {"decision": decision, "result": result}
 
 
 class TestGovernanceAdapter:
@@ -34,10 +30,7 @@ class TestGovernanceAdapter:
 
     def test_init(self):
         """Test adapter initialization."""
-        adapter = MockGovernanceAdapter(
-            governance_url="http://localhost:8000",
-            actor="model"
-        )
+        adapter = MockGovernanceAdapter(governance_url="http://localhost:8000", actor="model")
         assert adapter.governance_url == "http://localhost:8000"
         assert adapter.actor == "model"
         assert len(adapter.capability_tokens) == 0
@@ -75,7 +68,7 @@ class TestGovernanceAdapter:
             "token_id": "tok_test123",
             "scope": {"action": "search", "tool": "web_search"},
             "expiry": future_time,
-            "policy_version_hash": "test_hash"
+            "policy_version_hash": "test_hash",
         }
 
         # Store token
@@ -105,7 +98,7 @@ class TestGovernanceAdapter:
             "token_id": "tok_expired",
             "scope": {"action": "search", "tool": "web_search"},
             "expiry": past_time,
-            "policy_version_hash": "test_hash"
+            "policy_version_hash": "test_hash",
         }
 
         adapter.capability_tokens["tok_expired"] = token
@@ -134,7 +127,7 @@ class TestGovernanceVerifier:
             "token_id": "tok_test123",
             "scope": {"action": "search", "tool": "web_search"},
             "expiry": future_time,
-            "policy_version_hash": "test_hash"
+            "policy_version_hash": "test_hash",
         }
 
         result = verifier.verify_capability_token(token)
@@ -153,7 +146,7 @@ class TestGovernanceVerifier:
             "token_id": "tok_expired",
             "scope": {"action": "search", "tool": "web_search"},
             "expiry": past_time,
-            "policy_version_hash": "test_hash"
+            "policy_version_hash": "test_hash",
         }
 
         result = verifier.verify_capability_token(token)
@@ -166,7 +159,7 @@ class TestGovernanceVerifier:
 
         incomplete_token = {
             "token_id": "tok_incomplete",
-            "scope": {"action": "search"}
+            "scope": {"action": "search"},
             # Missing expiry and policy_version_hash
         }
 
@@ -185,7 +178,7 @@ class TestGovernanceVerifier:
             "token_id": "tok_incomplete_scope",
             "scope": {"action": "search"},  # Missing tool
             "expiry": future_time,
-            "policy_version_hash": "test_hash"
+            "policy_version_hash": "test_hash",
         }
 
         result = verifier.verify_capability_token(token)
@@ -198,10 +191,7 @@ class TestGovernanceError:
 
     def test_governance_error(self):
         """Test GovernanceError creation."""
-        decision = {
-            "decision": "deny",
-            "reasoning": "Action not permitted"
-        }
+        decision = {"decision": "deny", "reasoning": "Action not permitted"}
 
         error = GovernanceError(decision)
         assert error.decision == decision
@@ -233,8 +223,6 @@ class TestAdapterIntegration:
 
     def test_verify_ledger_with_server(self):
         """Test ledger verification against live server."""
-        verifier = GovernanceVerifier()
-
         # Would test actual ledger verification
         # Requires governance server to be running
         pass

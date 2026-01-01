@@ -1,10 +1,11 @@
 """Pytest configuration and fixtures."""
 
 import pytest
-from lexecon.policy.engine import PolicyEngine, PolicyMode
-from lexecon.policy.terms import PolicyTerm
-from lexecon.policy.relations import PolicyRelation
+
 from lexecon.ledger.chain import LedgerChain
+from lexecon.policy.engine import PolicyEngine, PolicyMode
+from lexecon.policy.relations import PolicyRelation
+from lexecon.policy.terms import PolicyTerm
 
 
 @pytest.fixture

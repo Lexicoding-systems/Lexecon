@@ -5,21 +5,22 @@ Provides endpoints for health checks, policy management, decision requests,
 and audit operations.
 """
 
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-from typing import Dict, Any, List, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from lexecon.policy.engine import PolicyEngine, PolicyMode
-from lexecon.decision.service import DecisionService, DecisionRequest
-from lexecon.ledger.chain import LedgerChain
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel, Field
+
+from lexecon.decision.service import DecisionRequest, DecisionService
 from lexecon.identity.signing import KeyManager
+from lexecon.ledger.chain import LedgerChain
+from lexecon.policy.engine import PolicyEngine, PolicyMode
 
 
 # Pydantic models for request/response validation
 class DecisionRequestModel(BaseModel):
     """Model for decision request."""
+
     request_id: Optional[str] = None
     actor: str = Field(..., description="Actor requesting the action")
     proposed_action: str = Field(..., description="Proposed action to perform")
@@ -34,17 +35,20 @@ class DecisionRequestModel(BaseModel):
 
 class PolicyLoadModel(BaseModel):
     """Model for loading policy."""
+
     policy: Dict[str, Any] = Field(..., description="Policy data")
 
 
 class HealthResponse(BaseModel):
     """Health check response."""
+
     status: str
     timestamp: str
 
 
 class StatusResponse(BaseModel):
     """System status response."""
+
     status: str
     policy_loaded: bool
     policy_hash: Optional[str]
@@ -56,7 +60,7 @@ class StatusResponse(BaseModel):
 app = FastAPI(
     title="Lexecon Governance API",
     description="Cryptographic governance system for AI safety and compliance",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 # Global state (in production, use dependency injection)
@@ -90,10 +94,7 @@ async def startup_event():
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat()
-    }
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
 
 @app.get("/status", response_model=StatusResponse)
@@ -106,7 +107,7 @@ async def get_status():
         "policy_loaded": policy_engine is not None and len(policy_engine.terms) > 0,
         "policy_hash": policy_engine.get_policy_hash() if policy_engine else None,
         "ledger_entries": len(ledger.entries),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
@@ -122,7 +123,7 @@ async def list_policies():
         "mode": policy_engine.mode.value,
         "terms_count": len(policy_engine.terms),
         "relations_count": len(policy_engine.relations),
-        "policy_hash": policy_engine.get_policy_hash()
+        "policy_hash": policy_engine.get_policy_hash(),
     }
 
 
@@ -135,22 +136,24 @@ async def load_policy(policy_load: PolicyLoadModel):
         policy_engine.load_policy(policy_load.policy)
 
         # Log to ledger
-        ledger.append("policy_loaded", {
-            "policy_hash": policy_engine.get_policy_hash(),
-            "terms_count": len(policy_engine.terms),
-            "relations_count": len(policy_engine.relations)
-        })
+        ledger.append(
+            "policy_loaded",
+            {
+                "policy_hash": policy_engine.get_policy_hash(),
+                "terms_count": len(policy_engine.terms),
+                "relations_count": len(policy_engine.relations),
+            },
+        )
 
         return {
             "status": "success",
             "policy_hash": policy_engine.get_policy_hash(),
             "terms_loaded": len(policy_engine.terms),
-            "relations_loaded": len(policy_engine.relations)
+            "relations_loaded": len(policy_engine.relations),
         }
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to load policy: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to load policy: {str(e)}"
         )
 
 
@@ -173,19 +176,22 @@ async def make_decision(request_model: DecisionRequestModel):
         risk_level=request_model.risk_level,
         requested_output_type=request_model.requested_output_type,
         policy_mode=request_model.policy_mode,
-        context=request_model.context
+        context=request_model.context,
     )
 
     # Evaluate
     response = decision_service.evaluate_request(request)
 
     # Log to ledger
-    ledger_entry = ledger.append("decision", {
-        "request_id": request.request_id,
-        "decision": response.decision,
-        "actor": request.actor,
-        "action": request.proposed_action
-    })
+    ledger_entry = ledger.append(
+        "decision",
+        {
+            "request_id": request.request_id,
+            "decision": response.decision,
+            "actor": request.actor,
+            "action": request.proposed_action,
+        },
+    )
 
     response.ledger_entry_hash = ledger_entry.entry_hash
 
@@ -199,8 +205,7 @@ async def verify_decision(decision_response: Dict[str, Any]):
 
     if not ledger_entry_hash:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing ledger_entry_hash"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Missing ledger_entry_hash"
         )
 
     # Find entry in ledger
@@ -218,10 +223,7 @@ async def verify_decision(decision_response: Dict[str, Any]):
     if calculated_hash != entry.entry_hash:
         return {"verified": False, "error": "Hash mismatch"}
 
-    return {
-        "verified": True,
-        "entry": entry.to_dict()
-    }
+    return {"verified": True, "entry": entry.to_dict()}
 
 
 @app.get("/ledger/verify")
@@ -249,6 +251,6 @@ async def root():
             "decide": "/decide",
             "verify": "/decide/verify",
             "ledger_verify": "/ledger/verify",
-            "audit_report": "/ledger/report"
-        }
+            "audit_report": "/ledger/report",
+        },
     }

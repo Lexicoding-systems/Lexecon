@@ -1,9 +1,8 @@
 """Tests for policy engine."""
 
-import pytest
-from lexecon.policy.terms import PolicyTerm, TermType
-from lexecon.policy.relations import PolicyRelation, RelationType
 from lexecon.policy.engine import PolicyEngine, PolicyMode
+from lexecon.policy.relations import PolicyRelation, RelationType
+from lexecon.policy.terms import PolicyTerm, TermType
 
 
 class TestPolicyTerm:
@@ -36,7 +35,7 @@ class TestPolicyTerm:
             "term_type": "action",
             "label": "Delete",
             "description": "Delete data",
-            "metadata": {}
+            "metadata": {},
         }
         term = PolicyTerm.from_dict(data)
         assert term.term_id == "action:delete"

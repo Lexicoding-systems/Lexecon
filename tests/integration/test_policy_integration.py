@@ -1,7 +1,8 @@
 """Integration tests for policy evaluation."""
 
 import pytest
-from lexecon import PolicyEngine, DecisionService
+
+from lexecon import DecisionService, PolicyEngine
 
 
 class TestPolicyEvaluation:
@@ -50,9 +51,7 @@ class TestPolicyEvaluation:
             ],
         }
         engine = PolicyEngine(policy)
-        decision = engine.evaluate(
-            actor="model", action="read", data_classes=[], risk_level=1
-        )
+        decision = engine.evaluate(actor="model", action="read", data_classes=[], risk_level=1)
         assert decision.allowed is True
 
     def test_explicit_forbid_denies_action(self) -> None:
@@ -73,9 +72,7 @@ class TestPolicyEvaluation:
             ],
         }
         engine = PolicyEngine(policy)
-        decision = engine.evaluate(
-            actor="model", action="delete", data_classes=[], risk_level=1
-        )
+        decision = engine.evaluate(actor="model", action="delete", data_classes=[], risk_level=1)
         assert decision.allowed is False
 
 
@@ -97,9 +94,7 @@ class TestGDPRPolicyIntegration:
         with open(policy_path) as f:
             return json.load(f)
 
-    def test_gdpr_forbids_special_category_processing(
-        self, gdpr_policy: dict
-    ) -> None:
+    def test_gdpr_forbids_special_category_processing(self, gdpr_policy: dict) -> None:
         """Test that GDPR policy forbids AI processing of special category data."""
         engine = PolicyEngine(gdpr_policy)
         decision = engine.evaluate(
@@ -111,9 +106,7 @@ class TestGDPRPolicyIntegration:
         assert decision.allowed is False
         assert "Article 9" in decision.reason or "special category" in decision.reason.lower()
 
-    def test_gdpr_allows_anonymous_data_processing(
-        self, gdpr_policy: dict
-    ) -> None:
+    def test_gdpr_allows_anonymous_data_processing(self, gdpr_policy: dict) -> None:
         """Test that GDPR policy allows processing of anonymous data."""
         engine = PolicyEngine(gdpr_policy)
         decision = engine.evaluate(
@@ -130,8 +123,8 @@ class TestDecisionServiceIntegration:
 
     def test_decision_creates_ledger_entry(self) -> None:
         """Test that decision service creates ledger entry."""
-        from lexecon.ledger import Ledger
         from lexecon.identity import NodeIdentity
+        from lexecon.ledger import Ledger
 
         ledger = Ledger()
         identity = NodeIdentity("test-node")
@@ -151,8 +144,8 @@ class TestDecisionServiceIntegration:
 
     def test_decision_signature_verification(self) -> None:
         """Test that decision signatures can be verified."""
-        from lexecon.ledger import Ledger
         from lexecon.identity import NodeIdentity
+        from lexecon.ledger import Ledger
 
         ledger = Ledger()
         identity = NodeIdentity("test-node")

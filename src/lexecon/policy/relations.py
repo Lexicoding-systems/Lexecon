@@ -5,12 +5,13 @@ Relations define permissions, prohibitions, requirements, and other connections 
 """
 
 from dataclasses import dataclass
-from typing import Dict, Any, List
 from enum import Enum
+from typing import Any, Dict, List
 
 
 class RelationType(Enum):
     """Types of policy relations."""
+
     PERMITS = "permits"
     FORBIDS = "forbids"
     REQUIRES = "requires"
@@ -48,7 +49,7 @@ class PolicyRelation:
             relation_type=RelationType.PERMITS,
             source=source,
             target=target,
-            conditions=conditions or []
+            conditions=conditions or [],
         )
 
     @classmethod
@@ -60,7 +61,7 @@ class PolicyRelation:
             relation_type=RelationType.FORBIDS,
             source=source,
             target=target,
-            conditions=conditions or []
+            conditions=conditions or [],
         )
 
     @classmethod
@@ -72,7 +73,7 @@ class PolicyRelation:
             relation_type=RelationType.REQUIRES,
             source=source,
             target=target,
-            conditions=conditions or []
+            conditions=conditions or [],
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -83,7 +84,7 @@ class PolicyRelation:
             "source": self.source,
             "target": self.target,
             "conditions": self.conditions,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     @classmethod
@@ -95,5 +96,5 @@ class PolicyRelation:
             source=data["source"],
             target=data["target"],
             conditions=data.get("conditions", []),
-            metadata=data.get("metadata", {})
+            metadata=data.get("metadata", {}),
         )

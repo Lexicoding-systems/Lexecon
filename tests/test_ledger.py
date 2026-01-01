@@ -1,6 +1,5 @@
 """Tests for ledger chain."""
 
-import pytest
 from lexecon.ledger.chain import LedgerChain, LedgerEntry
 
 
@@ -14,7 +13,7 @@ class TestLedgerEntry:
             event_type="test_event",
             data={"key": "value"},
             timestamp="2025-01-01T00:00:00",
-            previous_hash="0" * 64
+            previous_hash="0" * 64,
         )
         assert entry.entry_id == "test_1"
         assert len(entry.entry_hash) == 64
@@ -26,14 +25,14 @@ class TestLedgerEntry:
             event_type="test",
             data={"a": 1},
             timestamp="2025-01-01T00:00:00",
-            previous_hash="0" * 64
+            previous_hash="0" * 64,
         )
         entry2 = LedgerEntry(
             entry_id="test_1",
             event_type="test",
             data={"a": 1},
             timestamp="2025-01-01T00:00:00",
-            previous_hash="0" * 64
+            previous_hash="0" * 64,
         )
         assert entry1.entry_hash == entry2.entry_hash
 
@@ -44,14 +43,14 @@ class TestLedgerEntry:
             event_type="test",
             data={"a": 1},
             timestamp="2025-01-01T00:00:00",
-            previous_hash="0" * 64
+            previous_hash="0" * 64,
         )
         entry2 = LedgerEntry(
             entry_id="test_1",
             event_type="test",
             data={"a": 2},
             timestamp="2025-01-01T00:00:00",
-            previous_hash="0" * 64
+            previous_hash="0" * 64,
         )
         assert entry1.entry_hash != entry2.entry_hash
 

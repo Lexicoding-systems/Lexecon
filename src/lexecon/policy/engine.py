@@ -6,15 +6,16 @@ The engine loads terms and relations, and evaluates decision requests against th
 
 import hashlib
 import json
-from typing import Dict, List, Any, Optional
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from lexecon.policy.terms import PolicyTerm
 from lexecon.policy.relations import PolicyRelation, RelationType
+from lexecon.policy.terms import PolicyTerm
 
 
 class PolicyMode(Enum):
     """Policy evaluation modes."""
+
     PERMISSIVE = "permissive"  # Allow unless explicitly forbidden
     STRICT = "strict"  # Deny unless explicitly permitted
     PARANOID = "paranoid"  # Deny high risk unless human confirmation
@@ -80,7 +81,7 @@ class PolicyEngine:
         action: str,
         resource: Optional[str] = None,
         data_classes: List[str] = None,
-        context: Dict[str, Any] = None
+        context: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """
         Evaluate a decision request against the policy.
@@ -113,14 +114,11 @@ class PolicyEngine:
             "permits_count": len(permits),
             "forbids_count": len(forbids),
             "policy_version_hash": self.get_policy_hash(),
-            "reasoning": self._generate_reasoning(decision, permits, forbids)
+            "reasoning": self._generate_reasoning(decision, permits, forbids),
         }
 
     def _find_relations(
-        self,
-        relation_type: RelationType,
-        actor: str,
-        action: str
+        self, relation_type: RelationType, actor: str, action: str
     ) -> List[PolicyRelation]:
         """Find relations matching the given criteria."""
         matching = []
@@ -133,10 +131,7 @@ class PolicyEngine:
         return matching
 
     def _generate_reasoning(
-        self,
-        decision: bool,
-        permits: List[PolicyRelation],
-        forbids: List[PolicyRelation]
+        self, decision: bool, permits: List[PolicyRelation], forbids: List[PolicyRelation]
     ) -> str:
         """Generate human-readable reasoning for the decision."""
         if decision:
@@ -152,7 +147,7 @@ class PolicyEngine:
         return {
             "mode": self.mode.value,
             "terms": [term.to_dict() for term in self.terms.values()],
-            "relations": [relation.to_dict() for relation in self.relations]
+            "relations": [relation.to_dict() for relation in self.relations],
         }
 
     @classmethod

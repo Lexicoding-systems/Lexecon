@@ -7,7 +7,7 @@ generates capability tokens, and records decisions in the ledger.
 
 import uuid
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from lexecon.policy.engine import PolicyEngine
 
@@ -26,7 +26,7 @@ class DecisionRequest:
         risk_level: int = 1,
         requested_output_type: str = "tool_action",
         policy_mode: str = "strict",
-        context: Dict[str, Any] = None
+        context: Dict[str, Any] = None,
     ):
         self.request_id = request_id or str(uuid.uuid4())
         self.actor = actor
@@ -53,7 +53,7 @@ class DecisionRequest:
             "requested_output_type": self.requested_output_type,
             "policy_mode": self.policy_mode,
             "context": self.context,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
 
@@ -68,7 +68,7 @@ class DecisionResponse:
         policy_version_hash: str,
         capability_token: Optional[Dict[str, Any]] = None,
         ledger_entry_hash: Optional[str] = None,
-        timestamp: Optional[str] = None
+        timestamp: Optional[str] = None,
     ):
         self.request_id = request_id
         self.decision = decision
@@ -87,7 +87,7 @@ class DecisionResponse:
             "policy_version_hash": self.policy_version_hash,
             "capability_token": self.capability_token,
             "ledger_entry_hash": self.ledger_entry_hash,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
 
@@ -113,7 +113,7 @@ class DecisionService:
             actor=request.actor,
             action=request.proposed_action,
             data_classes=request.data_classes,
-            context=request.context
+            context=request.context,
         )
 
         decision = "permit" if evaluation["permitted"] else "deny"
@@ -123,8 +123,7 @@ class DecisionService:
         capability_token = None
         if evaluation["permitted"]:
             capability_token = self._generate_capability_token(
-                request=request,
-                policy_version_hash=evaluation["policy_version_hash"]
+                request=request, policy_version_hash=evaluation["policy_version_hash"]
             )
 
         response = DecisionResponse(
@@ -132,15 +131,13 @@ class DecisionService:
             decision=decision,
             reasoning=reasoning,
             policy_version_hash=evaluation["policy_version_hash"],
-            capability_token=capability_token
+            capability_token=capability_token,
         )
 
         return response
 
     def _generate_capability_token(
-        self,
-        request: DecisionRequest,
-        policy_version_hash: str
+        self, request: DecisionRequest, policy_version_hash: str
     ) -> Dict[str, Any]:
         """Generate an ephemeral capability token for approved action."""
         token_id = f"tok_{uuid.uuid4().hex[:16]}"
@@ -148,11 +145,8 @@ class DecisionService:
 
         return {
             "token_id": token_id,
-            "scope": {
-                "action": request.proposed_action,
-                "tool": request.tool
-            },
+            "scope": {"action": request.proposed_action, "tool": request.tool},
             "expiry": expiry.isoformat(),
             "policy_version_hash": policy_version_hash,
-            "granted_at": datetime.utcnow().isoformat()
+            "granted_at": datetime.utcnow().isoformat(),
         }

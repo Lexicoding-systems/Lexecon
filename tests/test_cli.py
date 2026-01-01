@@ -1,10 +1,10 @@
 """Tests for CLI commands."""
 
-import pytest
 import json
 import tempfile
-import os
 from pathlib import Path
+
+import pytest
 from click.testing import CliRunner
 
 from lexecon.cli.main import cli
@@ -34,15 +34,15 @@ def example_policy_file(temp_dir):
                 "term_type": "actor",
                 "label": "AI Model",
                 "description": "AI model",
-                "metadata": {}
+                "metadata": {},
             },
             {
                 "term_id": "action:search",
                 "term_type": "action",
                 "label": "Search",
                 "description": "Search action",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         ],
         "relations": [
             {
@@ -51,9 +51,9 @@ def example_policy_file(temp_dir):
                 "source": "actor:model",
                 "target": "action:search",
                 "conditions": [],
-                "metadata": {}
+                "metadata": {},
             }
-        ]
+        ],
     }
 
     policy_file = Path(temp_dir) / "policy.json"
@@ -71,7 +71,7 @@ def example_request_file(temp_dir):
         "user_intent": "Research AI governance",
         "data_classes": [],
         "risk_level": 1,
-        "context": {"query": "test"}
+        "context": {"query": "test"},
     }
 
     request_file = Path(temp_dir) / "request.json"
@@ -114,11 +114,7 @@ class TestInitCommand:
 
     def test_init_creates_node(self, runner, temp_dir):
         """Test init command creates node files."""
-        result = runner.invoke(cli, [
-            "init",
-            "--node-id", "test-node",
-            "--data-dir", temp_dir
-        ])
+        result = runner.invoke(cli, ["init", "--node-id", "test-node", "--data-dir", temp_dir])
 
         assert result.exit_code == 0
         assert "Node 'test-node' initialized" in result.output
@@ -147,11 +143,9 @@ class TestInitCommand:
         """Test init with custom data directory."""
         custom_dir = Path(temp_dir) / "custom"
 
-        result = runner.invoke(cli, [
-            "init",
-            "--node-id", "custom-node",
-            "--data-dir", str(custom_dir)
-        ])
+        result = runner.invoke(
+            cli, ["init", "--node-id", "custom-node", "--data-dir", str(custom_dir)]
+        )
 
         assert result.exit_code == 0
         assert custom_dir.exists()
@@ -163,10 +157,7 @@ class TestDecideCommand:
 
     def test_decide_with_json_file(self, runner, example_request_file):
         """Test decide command with JSON file."""
-        result = runner.invoke(cli, [
-            "decide",
-            "--json-file", example_request_file
-        ])
+        result = runner.invoke(cli, ["decide", "--json-file", example_request_file])
 
         assert result.exit_code == 0
 
@@ -179,13 +170,20 @@ class TestDecideCommand:
 
     def test_decide_with_cli_args(self, runner):
         """Test decide command with CLI arguments."""
-        result = runner.invoke(cli, [
-            "decide",
-            "--actor", "model",
-            "--action", "search",
-            "--tool", "web_search",
-            "--intent", "Test search"
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "decide",
+                "--actor",
+                "model",
+                "--action",
+                "search",
+                "--tool",
+                "web_search",
+                "--intent",
+                "Test search",
+            ],
+        )
 
         assert result.exit_code == 0
 
@@ -206,19 +204,13 @@ class TestDecideCommand:
         bad_file = Path(temp_dir) / "bad.json"
         bad_file.write_text("not valid json")
 
-        result = runner.invoke(cli, [
-            "decide",
-            "--json-file", str(bad_file)
-        ])
+        result = runner.invoke(cli, ["decide", "--json-file", str(bad_file)])
 
         assert result.exit_code != 0
 
     def test_decide_nonexistent_file(self, runner):
         """Test decide with non-existent file."""
-        result = runner.invoke(cli, [
-            "decide",
-            "--json-file", "/nonexistent/file.json"
-        ])
+        result = runner.invoke(cli, ["decide", "--json-file", "/nonexistent/file.json"])
 
         assert result.exit_code != 0
 
@@ -228,10 +220,7 @@ class TestLoadPolicyCommand:
 
     def test_load_policy_success(self, runner, example_policy_file):
         """Test loading a valid policy."""
-        result = runner.invoke(cli, [
-            "load-policy",
-            "--policy-file", example_policy_file
-        ])
+        result = runner.invoke(cli, ["load-policy", "--policy-file", example_policy_file])
 
         assert result.exit_code == 0
         assert "Policy loaded" in result.output
@@ -248,10 +237,7 @@ class TestLoadPolicyCommand:
 
     def test_load_policy_nonexistent_file(self, runner):
         """Test load-policy with non-existent file."""
-        result = runner.invoke(cli, [
-            "load-policy",
-            "--policy-file", "/nonexistent/policy.json"
-        ])
+        result = runner.invoke(cli, ["load-policy", "--policy-file", "/nonexistent/policy.json"])
 
         assert result.exit_code != 0
 
@@ -260,10 +246,7 @@ class TestLoadPolicyCommand:
         bad_file = Path(temp_dir) / "invalid.json"
         bad_file.write_text("{ invalid json")
 
-        result = runner.invoke(cli, [
-            "load-policy",
-            "--policy-file", str(bad_file)
-        ])
+        result = runner.invoke(cli, ["load-policy", "--policy-file", str(bad_file)])
 
         assert result.exit_code != 0
 
@@ -272,10 +255,7 @@ class TestLoadPolicyCommand:
         empty_file = Path(temp_dir) / "empty.json"
         empty_file.write_text(json.dumps({"terms": [], "relations": []}))
 
-        result = runner.invoke(cli, [
-            "load-policy",
-            "--policy-file", str(empty_file)
-        ])
+        result = runner.invoke(cli, ["load-policy", "--policy-file", str(empty_file)])
 
         # Should succeed but with 0 terms/relations
         assert result.exit_code == 0
@@ -288,10 +268,7 @@ class TestVerifyLedgerCommand:
 
     def test_verify_ledger_valid(self, runner, example_ledger_file):
         """Test verifying a valid ledger."""
-        result = runner.invoke(cli, [
-            "verify-ledger",
-            "--ledger-file", example_ledger_file
-        ])
+        result = runner.invoke(cli, ["verify-ledger", "--ledger-file", example_ledger_file])
 
         assert result.exit_code == 0
         assert "Ledger is valid" in result.output
@@ -307,10 +284,7 @@ class TestVerifyLedgerCommand:
 
     def test_verify_ledger_nonexistent_file(self, runner):
         """Test verify-ledger with non-existent file."""
-        result = runner.invoke(cli, [
-            "verify-ledger",
-            "--ledger-file", "/nonexistent/ledger.json"
-        ])
+        result = runner.invoke(cli, ["verify-ledger", "--ledger-file", "/nonexistent/ledger.json"])
 
         assert result.exit_code != 0
 
@@ -319,10 +293,7 @@ class TestVerifyLedgerCommand:
         bad_file = Path(temp_dir) / "bad_ledger.json"
         bad_file.write_text("not json")
 
-        result = runner.invoke(cli, [
-            "verify-ledger",
-            "--ledger-file", str(bad_file)
-        ])
+        result = runner.invoke(cli, ["verify-ledger", "--ledger-file", str(bad_file)])
 
         assert result.exit_code != 0
 
@@ -342,19 +313,18 @@ class TestVerifyLedgerCommand:
         ledger_file = Path(temp_dir) / "tampered.json"
         ledger_file.write_text(json.dumps(ledger.to_dict()))
 
-        result = runner.invoke(cli, [
-            "verify-ledger",
-            "--ledger-file", str(ledger_file)
-        ])
+        result = runner.invoke(cli, ["verify-ledger", "--ledger-file", str(ledger_file)])
 
         # Should fail with tamper detection
         # CLI raises exception which is caught by Click
         assert result.exit_code == 1
         # Error can be in output or exception
-        assert (result.exception is not None or
-                "validation failed" in result.output.lower() or
-                "invalid" in result.output.lower() or
-                len(result.output) == 0)  # Exception without output
+        assert (
+            result.exception is not None
+            or "validation failed" in result.output.lower()
+            or "invalid" in result.output.lower()
+            or len(result.output) == 0
+        )  # Exception without output
 
 
 class TestServerCommand:
@@ -378,41 +348,27 @@ class TestCLIIntegration:
     def test_full_workflow(self, runner, temp_dir, example_policy_file, example_request_file):
         """Test complete CLI workflow."""
         # 1. Initialize node
-        result = runner.invoke(cli, [
-            "init",
-            "--node-id", "workflow-test",
-            "--data-dir", temp_dir
-        ])
+        result = runner.invoke(cli, ["init", "--node-id", "workflow-test", "--data-dir", temp_dir])
         assert result.exit_code == 0
 
         # 2. Load policy
-        result = runner.invoke(cli, [
-            "load-policy",
-            "--policy-file", example_policy_file
-        ])
+        result = runner.invoke(cli, ["load-policy", "--policy-file", example_policy_file])
         assert result.exit_code == 0
         policy_hash = None
-        for line in result.output.split('\n'):
+        for line in result.output.split("\n"):
             if "Policy hash:" in line:
                 policy_hash = line.split(":")[-1].strip()
         assert policy_hash is not None
 
         # 3. Make decision
-        result = runner.invoke(cli, [
-            "decide",
-            "--json-file", example_request_file
-        ])
+        result = runner.invoke(cli, ["decide", "--json-file", example_request_file])
         assert result.exit_code == 0
         decision = json.loads(result.output)
         assert "decision" in decision
 
     def test_init_and_verify_keys(self, runner, temp_dir):
         """Test that init creates valid key files."""
-        result = runner.invoke(cli, [
-            "init",
-            "--node-id", "key-test",
-            "--data-dir", temp_dir
-        ])
+        result = runner.invoke(cli, ["init", "--node-id", "key-test", "--data-dir", temp_dir])
         assert result.exit_code == 0
 
         # Check key files exist and have content
@@ -446,30 +402,27 @@ class TestCLIErrorHandling:
     def test_decide_partial_args(self, runner):
         """Test decide with partial arguments."""
         # Provide some but not all required args
-        result = runner.invoke(cli, [
-            "decide",
-            "--actor", "model",
-            "--action", "search"
-            # Missing --tool and --intent
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "decide",
+                "--actor",
+                "model",
+                "--action",
+                "search",
+                # Missing --tool and --intent
+            ],
+        )
         assert result.exit_code != 0
 
     def test_init_duplicate_node(self, runner, temp_dir):
         """Test initializing same node twice."""
         # First init
-        result1 = runner.invoke(cli, [
-            "init",
-            "--node-id", "dup-test",
-            "--data-dir", temp_dir
-        ])
+        result1 = runner.invoke(cli, ["init", "--node-id", "dup-test", "--data-dir", temp_dir])
         assert result1.exit_code == 0
 
         # Second init (should overwrite or warn)
-        result2 = runner.invoke(cli, [
-            "init",
-            "--node-id", "dup-test",
-            "--data-dir", temp_dir
-        ])
+        result2 = runner.invoke(cli, ["init", "--node-id", "dup-test", "--data-dir", temp_dir])
         # Either succeeds (overwrite) or fails (file exists)
         # Both are acceptable behaviors
         assert result2.exit_code in [0, 1]
@@ -480,10 +433,7 @@ class TestCLIOutput:
 
     def test_decide_json_output(self, runner, example_request_file):
         """Test decide outputs valid JSON."""
-        result = runner.invoke(cli, [
-            "decide",
-            "--json-file", example_request_file
-        ])
+        result = runner.invoke(cli, ["decide", "--json-file", example_request_file])
 
         if result.exit_code == 0:
             # Should be parseable JSON
@@ -492,10 +442,7 @@ class TestCLIOutput:
 
     def test_load_policy_output_format(self, runner, example_policy_file):
         """Test load-policy output format."""
-        result = runner.invoke(cli, [
-            "load-policy",
-            "--policy-file", example_policy_file
-        ])
+        result = runner.invoke(cli, ["load-policy", "--policy-file", example_policy_file])
 
         assert result.exit_code == 0
         # Check for expected output format markers
@@ -505,10 +452,7 @@ class TestCLIOutput:
 
     def test_verify_ledger_output_format(self, runner, example_ledger_file):
         """Test verify-ledger output format."""
-        result = runner.invoke(cli, [
-            "verify-ledger",
-            "--ledger-file", example_ledger_file
-        ])
+        result = runner.invoke(cli, ["verify-ledger", "--ledger-file", example_ledger_file])
 
         assert result.exit_code == 0
         # Check for expected output format

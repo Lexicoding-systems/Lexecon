@@ -1,8 +1,8 @@
 """Prometheus metrics for Lexecon."""
 
-from prometheus_client import Counter, Histogram, Gauge, generate_latest, REGISTRY
-from typing import Dict, Any
 import time
+
+from prometheus_client import REGISTRY, Counter, Gauge, Histogram, generate_latest
 
 # Request metrics
 http_requests_total = Counter(
@@ -109,31 +109,19 @@ class MetricsCollector:
         """Initialize metrics collector."""
         self.start_time = time.time()
 
-    def record_request(
-        self, method: str, endpoint: str, status: int, duration: float
-    ) -> None:
+    def record_request(self, method: str, endpoint: str, status: int, duration: float) -> None:
         """Record HTTP request metrics."""
         http_requests_total.labels(method=method, endpoint=endpoint, status=status).inc()
-        http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(
-            duration
-        )
+        http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
 
-    def record_decision(
-        self, allowed: bool, actor: str, risk_level: int, duration: float
-    ) -> None:
+    def record_decision(self, allowed: bool, actor: str, risk_level: int, duration: float) -> None:
         """Record decision metrics."""
-        decisions_total.labels(
-            allowed=str(allowed), actor=actor, risk_level=str(risk_level)
-        ).inc()
-        decision_evaluation_duration_seconds.labels(policy_mode="strict").observe(
-            duration
-        )
+        decisions_total.labels(allowed=str(allowed), actor=actor, risk_level=str(risk_level)).inc()
+        decision_evaluation_duration_seconds.labels(policy_mode="strict").observe(duration)
 
     def record_denial(self, reason_category: str, actor: str) -> None:
         """Record decision denial."""
-        decisions_denied_total.labels(
-            reason_category=reason_category, actor=actor
-        ).inc()
+        decisions_denied_total.labels(reason_category=reason_category, actor=actor).inc()
 
     def record_policy_load(self, policy_name: str) -> None:
         """Record policy load."""

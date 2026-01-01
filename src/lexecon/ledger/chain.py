@@ -6,9 +6,9 @@ Each entry is cryptographically linked to previous entries.
 
 import hashlib
 import json
-from datetime import datetime
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -33,7 +33,7 @@ class LedgerEntry:
             "event_type": self.event_type,
             "data": self.data,
             "timestamp": self.timestamp,
-            "previous_hash": self.previous_hash
+            "previous_hash": self.previous_hash,
         }
         canonical_json = json.dumps(entry_data, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical_json.encode()).hexdigest()
@@ -46,7 +46,7 @@ class LedgerEntry:
             "data": self.data,
             "timestamp": self.timestamp,
             "previous_hash": self.previous_hash,
-            "entry_hash": self.entry_hash
+            "entry_hash": self.entry_hash,
         }
 
 
@@ -68,7 +68,7 @@ class LedgerChain:
             event_type="genesis",
             data={"message": "Lexecon ledger initialized"},
             timestamp=datetime.utcnow().isoformat(),
-            previous_hash="0" * 64  # No previous hash
+            previous_hash="0" * 64,  # No previous hash
         )
         self.entries.append(genesis)
 
@@ -86,7 +86,7 @@ class LedgerChain:
             event_type=event_type,
             data=data,
             timestamp=datetime.utcnow().isoformat(),
-            previous_hash=previous_hash
+            previous_hash=previous_hash,
         )
 
         self.entries.append(entry)
@@ -108,7 +108,7 @@ class LedgerChain:
                 return {
                     "valid": False,
                     "error": f"Hash mismatch at entry {i}",
-                    "entry_id": entry.entry_id
+                    "entry_id": entry.entry_id,
                 }
 
             # Verify chain linkage (skip genesis)
@@ -118,13 +118,13 @@ class LedgerChain:
                     return {
                         "valid": False,
                         "error": f"Chain break at entry {i}",
-                        "entry_id": entry.entry_id
+                        "entry_id": entry.entry_id,
                     }
 
         return {
             "valid": True,
             "entries_verified": len(self.entries),
-            "chain_head_hash": self.entries[-1].entry_hash
+            "chain_head_hash": self.entries[-1].entry_hash,
         }
 
     def get_entry(self, entry_id: str) -> Optional[LedgerEntry]:
@@ -152,14 +152,12 @@ class LedgerChain:
             "event_type_counts": event_types,
             "first_entry_timestamp": self.entries[0].timestamp if self.entries else None,
             "last_entry_timestamp": self.entries[-1].timestamp if self.entries else None,
-            "chain_head_hash": self.entries[-1].entry_hash if self.entries else None
+            "chain_head_hash": self.entries[-1].entry_hash if self.entries else None,
         }
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize ledger to dictionary."""
-        return {
-            "entries": [entry.to_dict() for entry in self.entries]
-        }
+        return {"entries": [entry.to_dict() for entry in self.entries]}
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "LedgerChain":
@@ -173,7 +171,7 @@ class LedgerChain:
                 event_type=entry_data["event_type"],
                 data=entry_data["data"],
                 timestamp=entry_data["timestamp"],
-                previous_hash=entry_data["previous_hash"]
+                previous_hash=entry_data["previous_hash"],
             )
             # Verify the stored hash matches calculated hash
             if entry.entry_hash != entry_data["entry_hash"]:

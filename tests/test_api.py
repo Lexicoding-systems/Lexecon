@@ -1,13 +1,11 @@
 """Tests for API server endpoints."""
 
-import pytest
-from fastapi.testclient import TestClient
 from datetime import datetime
 
+import pytest
+from fastapi.testclient import TestClient
+
 from lexecon.api.server import app, initialize_services
-from lexecon.policy.engine import PolicyEngine, PolicyMode
-from lexecon.policy.terms import PolicyTerm
-from lexecon.policy.relations import PolicyRelation
 
 
 @pytest.fixture
@@ -29,15 +27,15 @@ def example_policy():
                 "term_type": "actor",
                 "label": "AI Model",
                 "description": "AI language model",
-                "metadata": {}
+                "metadata": {},
             },
             {
                 "term_id": "action:search",
                 "term_type": "action",
                 "label": "Search",
                 "description": "Search operation",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         ],
         "relations": [
             {
@@ -46,9 +44,9 @@ def example_policy():
                 "source": "actor:model",
                 "target": "action:search",
                 "conditions": [],
-                "metadata": {}
+                "metadata": {},
             }
-        ]
+        ],
     }
 
 
@@ -64,7 +62,7 @@ def decision_request():
         "risk_level": 1,
         "requested_output_type": "tool_action",
         "policy_mode": "strict",
-        "context": {"query": "test"}
+        "context": {"query": "test"},
     }
 
 
@@ -124,10 +122,7 @@ class TestPolicyEndpoints:
 
     def test_load_policy(self, client, example_policy):
         """Test loading a policy."""
-        response = client.post(
-            "/policies/load",
-            json={"policy": example_policy}
-        )
+        response = client.post("/policies/load", json={"policy": example_policy})
         assert response.status_code == 200
 
         data = response.json()
@@ -139,10 +134,7 @@ class TestPolicyEndpoints:
 
     def test_load_policy_invalid(self, client):
         """Test loading invalid policy."""
-        response = client.post(
-            "/policies/load",
-            json={"policy": {"invalid": "data"}}
-        )
+        response = client.post("/policies/load", json={"policy": {"invalid": "data"}})
         # Policy engine is tolerant - this actually succeeds with empty policy
         assert response.status_code == 200
         data = response.json()
@@ -213,7 +205,7 @@ class TestDecisionEndpoints:
             "tool": "file_system",
             "user_intent": "Delete files",
             "data_classes": [],
-            "risk_level": 5
+            "risk_level": 5,
         }
 
         response = client.post("/decide", json=request)
@@ -225,10 +217,7 @@ class TestDecisionEndpoints:
 
     def test_decide_missing_required_fields(self, client):
         """Test decision with missing required fields."""
-        response = client.post(
-            "/decide",
-            json={"actor": "model"}  # Missing required fields
-        )
+        response = client.post("/decide", json={"actor": "model"})  # Missing required fields
         assert response.status_code == 422  # Validation error
 
     def test_verify_decision(self, client, example_policy, decision_request):
@@ -249,17 +238,13 @@ class TestDecisionEndpoints:
     def test_verify_decision_missing_hash(self, client):
         """Test verification without ledger hash."""
         response = client.post(
-            "/decide/verify",
-            json={"decision": "permit"}  # No ledger_entry_hash
+            "/decide/verify", json={"decision": "permit"}  # No ledger_entry_hash
         )
         assert response.status_code == 400
 
     def test_verify_decision_invalid_hash(self, client):
         """Test verification with invalid hash."""
-        response = client.post(
-            "/decide/verify",
-            json={"ledger_entry_hash": "invalid_hash"}
-        )
+        response = client.post("/decide/verify", json={"ledger_entry_hash": "invalid_hash"})
         assert response.status_code == 200
 
         data = response.json()
@@ -330,23 +315,23 @@ class TestIntegrationWorkflows:
         initial_entries = status["ledger_entries"]
 
         # 2. Load policy
-        policy_response = client.post(
-            "/policies/load",
-            json={"policy": example_policy}
-        )
+        policy_response = client.post("/policies/load", json={"policy": example_policy})
         assert policy_response.status_code == 200
         policy_data = policy_response.json()
         policy_hash = policy_data["policy_hash"]
 
         # 3. Make permitted decision
-        decision_response = client.post("/decide", json={
-            "actor": "model",
-            "proposed_action": "search",
-            "tool": "web_search",
-            "user_intent": "Research",
-            "data_classes": [],
-            "risk_level": 1
-        })
+        decision_response = client.post(
+            "/decide",
+            json={
+                "actor": "model",
+                "proposed_action": "search",
+                "tool": "web_search",
+                "user_intent": "Research",
+                "data_classes": [],
+                "risk_level": 1,
+            },
+        )
         assert decision_response.status_code == 200
         decision_data = decision_response.json()
 
@@ -389,13 +374,16 @@ class TestIntegrationWorkflows:
         # Make multiple decisions
         results = []
         for i in range(5):
-            response = client.post("/decide", json={
-                "actor": "model",
-                "proposed_action": "search",
-                "tool": "web_search",
-                "user_intent": f"Request {i}",
-                "risk_level": 1
-            })
+            response = client.post(
+                "/decide",
+                json={
+                    "actor": "model",
+                    "proposed_action": "search",
+                    "tool": "web_search",
+                    "user_intent": f"Request {i}",
+                    "risk_level": 1,
+                },
+            )
             results.append(response.json())
 
         # Verify all were permitted
@@ -425,14 +413,16 @@ class TestIntegrationWorkflows:
 
         # Modify policy
         modified_policy = example_policy.copy()
-        modified_policy["relations"].append({
-            "relation_id": "permits:actor:model:action:read",
-            "relation_type": "permits",
-            "source": "actor:model",
-            "target": "action:read",
-            "conditions": [],
-            "metadata": {}
-        })
+        modified_policy["relations"].append(
+            {
+                "relation_id": "permits:actor:model:action:read",
+                "relation_type": "permits",
+                "source": "actor:model",
+                "target": "action:read",
+                "conditions": [],
+                "metadata": {},
+            }
+        )
 
         # Reload policy
         response2 = client.post("/policies/load", json={"policy": modified_policy})
@@ -452,28 +442,26 @@ class TestErrorHandling:
     def test_invalid_json(self, client):
         """Test handling of invalid JSON."""
         response = client.post(
-            "/policies/load",
-            data="invalid json",
-            headers={"Content-Type": "application/json"}
+            "/policies/load", data="invalid json", headers={"Content-Type": "application/json"}
         )
         assert response.status_code == 422
 
     def test_missing_content_type(self, client):
         """Test handling of missing content type."""
-        response = client.post(
-            "/decide",
-            data='{"actor": "model"}'
-        )
+        response = client.post("/decide", data='{"actor": "model"}')
         # FastAPI should still handle it
         assert response.status_code in [422, 400]
 
     def test_invalid_field_types(self, client):
         """Test handling of invalid field types."""
-        response = client.post("/decide", json={
-            "actor": "model",
-            "proposed_action": "search",
-            "tool": "web_search",
-            "user_intent": "test",
-            "risk_level": "invalid"  # Should be int
-        })
+        response = client.post(
+            "/decide",
+            json={
+                "actor": "model",
+                "proposed_action": "search",
+                "tool": "web_search",
+                "user_intent": "test",
+                "risk_level": "invalid",  # Should be int
+            },
+        )
         assert response.status_code == 422
