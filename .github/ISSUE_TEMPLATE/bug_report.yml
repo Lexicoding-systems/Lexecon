@@ -1,0 +1,140 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in Lexecon
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this bug! Please fill out the form below to help us investigate and fix the issue.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to reproduce the problem
+      placeholder: |
+        1. Initialize node with 'lexecon init --node-id test'
+        2. Load policy with 'lexecon policy load --file policy.json'
+        3. Make decision with 'lexecon decide ...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+      placeholder: Describe the expected behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happens?
+      placeholder: Describe the actual behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Messages / Logs
+      description: Please paste any relevant error messages or logs
+      render: shell
+      placeholder: |
+        Paste error messages or logs here...
+
+  - type: input
+    id: version
+    attributes:
+      label: Lexecon Version
+      description: What version of Lexecon are you using?
+      placeholder: "e.g., 0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: What version of Python are you using?
+      placeholder: "e.g., 3.11.2"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: What OS are you running?
+      placeholder: "e.g., Ubuntu 22.04, macOS 13.2, Windows 11"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which component is affected?
+      options:
+        - Policy Engine
+        - Decision Service
+        - Capability System
+        - Ledger
+        - API Server
+        - CLI
+        - Identity Management
+        - Model Integration
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Critical (System unusable)
+        - High (Major functionality broken)
+        - Medium (Feature partially broken)
+        - Low (Minor issue or cosmetic)
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: |
+        - Configuration details
+        - Screenshots
+        - Related issues
+        - Workarounds you've tried
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have provided all required information above
+          required: true
+        - label: I can reproduce this bug consistently
+          required: false

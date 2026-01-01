@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/Lexicoding-systems/Lexecon/discussions
+    about: Ask questions, share ideas, or discuss Lexecon with the community
+  - name: Documentation
+    url: https://github.com/Lexicoding-systems/Lexecon/blob/main/README.md
+    about: Check the documentation for guides, API reference, and examples
+  - name: Security Vulnerability
+    url: https://github.com/Lexicoding-systems/Lexecon/security/advisories/new
+    about: Report security vulnerabilities privately (DO NOT use public issues)
