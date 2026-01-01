@@ -1,0 +1,225 @@
+{
+  "name": "Financial Services AI Governance Policy",
+  "version": "1.0.0",
+  "description": "AI governance policy for financial institutions ensuring regulatory compliance",
+  "mode": "strict",
+  "compliance_frameworks": ["SOC 2", "PCI-DSS", "GLBA", "SOX"],
+  "terms": [
+    {
+      "id": "actor:ai_trading_system",
+      "type": "actor",
+      "name": "ai_trading_system",
+      "description": "AI system for trading decisions"
+    },
+    {
+      "id": "actor:ai_fraud_detector",
+      "type": "actor",
+      "name": "ai_fraud_detector",
+      "description": "AI system for fraud detection"
+    },
+    {
+      "id": "actor:ai_credit_scorer",
+      "type": "actor",
+      "name": "ai_credit_scorer",
+      "description": "AI system for credit decisioning"
+    },
+    {
+      "id": "actor:compliance_officer",
+      "type": "actor",
+      "name": "compliance_officer",
+      "description": "Human compliance officer"
+    },
+    {
+      "id": "action:execute_trade",
+      "type": "action",
+      "name": "execute_trade",
+      "description": "Execute financial trade"
+    },
+    {
+      "id": "action:access_pii",
+      "type": "action",
+      "name": "access_pii",
+      "description": "Access personally identifiable information"
+    },
+    {
+      "id": "action:access_npi",
+      "type": "action",
+      "name": "access_npi",
+      "description": "Access non-public information"
+    },
+    {
+      "id": "action:modify_financial_record",
+      "type": "action",
+      "name": "modify_financial_record",
+      "description": "Modify financial records or transactions"
+    },
+    {
+      "id": "action:credit_decision",
+      "type": "action",
+      "name": "credit_decision",
+      "description": "Make credit approval/denial decision"
+    },
+    {
+      "id": "data:pci_cardholder_data",
+      "type": "data_class",
+      "name": "pci_cardholder_data",
+      "description": "PCI-DSS cardholder data (PAN, CVV, etc.)",
+      "sensitivity": "critical",
+      "requires_encryption": true,
+      "requires_tokenization": true
+    },
+    {
+      "id": "data:financial_records",
+      "type": "data_class",
+      "name": "financial_records",
+      "description": "SOX financial records and statements",
+      "sensitivity": "high",
+      "immutable": true,
+      "retention_years": 7
+    },
+    {
+      "id": "data:customer_npi",
+      "type": "data_class",
+      "name": "customer_npi",
+      "description": "GLBA non-public personal information",
+      "sensitivity": "high",
+      "requires_safeguards": true
+    },
+    {
+      "id": "data:market_data",
+      "type": "data_class",
+      "name": "market_data",
+      "description": "Public market data",
+      "sensitivity": "low"
+    }
+  ],
+  "relations": [
+    {
+      "type": "forbids",
+      "subject": "actor:ai_trading_system",
+      "action": "action:execute_trade",
+      "conditions": ["trade_value > threshold", "high_volatility"],
+      "justification": "SEC regulations - large trades require human oversight"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_credit_scorer",
+      "action": "action:credit_decision",
+      "justification": "Fair Credit Reporting Act - final credit decisions require human review"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_trading_system",
+      "action": "action:access_npi",
+      "justification": "GLBA Safeguards Rule - NPI access requires legitimate business need"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_fraud_detector",
+      "action": "action:access_pci_cardholder_data",
+      "object": "data:pci_cardholder_data",
+      "justification": "PCI-DSS 3.2.1 - cardholder data access must be restricted"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_trading_system",
+      "action": "action:modify_financial_record",
+      "object": "data:financial_records",
+      "justification": "SOX Section 404 - financial records require strong internal controls"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:ai_fraud_detector",
+      "action": "action:analyze_transaction_patterns",
+      "object": "data:tokenized_transaction_data",
+      "justification": "Fraud detection with tokenized data permitted"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:ai_trading_system",
+      "action": "action:analyze_market_data",
+      "object": "data:market_data",
+      "justification": "Public market analysis permitted"
+    },
+    {
+      "type": "requires",
+      "action": "action:execute_trade",
+      "condition": "dual_authorization",
+      "justification": "SOC 2 CC6.1 - logical access controls"
+    },
+    {
+      "type": "requires",
+      "action": "action:access_pci_cardholder_data",
+      "condition": "business_need_documented",
+      "justification": "PCI-DSS Requirement 7 - restrict access by business need-to-know"
+    },
+    {
+      "type": "requires",
+      "action": "action:modify_financial_record",
+      "condition": "audit_trail_generated",
+      "justification": "SOX Section 404 - maintain audit trail"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "trading_circuit_breaker",
+      "condition": "trade_value > 1000000 || unusual_pattern_detected",
+      "action": "require_compliance_officer_approval",
+      "justification": "Risk management - prevent rogue trading"
+    },
+    {
+      "name": "fair_lending",
+      "condition": "ai_credit_scorer.decision_factors",
+      "action": "verify_no_discriminatory_factors",
+      "justification": "Equal Credit Opportunity Act - prevent discrimination"
+    },
+    {
+      "name": "model_explainability",
+      "condition": "adverse_action == true",
+      "action": "provide_reason_codes",
+      "justification": "FCRA Section 615 - adverse action notice requirements"
+    },
+    {
+      "name": "suspicious_activity_reporting",
+      "condition": "potential_money_laundering_detected",
+      "action": "trigger_sar_workflow",
+      "justification": "Bank Secrecy Act - SAR filing requirements"
+    },
+    {
+      "name": "pci_data_retention",
+      "condition": "cardholder_data_age > 90_days",
+      "action": "require_deletion",
+      "justification": "PCI-DSS Requirement 3.1 - data retention policy"
+    },
+    {
+      "name": "soc2_change_management",
+      "condition": "policy_change_detected",
+      "action": "require_change_approval_workflow",
+      "justification": "SOC 2 CC8.1 - change management process"
+    }
+  ],
+  "audit_requirements": {
+    "log_all_access": true,
+    "log_all_decisions": true,
+    "log_model_versions": true,
+    "retention_period_days": 2555,
+    "tamper_evident_logs": true,
+    "real_time_monitoring": true,
+    "quarterly_audit_reports": true
+  },
+  "model_governance": {
+    "require_model_validation": true,
+    "require_model_documentation": true,
+    "require_bias_testing": true,
+    "require_performance_monitoring": true,
+    "model_review_frequency_days": 90
+  },
+  "metadata": {
+    "author": "Lexecon Financial Services Policy Team",
+    "created": "2026-01-01",
+    "jurisdiction": "USA",
+    "review_period_days": 90,
+    "ciso_approval_required": true,
+    "legal_review_required": true
+  }
+}

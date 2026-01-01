@@ -1,0 +1,203 @@
+{
+  "name": "Enterprise General AI Governance Policy",
+  "version": "1.0.0",
+  "description": "General-purpose AI governance policy for enterprise deployments",
+  "mode": "strict",
+  "compliance_frameworks": ["SOC 2", "ISO 27001"],
+  "terms": [
+    {
+      "id": "actor:ai_assistant",
+      "type": "actor",
+      "name": "ai_assistant",
+      "description": "General-purpose AI assistant"
+    },
+    {
+      "id": "actor:employee",
+      "type": "actor",
+      "name": "employee",
+      "description": "Company employee"
+    },
+    {
+      "id": "actor:administrator",
+      "type": "actor",
+      "name": "administrator",
+      "description": "System administrator"
+    },
+    {
+      "id": "action:web_search",
+      "type": "action",
+      "name": "web_search",
+      "description": "Search the web"
+    },
+    {
+      "id": "action:read_file",
+      "type": "action",
+      "name": "read_file",
+      "description": "Read file from storage"
+    },
+    {
+      "id": "action:write_file",
+      "type": "action",
+      "name": "write_file",
+      "description": "Write file to storage"
+    },
+    {
+      "id": "action:execute_code",
+      "type": "action",
+      "name": "execute_code",
+      "description": "Execute code or commands"
+    },
+    {
+      "id": "action:send_email",
+      "type": "action",
+      "name": "send_email",
+      "description": "Send email message"
+    },
+    {
+      "id": "action:api_call",
+      "type": "action",
+      "name": "api_call",
+      "description": "Call external API"
+    },
+    {
+      "id": "data:public_web",
+      "type": "data_class",
+      "name": "public_web_data",
+      "description": "Publicly available web data",
+      "sensitivity": "low"
+    },
+    {
+      "id": "data:company_confidential",
+      "type": "data_class",
+      "name": "company_confidential",
+      "description": "Company confidential information",
+      "sensitivity": "high",
+      "requires_authorization": true
+    },
+    {
+      "id": "data:customer_data",
+      "type": "data_class",
+      "name": "customer_data",
+      "description": "Customer information and data",
+      "sensitivity": "high",
+      "requires_authorization": true
+    },
+    {
+      "id": "data:system_config",
+      "type": "data_class",
+      "name": "system_configuration",
+      "description": "System configuration files",
+      "sensitivity": "critical",
+      "requires_admin_access": true
+    }
+  ],
+  "relations": [
+    {
+      "type": "permits",
+      "subject": "actor:ai_assistant",
+      "action": "action:web_search",
+      "object": "data:public_web",
+      "justification": "Public web search is safe and useful"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:ai_assistant",
+      "action": "action:read_file",
+      "object": "data:public_documentation",
+      "justification": "Reading public documentation is permitted"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_assistant",
+      "action": "action:read_file",
+      "object": "data:company_confidential",
+      "justification": "Confidential data requires human authorization"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_assistant",
+      "action": "action:write_file",
+      "object": "data:system_config",
+      "justification": "System configuration changes require admin approval"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_assistant",
+      "action": "action:execute_code",
+      "justification": "Code execution requires security review"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_assistant",
+      "action": "action:send_email",
+      "conditions": ["external_recipient"],
+      "justification": "External emails require human approval"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:employee",
+      "action": "action:read_file",
+      "object": "data:company_confidential",
+      "conditions": ["need_to_know"],
+      "justification": "Employees can access data relevant to their role"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:administrator",
+      "action": "action:write_file",
+      "object": "data:system_config",
+      "justification": "Admins can modify system configuration"
+    },
+    {
+      "type": "requires",
+      "action": "action:api_call",
+      "condition": "api_endpoint_whitelisted",
+      "justification": "Only approved APIs can be called"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "high_risk_actions",
+      "condition": "risk_level >= 4",
+      "action": "require_human_confirmation",
+      "justification": "High-risk actions need human oversight"
+    },
+    {
+      "name": "data_exfiltration_prevention",
+      "condition": "large_data_transfer_detected",
+      "action": "require_security_review",
+      "justification": "Prevent accidental data leaks"
+    },
+    {
+      "name": "rate_limiting",
+      "condition": "requests_per_hour > 1000",
+      "action": "throttle_requests",
+      "justification": "Prevent abuse and ensure fair usage"
+    },
+    {
+      "name": "sensitive_data_detection",
+      "condition": "pii_or_secrets_detected",
+      "action": "block_and_alert",
+      "justification": "Prevent exposure of sensitive data"
+    },
+    {
+      "name": "working_hours",
+      "condition": "time_outside_business_hours && high_privilege_action",
+      "action": "require_additional_approval",
+      "justification": "Enhanced security during off-hours"
+    }
+  ],
+  "audit_requirements": {
+    "log_all_decisions": true,
+    "log_denials": true,
+    "log_high_risk_actions": true,
+    "retention_period_days": 365,
+    "include_context": true
+  },
+  "metadata": {
+    "author": "Lexecon Enterprise Policy Team",
+    "created": "2026-01-01",
+    "review_period_days": 180,
+    "applies_to": "all_ai_systems"
+  }
+}

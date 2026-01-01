@@ -1,0 +1,202 @@
+{
+  "name": "GDPR Compliance Policy",
+  "version": "1.0.0",
+  "description": "AI governance policy ensuring GDPR compliance for EU data processing",
+  "mode": "strict",
+  "compliance_frameworks": ["GDPR", "EU AI Act"],
+  "terms": [
+    {
+      "id": "actor:ai_model",
+      "type": "actor",
+      "name": "ai_model",
+      "description": "AI model or agent performing actions"
+    },
+    {
+      "id": "actor:data_controller",
+      "type": "actor",
+      "name": "data_controller",
+      "description": "Human data controller with GDPR authority"
+    },
+    {
+      "id": "action:read",
+      "type": "action",
+      "name": "read",
+      "description": "Read data from storage"
+    },
+    {
+      "id": "action:write",
+      "type": "action",
+      "name": "write",
+      "description": "Write data to storage"
+    },
+    {
+      "id": "action:process",
+      "type": "action",
+      "name": "process",
+      "description": "Process or analyze data"
+    },
+    {
+      "id": "action:transfer",
+      "type": "action",
+      "name": "transfer",
+      "description": "Transfer data to third party or across borders"
+    },
+    {
+      "id": "action:delete",
+      "type": "action",
+      "name": "delete",
+      "description": "Delete data (right to erasure)"
+    },
+    {
+      "id": "data:personal_data",
+      "type": "data_class",
+      "name": "personal_data",
+      "description": "GDPR Article 4(1) personal data",
+      "sensitivity": "high",
+      "retention_days": 730,
+      "requires_consent": true
+    },
+    {
+      "id": "data:special_category",
+      "type": "data_class",
+      "name": "special_category_data",
+      "description": "GDPR Article 9 special categories (health, biometric, etc.)",
+      "sensitivity": "critical",
+      "retention_days": 365,
+      "requires_explicit_consent": true
+    },
+    {
+      "id": "data:anonymous",
+      "type": "data_class",
+      "name": "anonymous_data",
+      "description": "Truly anonymized data (not pseudonymized)",
+      "sensitivity": "low",
+      "requires_consent": false
+    },
+    {
+      "id": "data:public",
+      "type": "data_class",
+      "name": "public_data",
+      "description": "Publicly available data",
+      "sensitivity": "low",
+      "requires_consent": false
+    }
+  ],
+  "relations": [
+    {
+      "type": "permits",
+      "subject": "actor:ai_model",
+      "action": "action:read",
+      "object": "data:public",
+      "justification": "GDPR recital 26 - public data not subject to regulation"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:ai_model",
+      "action": "action:read",
+      "object": "data:anonymous",
+      "justification": "GDPR recital 26 - anonymous data not personal data"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:ai_model",
+      "action": "action:process",
+      "object": "data:anonymous",
+      "justification": "GDPR recital 26 - processing of anonymous data permitted"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_model",
+      "action": "action:read",
+      "object": "data:personal_data",
+      "justification": "GDPR Article 6 - requires legal basis and human oversight"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_model",
+      "action": "action:write",
+      "object": "data:personal_data",
+      "justification": "GDPR Article 5(1)(f) - integrity and confidentiality"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_model",
+      "action": "action:process",
+      "object": "data:special_category",
+      "justification": "GDPR Article 9 - special category data prohibited without explicit basis"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_model",
+      "action": "action:transfer",
+      "object": "data:personal_data",
+      "justification": "GDPR Chapter V - international transfers require safeguards"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:data_controller",
+      "action": "action:delete",
+      "object": "data:personal_data",
+      "justification": "GDPR Article 17 - right to erasure"
+    },
+    {
+      "type": "requires",
+      "action": "action:process",
+      "object": "data:personal_data",
+      "condition": "valid_legal_basis",
+      "justification": "GDPR Article 6 - lawfulness of processing"
+    },
+    {
+      "type": "requires",
+      "action": "action:transfer",
+      "condition": "adequacy_decision_or_safeguards",
+      "justification": "GDPR Articles 45-46 - transfer mechanisms"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "purpose_limitation",
+      "condition": "action.purpose == original_consent.purpose",
+      "action": "deny_if_purpose_mismatch",
+      "justification": "GDPR Article 5(1)(b) - purpose limitation principle"
+    },
+    {
+      "name": "data_minimization",
+      "condition": "data_requested > data_necessary",
+      "action": "reduce_to_minimum",
+      "justification": "GDPR Article 5(1)(c) - data minimisation principle"
+    },
+    {
+      "name": "storage_limitation",
+      "condition": "data_age > retention_period",
+      "action": "require_deletion",
+      "justification": "GDPR Article 5(1)(e) - storage limitation principle"
+    },
+    {
+      "name": "automated_decision_making",
+      "condition": "risk_level >= 3 && produces_legal_effects",
+      "action": "require_human_review",
+      "justification": "GDPR Article 22 - automated individual decision-making"
+    },
+    {
+      "name": "high_risk_ai_system",
+      "condition": "eu_ai_act_high_risk == true",
+      "action": "require_conformity_assessment",
+      "justification": "EU AI Act Article 9 - high-risk AI systems"
+    }
+  ],
+  "audit_requirements": {
+    "log_all_decisions": true,
+    "log_purpose": true,
+    "log_legal_basis": true,
+    "retention_period_days": 2555,
+    "include_data_subject_rights": true
+  },
+  "metadata": {
+    "author": "Lexecon Policy Team",
+    "created": "2026-01-01",
+    "jurisdiction": "EU",
+    "review_period_days": 180,
+    "dpia_required": true
+  }
+}

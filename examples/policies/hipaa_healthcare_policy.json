@@ -1,0 +1,217 @@
+{
+  "name": "HIPAA Healthcare Policy",
+  "version": "1.0.0",
+  "description": "AI governance policy for HIPAA-compliant healthcare applications",
+  "mode": "paranoid",
+  "compliance_frameworks": ["HIPAA", "HITECH"],
+  "terms": [
+    {
+      "id": "actor:ai_clinical_assistant",
+      "type": "actor",
+      "name": "ai_clinical_assistant",
+      "description": "AI system assisting with clinical tasks"
+    },
+    {
+      "id": "actor:healthcare_provider",
+      "type": "actor",
+      "name": "healthcare_provider",
+      "description": "Licensed healthcare professional"
+    },
+    {
+      "id": "actor:patient",
+      "type": "actor",
+      "name": "patient",
+      "description": "Patient accessing their own data"
+    },
+    {
+      "id": "action:view_phi",
+      "type": "action",
+      "name": "view_phi",
+      "description": "View Protected Health Information"
+    },
+    {
+      "id": "action:modify_phi",
+      "type": "action",
+      "name": "modify_phi",
+      "description": "Modify Protected Health Information"
+    },
+    {
+      "id": "action:transmit_phi",
+      "type": "action",
+      "name": "transmit_phi",
+      "description": "Transmit PHI to another party"
+    },
+    {
+      "id": "action:analyze_medical_image",
+      "type": "action",
+      "name": "analyze_medical_image",
+      "description": "AI analysis of medical imaging"
+    },
+    {
+      "id": "action:generate_clinical_note",
+      "type": "action",
+      "name": "generate_clinical_note",
+      "description": "Generate clinical documentation"
+    },
+    {
+      "id": "data:phi",
+      "type": "data_class",
+      "name": "protected_health_information",
+      "description": "HIPAA 45 CFR 160.103 Protected Health Information",
+      "sensitivity": "critical",
+      "requires_encryption_at_rest": true,
+      "requires_encryption_in_transit": true,
+      "minimum_necessary_standard": true
+    },
+    {
+      "id": "data:psychotherapy_notes",
+      "type": "data_class",
+      "name": "psychotherapy_notes",
+      "description": "HIPAA 45 CFR 164.501 Psychotherapy Notes",
+      "sensitivity": "critical",
+      "requires_explicit_authorization": true
+    },
+    {
+      "id": "data:deidentified",
+      "type": "data_class",
+      "name": "deidentified_health_data",
+      "description": "HIPAA 45 CFR 164.514(a) De-identified data",
+      "sensitivity": "low"
+    },
+    {
+      "id": "data:limited_dataset",
+      "type": "data_class",
+      "name": "limited_dataset",
+      "description": "HIPAA 45 CFR 164.514(e) Limited data set",
+      "sensitivity": "medium",
+      "requires_data_use_agreement": true
+    }
+  ],
+  "relations": [
+    {
+      "type": "forbids",
+      "subject": "actor:ai_clinical_assistant",
+      "action": "action:view_phi",
+      "object": "data:phi",
+      "justification": "HIPAA Privacy Rule - minimum necessary standard requires human oversight"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_clinical_assistant",
+      "action": "action:modify_phi",
+      "object": "data:phi",
+      "justification": "HIPAA Security Rule - integrity controls require human authorization"
+    },
+    {
+      "type": "forbids",
+      "subject": "actor:ai_clinical_assistant",
+      "action": "action:transmit_phi",
+      "object": "data:phi",
+      "justification": "HIPAA Security Rule 164.312(e) - transmission security requires human control"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:ai_clinical_assistant",
+      "action": "action:analyze_medical_image",
+      "object": "data:deidentified",
+      "justification": "HIPAA allows processing of de-identified data"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:healthcare_provider",
+      "action": "action:view_phi",
+      "object": "data:phi",
+      "conditions": ["treatment_purpose", "minimum_necessary"],
+      "justification": "HIPAA 164.506(c) - treatment purposes"
+    },
+    {
+      "type": "permits",
+      "subject": "actor:patient",
+      "action": "action:view_phi",
+      "object": "data:phi",
+      "conditions": ["own_records_only"],
+      "justification": "HIPAA 164.524 - right of access"
+    },
+    {
+      "type": "requires",
+      "action": "action:view_phi",
+      "condition": "access_logged_with_audit_trail",
+      "justification": "HIPAA 164.312(b) - audit controls"
+    },
+    {
+      "type": "requires",
+      "action": "action:transmit_phi",
+      "condition": "tls_1_2_or_higher",
+      "justification": "HIPAA 164.312(e)(1) - transmission security"
+    },
+    {
+      "type": "requires",
+      "subject": "actor:ai_clinical_assistant",
+      "action": "action:generate_clinical_note",
+      "condition": "healthcare_provider_review_required",
+      "justification": "Medical practice standards - AI-generated notes require clinician review"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "minimum_necessary",
+      "condition": "data_scope > minimum_necessary",
+      "action": "deny_and_log",
+      "justification": "HIPAA 164.502(b) - minimum necessary standard"
+    },
+    {
+      "name": "emergency_access",
+      "condition": "emergency_override == true",
+      "action": "allow_with_enhanced_logging",
+      "justification": "HIPAA 164.510(a) - emergency treatment"
+    },
+    {
+      "name": "breach_notification",
+      "condition": "unauthorized_access_detected",
+      "action": "trigger_breach_notification_workflow",
+      "justification": "HIPAA 164.400 - breach notification rule"
+    },
+    {
+      "name": "psychotherapy_notes_protection",
+      "condition": "data_class == psychotherapy_notes",
+      "action": "require_explicit_authorization",
+      "justification": "HIPAA 164.508(a)(2) - psychotherapy notes require authorization"
+    },
+    {
+      "name": "ai_clinical_decision_support",
+      "condition": "ai_recommendation_affects_treatment",
+      "action": "require_clinician_review_and_approval",
+      "justification": "FDA guidance on clinical decision support software"
+    },
+    {
+      "name": "high_risk_decision",
+      "condition": "risk_level >= 4",
+      "action": "require_dual_authorization",
+      "justification": "Healthcare risk management best practices"
+    }
+  ],
+  "audit_requirements": {
+    "log_all_phi_access": true,
+    "log_access_denials": true,
+    "log_emergency_overrides": true,
+    "retention_period_days": 2555,
+    "tamper_evident_logs": true,
+    "real_time_monitoring": true
+  },
+  "security_controls": {
+    "encryption_at_rest": "AES-256",
+    "encryption_in_transit": "TLS 1.2+",
+    "authentication": "multi_factor",
+    "session_timeout_minutes": 15,
+    "automatic_logoff": true,
+    "password_requirements": "NIST_800_63B"
+  },
+  "metadata": {
+    "author": "Lexecon Healthcare Policy Team",
+    "created": "2026-01-01",
+    "jurisdiction": "USA",
+    "review_period_days": 90,
+    "privacy_officer_approval_required": true,
+    "security_officer_approval_required": true
+  }
+}
