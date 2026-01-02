@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from lexecon.decision.service import DecisionRequest, DecisionService
@@ -76,6 +77,17 @@ app = FastAPI(
     title="Lexecon Governance API",
     description="Cryptographic governance system for AI safety and compliance",
     version="0.1.0",
+)
+
+# Configure CORS
+import os
+allowed_origins = os.getenv("LEXECON_CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins if allowed_origins != ["*"] else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Global state (in production, use dependency injection)

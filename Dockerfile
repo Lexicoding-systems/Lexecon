@@ -70,4 +70,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Run server
-CMD ["python", "-m", "uvicorn", "lexecon.api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use PORT environment variable from Railway, fallback to 8000 for local development
+CMD sh -c "python -m uvicorn lexecon.api.server:app --host 0.0.0.0 --port ${PORT:-8000}"
