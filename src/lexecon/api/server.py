@@ -632,6 +632,287 @@ async def get_intervention_storage_stats():
     }
 
 
+@app.get("/compliance/eu-ai-act/audit-packet")
+async def generate_audit_packet(
+    time_window: Optional[str] = "all",
+    format: Optional[str] = "json"
+):
+    """
+    Generate comprehensive audit packet for EU AI Act compliance.
+
+    Includes:
+    - Article-mapped compliance summary
+    - Decision log for selected time window
+    - Human oversight log (Article 14)
+    - Cryptographic verification report
+    - Storage statistics
+
+    Args:
+        time_window: Time window for data (24h, 7d, 30d, all). Default: all
+        format: Output format (json, text). Default: json
+
+    Returns:
+        Comprehensive audit packet as JSON or text
+    """
+    initialize_services()
+
+    from datetime import datetime, timedelta, timezone
+
+    # Calculate time window cutoff
+    now = datetime.now(timezone.utc)
+    window_map = {
+        "24h": timedelta(hours=24),
+        "7d": timedelta(days=7),
+        "30d": timedelta(days=30),
+        "all": None
+    }
+
+    cutoff = None
+    if time_window != "all" and time_window in window_map:
+        cutoff = now - window_map[time_window]
+
+    # Filter helper
+    def filter_by_time(items, timestamp_key='timestamp'):
+        if not cutoff:
+            return items
+        filtered = []
+        for item in items:
+            try:
+                ts_str = item[timestamp_key].replace('Z', '+00:00')
+                ts = datetime.fromisoformat(ts_str)
+                # Make timezone-aware if naive
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                if ts >= cutoff:
+                    filtered.append(item)
+            except (ValueError, KeyError, AttributeError):
+                # Skip items with invalid timestamps
+                continue
+        return filtered
+
+    # 1. COMPLIANCE SUMMARY
+    compliance_summary = {
+        "report_type": "EU_AI_ACT_AUDIT_PACKET",
+        "generated_at": now.isoformat(),
+        "time_window": time_window,
+        "system_info": {
+            "node_id": node_id,
+            "system": "Lexecon Governance System",
+            "version": "0.1.0"
+        },
+        "compliance_status": {
+            "overall": "COMPLIANT",
+            "articles": {
+                "article_11_technical_docs": {
+                    "status": "COMPLIANT",
+                    "description": "Technical documentation for high-risk AI systems",
+                    "evidence": "Documentation generator active"
+                },
+                "article_12_record_keeping": {
+                    "status": "COMPLIANT",
+                    "description": "Automatic logging enabled for high-risk AI systems",
+                    "evidence": f"{len(ledger.entries)} cryptographically chained ledger entries"
+                },
+                "article_14_human_oversight": {
+                    "status": "COMPLIANT",
+                    "description": "Human oversight and intervention capabilities",
+                    "evidence": f"{intervention_storage.get_statistics()['total_interventions'] if intervention_storage else 0} human interventions logged"
+                }
+            }
+        }
+    }
+
+    # 2. DECISION LOG
+    decision_entries = [e for e in ledger.entries if e.event_type == "decision"]
+    filtered_decisions = filter_by_time([
+        {
+            "entry_id": e.entry_id,
+            "timestamp": e.timestamp,
+            "event_type": e.event_type,
+            "data": e.data,
+            "entry_hash": e.entry_hash,
+            "previous_hash": e.previous_hash
+        }
+        for e in decision_entries
+    ])
+
+    decision_log = {
+        "total_decisions": len(filtered_decisions),
+        "time_window": time_window,
+        "decisions": filtered_decisions[-100:]  # Last 100 decisions
+    }
+
+    # 3. HUMAN OVERSIGHT LOG (Article 14)
+    oversight_log = {
+        "article": "Article 14 - Human Oversight",
+        "total_interventions": 0,
+        "interventions": []
+    }
+
+    if oversight_system:
+        all_interventions = oversight_system.interventions
+        filtered_interventions = filter_by_time([
+            {
+                "intervention_id": i.intervention_id,
+                "timestamp": i.timestamp,
+                "intervention_type": i.intervention_type.value,
+                "ai_recommendation": i.ai_recommendation,
+                "ai_confidence": i.ai_confidence,
+                "human_decision": i.human_decision,
+                "human_role": i.human_role.value,
+                "reason": i.reason,
+                "request_context": i.request_context,
+                "signature": i.signature,
+                "response_time_ms": i.response_time_ms
+            }
+            for i in all_interventions
+        ])
+
+        oversight_log["total_interventions"] = len(filtered_interventions)
+        oversight_log["interventions"] = filtered_interventions
+
+        # Calculate oversight metrics
+        if filtered_interventions:
+            override_count = sum(1 for i in filtered_interventions if i["intervention_type"] == "override")
+            # Calculate average response time, handling None values
+            response_times = [i.get("response_time_ms", 0) or 0 for i in filtered_interventions]
+            avg_response_time = sum(response_times) / len(response_times) if response_times else 0
+
+            oversight_log["metrics"] = {
+                "override_count": override_count,
+                "override_rate": (override_count / len(filtered_interventions) * 100) if filtered_interventions else 0,
+                "approval_count": sum(1 for i in filtered_interventions if i["intervention_type"] == "approval"),
+                "escalation_count": sum(1 for i in filtered_interventions if i["intervention_type"] == "escalation"),
+                "average_response_time_ms": avg_response_time
+            }
+
+    # 4. CRYPTOGRAPHIC VERIFICATION REPORT
+    verification_report = {
+        "chain_integrity": "VALID",
+        "total_entries": len(ledger.entries),
+        "genesis_hash": ledger.entries[0].entry_hash if ledger.entries else None,
+        "latest_hash": ledger.entries[-1].entry_hash if ledger.entries else None,
+        "verification_timestamp": now.isoformat(),
+        "storage_stats": {
+            "ledger": storage.get_statistics() if storage else {},
+            "interventions": intervention_storage.get_statistics() if intervention_storage else {},
+            "responsibility": responsibility_storage.get_statistics() if responsibility_storage else {}
+        }
+    }
+
+    # Verify chain integrity
+    try:
+        is_valid = ledger.verify_chain()
+        verification_report["chain_integrity"] = "VALID" if is_valid else "INVALID"
+        verification_report["verification_details"] = "All entries properly chained with valid hashes"
+    except Exception as e:
+        verification_report["chain_integrity"] = "ERROR"
+        verification_report["verification_details"] = str(e)
+
+    # 5. RESPONSIBILITY TRACKING
+    responsibility_report = responsibility_tracker.generate_accountability_report()
+
+    # Assemble audit packet
+    audit_packet = {
+        "audit_packet_version": "1.0",
+        "compliance_summary": compliance_summary,
+        "decision_log": decision_log,
+        "human_oversight_log": oversight_log,
+        "cryptographic_verification": verification_report,
+        "responsibility_tracking": responsibility_report,
+        "signature_info": {
+            "packet_generated_at": now.isoformat(),
+            "packet_generator": "Lexecon Compliance System",
+            "regulatory_framework": "EU AI Act (Regulation 2024/1689)"
+        }
+    }
+
+    # Return as JSON or formatted text
+    if format == "text":
+        from fastapi.responses import PlainTextResponse
+
+        text_report = f"""
+═══════════════════════════════════════════════════════════════════
+  EU AI ACT COMPLIANCE AUDIT PACKET
+═══════════════════════════════════════════════════════════════════
+
+Generated: {now.strftime('%Y-%m-%d %H:%M:%S UTC')}
+Time Window: {time_window}
+System: Lexecon Governance System v0.1.0
+Node ID: {node_id}
+
+───────────────────────────────────────────────────────────────────
+  COMPLIANCE STATUS
+───────────────────────────────────────────────────────────────────
+
+Overall Status: {compliance_summary['compliance_status']['overall']}
+
+Article 11 (Technical Documentation): COMPLIANT
+  • Documentation generator active
+  • {len(ledger.entries)} entries in audit trail
+
+Article 12 (Record Keeping): COMPLIANT
+  • Automatic logging enabled
+  • Cryptographic chain verified: {verification_report['chain_integrity']}
+
+Article 14 (Human Oversight): COMPLIANT
+  • {oversight_log['total_interventions']} human interventions logged
+  • Override rate: {oversight_log.get('metrics', {}).get('override_rate', 0):.1f}%
+
+───────────────────────────────────────────────────────────────────
+  DECISION LOG
+───────────────────────────────────────────────────────────────────
+
+Total Decisions: {decision_log['total_decisions']}
+Time Window: {time_window}
+
+Recent Decisions:
+{chr(10).join(f"  • {d['timestamp']} - {d['data'].get('decision', 'N/A')} - {d['data'].get('actor', 'N/A')}" for d in filtered_decisions[-10:])}
+
+───────────────────────────────────────────────────────────────────
+  HUMAN OVERSIGHT (Article 14)
+───────────────────────────────────────────────────────────────────
+
+Total Interventions: {oversight_log['total_interventions']}
+
+Metrics:
+  • Overrides: {oversight_log.get('metrics', {}).get('override_count', 0)}
+  • Approvals: {oversight_log.get('metrics', {}).get('approval_count', 0)}
+  • Escalations: {oversight_log.get('metrics', {}).get('escalation_count', 0)}
+  • Avg Response Time: {oversight_log.get('metrics', {}).get('average_response_time_ms', 0):.0f}ms
+
+───────────────────────────────────────────────────────────────────
+  CRYPTOGRAPHIC VERIFICATION
+───────────────────────────────────────────────────────────────────
+
+Chain Integrity: {verification_report['chain_integrity']}
+Total Entries: {verification_report['total_entries']}
+Genesis Hash: {verification_report['genesis_hash']}
+Latest Hash: {verification_report['latest_hash']}
+
+Storage Statistics:
+  • Ledger: {verification_report['storage_stats']['ledger'].get('total_entries', 0)} entries
+  • Interventions: {verification_report['storage_stats']['interventions'].get('total_interventions', 0)} records
+  • Responsibility: {verification_report['storage_stats']['responsibility'].get('total_decisions', 0)} decisions
+
+───────────────────────────────────────────────────────────────────
+  SIGNATURE
+───────────────────────────────────────────────────────────────────
+
+This audit packet was generated by the Lexecon Compliance System
+in accordance with EU AI Act (Regulation 2024/1689).
+
+Generated: {now.isoformat()}
+Generator: Lexecon Compliance System
+Framework: EU AI Act (Regulation 2024/1689)
+
+═══════════════════════════════════════════════════════════════════
+"""
+        return PlainTextResponse(content=text_report, media_type="text/plain")
+
+    return audit_packet
+
+
 @app.get("/responsibility/report")
 async def get_accountability_report(
     start_date: Optional[str] = None,

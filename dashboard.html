@@ -752,7 +752,54 @@
         }
 
         async function generateAuditPacket() {
-            alert('Generating Audit Packet...\n\nThis will export:\n• Article-mapped compliance summary\n• Decision log for selected time window\n• Human oversight log (Article 14)\n• Cryptographic verification report\n\n(Export functionality to be implemented)');
+            try {
+                // Show loading state
+                const originalText = event.target.innerHTML;
+                event.target.innerHTML = '<div class="spinner" style="margin-right: 8px;"></div>Generating...';
+                event.target.disabled = true;
+
+                // Fetch audit packet with current time window
+                const response = await fetch(`${API_BASE}/compliance/eu-ai-act/audit-packet?time_window=${currentTimeWindow}&format=json`);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to generate audit packet: ${response.statusText}`);
+                }
+
+                const auditPacket = await response.json();
+
+                // Create formatted JSON blob
+                const blob = new Blob([JSON.stringify(auditPacket, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+
+                // Create download link
+                const a = document.createElement('a');
+                a.href = url;
+
+                // Generate filename with timestamp and time window
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                const filename = `lexecon-audit-packet-${currentTimeWindow}-${timestamp}.json`;
+                a.download = filename;
+
+                // Trigger download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                // Show success message
+                alert(`✅ Audit Packet Generated Successfully!\n\nFilename: ${filename}\n\nIncludes:\n• Compliance summary (Articles 11, 12, 14)\n• ${auditPacket.decision_log.total_decisions} decisions\n• ${auditPacket.human_oversight_log.total_interventions} human interventions\n• Cryptographic verification: ${auditPacket.cryptographic_verification.chain_integrity}\n• Time window: ${getTimeWindowLabel()}`);
+
+                // Reset button
+                event.target.innerHTML = originalText;
+                event.target.disabled = false;
+            } catch (error) {
+                console.error('Failed to generate audit packet:', error);
+                alert('❌ Failed to generate audit packet:\n\n' + error.message);
+
+                // Reset button
+                event.target.innerHTML = '📦 Generate Audit Packet';
+                event.target.disabled = false;
+            }
         }
 
         async function refreshDashboard() {
