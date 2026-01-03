@@ -12,7 +12,7 @@ EU AI Act Article 14 Requirements:
 
 import hashlib
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, asdict
@@ -224,7 +224,7 @@ class HumanOversightEvidence:
         Proves humans actually intervene, not just rubber-stamp.
         This is critical for Article 14 compliance.
         """
-        cutoff = datetime.utcnow() - timedelta(days=time_period_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=time_period_days)
         recent = [
             i for i in self.interventions
             if datetime.fromisoformat(i.timestamp.replace('Z', '+00:00')) >= cutoff
