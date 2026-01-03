@@ -55,11 +55,30 @@ class LedgerChain:
     Tamper-evident ledger using hash chaining.
 
     Each entry contains a hash of the previous entry, making modifications detectable.
+
+    Supports optional persistence to SQLite for EU AI Act compliance.
     """
 
-    def __init__(self):
+    def __init__(self, storage=None):
+        """
+        Initialize ledger chain.
+
+        Args:
+            storage: Optional LedgerStorage instance for persistence.
+                     If provided, ledger will auto-load and auto-save.
+        """
+        self.storage = storage
         self.entries: List[LedgerEntry] = []
-        self._initialize_genesis()
+
+        # Load from storage if available
+        if self.storage:
+            loaded_entries = self.storage.load_all_entries()
+            if loaded_entries:
+                self.entries = loaded_entries
+            else:
+                self._initialize_genesis()
+        else:
+            self._initialize_genesis()
 
     def _initialize_genesis(self) -> None:
         """Create genesis entry (first entry in chain)."""
@@ -72,9 +91,15 @@ class LedgerChain:
         )
         self.entries.append(genesis)
 
+        # Save to storage if available
+        if self.storage:
+            self.storage.save_entry(genesis)
+
     def append(self, event_type: str, data: Dict[str, Any]) -> LedgerEntry:
         """
         Append a new entry to the ledger.
+
+        Automatically saves to storage if configured.
 
         Returns the created entry with its hash.
         """
@@ -90,6 +115,11 @@ class LedgerChain:
         )
 
         self.entries.append(entry)
+
+        # Auto-save to storage if available
+        if self.storage:
+            self.storage.save_entry(entry)
+
         return entry
 
     def verify_integrity(self) -> Dict[str, Any]:
