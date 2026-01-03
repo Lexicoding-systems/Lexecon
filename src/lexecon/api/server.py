@@ -13,7 +13,9 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, Field
+import os
 
 from lexecon.decision.service import DecisionRequest, DecisionService
 from lexecon.identity.signing import KeyManager
@@ -185,6 +187,22 @@ async def get_status():
         "uptime_seconds": time.time() - startup_time,
         "timestamp": datetime.utcnow().isoformat(),
     }
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def serve_dashboard():
+    """Serve the compliance dashboard UI."""
+    # Dashboard is at project root, go up from src/lexecon/api/
+    dashboard_path = os.path.join(
+        os.path.dirname(__file__),
+        "../../../dashboard.html"
+    )
+    if not os.path.exists(dashboard_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Dashboard not found at {dashboard_path}"
+        )
+    return FileResponse(dashboard_path)
 
 
 @app.get("/policies")
@@ -703,6 +721,7 @@ async def root():
         "endpoints": {
             "health": "/health",
             "status": "/status",
+            "dashboard": "/dashboard",
             "policies": "/policies",
             "decide": "/decide",
             "verify": "/decide/verify",

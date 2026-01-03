@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lexecon Compliance Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border: #334155;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--bg-card);
+            border-bottom: 2px solid var(--primary);
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.compliant {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .refresh-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .metric-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .badge-info { background: rgba(37, 99, 235, 0.2); color: var(--primary); }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            margin-top: 20px;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            height: 180px;
+            gap: 12px;
+        }
+
+        .bar {
+            flex: 1;
+            background: linear-gradient(180deg, var(--primary) 0%, #1d4ed8 100%);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            min-height: 4px;
+            transition: all 0.3s;
+        }
+
+        .bar:hover {
+            opacity: 0.8;
+        }
+
+        .bar-label {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .bar-value {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 12px;
+            border-radius: 6px;
+            margin: 12px 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .timestamp {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1>Lexecon Compliance Dashboard</h1>
+                    <div class="subtitle">EU AI Act Compliance Monitoring</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="status-badge compliant" id="complianceStatus">Compliant</span>
+                    <button class="refresh-btn" onclick="refreshDashboard()">↻ Refresh</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Decisions</div>
+                <div class="metric-value" id="totalDecisions">-</div>
+                <div class="metric-subtitle">Tracked with accountability</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Ledger Entries</div>
+                <div class="metric-value" id="ledgerEntries">-</div>
+                <div class="metric-subtitle">Cryptographically chained</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Human Interventions</div>
+                <div class="metric-value" id="interventions">-</div>
+                <div class="metric-subtitle">Article 14 oversight</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Override Rate</div>
+                <div class="metric-value" id="overrideRate">-</div>
+                <div class="metric-subtitle">Human vs AI decisions</div>
+            </div>
+        </div>
+
+        <!-- Article 14 Human Oversight -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Article 14: Human Oversight</h2>
+                <span class="timestamp" id="article14Updated">-</span>
+            </div>
+
+            <div class="grid-2" id="article14Stats">
+                <div class="loading"><div class="spinner"></div>Loading...</div>
+            </div>
+
+            <div class="chart-container">
+                <div class="bar-chart" id="interventionChart"></div>
+            </div>
+        </div>
+
+        <!-- Responsibility Tracking -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Decision Responsibility Tracking</h2>
+                <span class="timestamp" id="responsibilityUpdated">-</span>
+            </div>
+
+            <div class="grid-2" id="responsibilityStats">
+                <div class="loading"><div class="spinner"></div>Loading...</div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Party</th>
+                            <th>Role</th>
+                            <th>Decisions</th>
+                            <th>Level</th>
+                        </tr>
+                    </thead>
+                    <tbody id="responsibilityTable">
+                        <tr><td colspan="4" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Ledger Entries -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Recent Ledger Entries</h2>
+                <span class="timestamp" id="ledgerUpdated">-</span>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="filterLedger('all')">All</button>
+                <button class="tab" onclick="filterLedger('decision')">Decisions</button>
+                <button class="tab" onclick="filterLedger('system')">System</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Timestamp</th>
+                            <th>Data</th>
+                            <th>Hash</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerTable">
+                        <tr><td colspan="5" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Storage Statistics -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Persistent Storage</h2>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <h3 style="margin-bottom: 12px; font-size: 16px;">Ledger Storage</h3>
+                    <div id="ledgerStorageStats">
+                        <div class="loading"><div class="spinner"></div>Loading...</div>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 12px; font-size: 16px;">Responsibility Storage</h3>
+                    <div id="responsibilityStorageStats">
+                        <div class="loading"><div class="spinner"></div>Loading...</div>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: 12px; font-size: 16px;">Intervention Storage</h3>
+                    <div id="interventionStorageStats">
+                        <div class="loading"><div class="spinner"></div>Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentLedgerFilter = 'all';
+
+        async function fetchAPI(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                return null;
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function formatTimestamp(iso) {
+            const date = new Date(iso);
+            return date.toLocaleString();
+        }
+
+        function truncateHash(hash, length = 12) {
+            return hash ? hash.substring(0, length) + '...' : '-';
+        }
+
+        async function loadArticle14Data() {
+            const [effectiveness, storage] = await Promise.all([
+                fetchAPI('/compliance/eu-ai-act/article-14/effectiveness'),
+                fetchAPI('/compliance/eu-ai-act/article-14/storage/stats')
+            ]);
+
+            if (effectiveness) {
+                document.getElementById('interventions').textContent = effectiveness.total_interventions || 0;
+                document.getElementById('overrideRate').textContent =
+                    (effectiveness.effectiveness_metrics?.override_rate_percent || 0).toFixed(1) + '%';
+
+                const statsHTML = `
+                    <div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Interventions</span>
+                            <span class="stat-value">${effectiveness.total_interventions || 0}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Overrides</span>
+                            <span class="stat-value">${effectiveness.effectiveness_metrics?.total_overrides || 0}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Approvals</span>
+                            <span class="stat-value">${effectiveness.effectiveness_metrics?.total_approvals || 0}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Avg Response Time</span>
+                            <span class="stat-value">${effectiveness.response_time_metrics?.average_seconds || 0}s</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="stat-item">
+                            <span class="stat-label">Compliance Status</span>
+                            <span class="stat-value">
+                                <span class="badge badge-success">${effectiveness.compliance_assessment?.status || 'UNKNOWN'}</span>
+                            </span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">All Signed</span>
+                            <span class="stat-value">${effectiveness.evidence_integrity?.all_signed ? '✓ Yes' : '✗ No'}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Verification Rate</span>
+                            <span class="stat-value">${effectiveness.evidence_integrity?.verification_rate || 0}%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Meets Target</span>
+                            <span class="stat-value">${effectiveness.response_time_metrics?.meets_target ? '✓ Yes' : '✗ No'}</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('article14Stats').innerHTML = statsHTML;
+
+                // Chart
+                const breakdown = effectiveness.intervention_breakdown?.by_type || {};
+                const chartHTML = Object.entries(breakdown).map(([type, count]) => {
+                    const maxCount = Math.max(...Object.values(breakdown));
+                    const height = (count / maxCount) * 100;
+                    return `
+                        <div class="bar" style="height: ${height}%">
+                            <div class="bar-value">${count}</div>
+                            <div class="bar-label">${type}</div>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('interventionChart').innerHTML = chartHTML || '<div class="empty-state">No data</div>';
+
+                document.getElementById('article14Updated').textContent = `Updated: ${formatTimestamp(effectiveness.period_end)}`;
+            }
+
+            if (storage) {
+                const storageHTML = `
+                    <div class="stat-item">
+                        <span class="stat-label">Total Records</span>
+                        <span class="stat-value">${storage.total_interventions || 0}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Database Size</span>
+                        <span class="stat-value">${formatBytes(storage.database_size_bytes || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Override Count</span>
+                        <span class="stat-value">${storage.override_count || 0}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Override Rate</span>
+                        <span class="stat-value">${(storage.override_rate || 0).toFixed(1)}%</span>
+                    </div>
+                `;
+                document.getElementById('interventionStorageStats').innerHTML = storageHTML;
+            }
+        }
+
+        async function loadResponsibilityData() {
+            const [report, storage] = await Promise.all([
+                fetchAPI('/responsibility/report'),
+                fetchAPI('/responsibility/storage/stats')
+            ]);
+
+            if (report) {
+                document.getElementById('totalDecisions').textContent = report.summary?.total_decisions || 0;
+
+                const statsHTML = `
+                    <div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Decisions</span>
+                            <span class="stat-value">${report.summary?.total_decisions || 0}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">AI Overrides</span>
+                            <span class="stat-value">${report.summary?.ai_overrides || 0}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Pending Reviews</span>
+                            <span class="stat-value">${report.summary?.pending_reviews || 0}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Liability Acceptance</span>
+                            <span class="stat-value">${(report.summary?.liability_acceptance_rate || 0).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 8px; font-size: 14px; color: var(--text-secondary);">Compliance Indicators</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Human Oversight</span>
+                            <span class="stat-value">${report.compliance_indicators?.human_oversight_active ? '✓ Active' : '✗ Inactive'}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Review Process</span>
+                            <span class="stat-value">${report.compliance_indicators?.review_process_active ? '✓ Active' : '✗ Inactive'}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Liability Framework</span>
+                            <span class="stat-value">${report.compliance_indicators?.liability_framework_active ? '✓ Active' : '✗ Inactive'}</span>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('responsibilityStats').innerHTML = statsHTML;
+
+                // Table
+                const parties = report.top_responsible_parties || [];
+                const tableHTML = parties.length > 0 ? parties.map(p => `
+                    <tr>
+                        <td>${p.party}</td>
+                        <td><span class="badge badge-info">System</span></td>
+                        <td>${p.decision_count}</td>
+                        <td><span class="badge badge-success">Automated</span></td>
+                    </tr>
+                `).join('') : '<tr><td colspan="4" class="empty-state">No data</td></tr>';
+                document.getElementById('responsibilityTable').innerHTML = tableHTML;
+
+                document.getElementById('responsibilityUpdated').textContent = `Updated: ${formatTimestamp(report.generated_at)}`;
+            }
+
+            if (storage) {
+                const storageHTML = `
+                    <div class="stat-item">
+                        <span class="stat-label">Total Records</span>
+                        <span class="stat-value">${storage.total_records || 0}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Database Size</span>
+                        <span class="stat-value">${formatBytes(storage.database_size_bytes || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Override Count</span>
+                        <span class="stat-value">${storage.override_count || 0}</span>
+                    </div>
+                `;
+                document.getElementById('responsibilityStorageStats').innerHTML = storageHTML;
+            }
+        }
+
+        async function loadLedgerData() {
+            const [entries, storage] = await Promise.all([
+                fetchAPI('/ledger/entries'),
+                fetchAPI('/storage/stats')
+            ]);
+
+            if (entries && entries.entries) {
+                document.getElementById('ledgerEntries').textContent = entries.entries.length;
+
+                const filtered = currentLedgerFilter === 'all'
+                    ? entries.entries
+                    : entries.entries.filter(e => e.event_type.includes(currentLedgerFilter));
+
+                const tableHTML = filtered.slice(-10).reverse().map(entry => `
+                    <tr>
+                        <td><code>${truncateHash(entry.entry_id, 8)}</code></td>
+                        <td><span class="badge badge-info">${entry.event_type}</span></td>
+                        <td class="timestamp">${formatTimestamp(entry.timestamp)}</td>
+                        <td>${JSON.stringify(entry.data).substring(0, 50)}...</td>
+                        <td><code>${truncateHash(entry.entry_hash)}</code></td>
+                    </tr>
+                `).join('');
+                document.getElementById('ledgerTable').innerHTML = tableHTML || '<tr><td colspan="5" class="empty-state">No entries</td></tr>';
+
+                document.getElementById('ledgerUpdated').textContent = `Updated: ${formatTimestamp(new Date().toISOString())}`;
+            }
+
+            if (storage) {
+                const storageHTML = `
+                    <div class="stat-item">
+                        <span class="stat-label">Total Entries</span>
+                        <span class="stat-value">${storage.total_entries || 0}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Database Size</span>
+                        <span class="stat-value">${formatBytes(storage.database_size_bytes || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Oldest Entry</span>
+                        <span class="stat-value timestamp">${storage.oldest_entry ? formatTimestamp(storage.oldest_entry).split(',')[0] : '-'}</span>
+                    </div>
+                `;
+                document.getElementById('ledgerStorageStats').innerHTML = storageHTML;
+            }
+        }
+
+        function filterLedger(type) {
+            currentLedgerFilter = type;
+            document.querySelectorAll('.tabs .tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            loadLedgerData();
+        }
+
+        async function refreshDashboard() {
+            await Promise.all([
+                loadArticle14Data(),
+                loadResponsibilityData(),
+                loadLedgerData()
+            ]);
+        }
+
+        // Initial load
+        refreshDashboard();
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshDashboard, 30000);
+    </script>
+</body>
+</html>
