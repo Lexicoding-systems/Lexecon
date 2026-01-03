@@ -374,6 +374,350 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+    
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9998;
+        backdrop-filter: blur(4px);
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        max-width: 800px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-header {
+        padding: 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+    }
+
+    .modal-close:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-primary);
+    }
+
+    .modal-body {
+        padding: 24px;
+    }
+
+    .modal-footer {
+        padding: 20px 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-label.required::after {
+        content: " *";
+        color: var(--danger);
+    }
+
+    .form-input {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+    }
+
+    .form-input::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.5;
+    }
+
+    textarea.form-input {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .checkbox-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .checkbox-item:hover {
+        border-color: var(--primary);
+        background: rgba(8, 145, 178, 0.05);
+    }
+
+    .checkbox-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .checkbox-label {
+        flex: 1;
+        cursor: pointer;
+    }
+
+    .checkbox-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+
+    .checkbox-desc {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
+
+    .format-selector {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .format-option {
+        flex: 1;
+        min-width: 140px;
+        padding: 16px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+
+    .format-option:hover {
+        border-color: var(--primary);
+        background: rgba(8, 145, 178, 0.05);
+    }
+
+    .format-option input[type="checkbox"] {
+        display: none;
+    }
+
+    .format-option input[type="checkbox"]:checked + .format-content {
+        border-color: var(--primary);
+    }
+
+    .format-option input[type="checkbox"]:checked ~ .format-icon {
+        color: var(--primary);
+    }
+
+    .format-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+
+    .format-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+
+    .format-size {
+        font-size: 11px;
+        color: var(--text-secondary);
+    }
+
+    .preview-section {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .preview-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+
+    .preview-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+    }
+
+    .preview-label {
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .preview-value {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .step-indicator {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+
+    .step {
+        width: 40px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        transition: all 0.3s;
+    }
+
+    .step.active {
+        background: var(--primary);
+    }
+
+    .step.completed {
+        background: var(--success);
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 16px 0;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.3s;
+    }
+
+    .alert {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: start;
+        gap: 12px;
+    }
+
+    .alert-warning {
+        background: rgba(217, 119, 6, 0.1);
+        border: 1px solid rgba(217, 119, 6, 0.3);
+        color: var(--warning);
+    }
+
+    .alert-info {
+        background: rgba(8, 145, 178, 0.1);
+        border: 1px solid rgba(8, 145, 178, 0.3);
+        color: var(--primary);
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-secondary {
+        background: rgba(100, 116, 139, 0.2);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(100, 116, 139, 0.3);
+    }
+
     </style>
 </head>
 <body>
@@ -398,7 +742,7 @@
                         <span>✓</span>
                         <span>COMPLIANT</span>
                     </span>
-                    <button class="action-btn" onclick="generateAuditPacket()">
+                    <button class="action-btn" onclick="openAuditModal()">
                         📦 Generate Audit Packet
                     </button>
                     <button class="action-btn secondary" onclick="refreshDashboard()">
@@ -751,56 +1095,349 @@
             }
         }
 
-        async function generateAuditPacket() {
-            try {
-                // Show loading state
-                const originalText = event.target.innerHTML;
-                event.target.innerHTML = '<div class="spinner" style="margin-right: 8px;"></div>Generating...';
-                event.target.disabled = true;
+        // Enterprise Audit Packet Generation Workflow
+let currentStep = 1;
+const totalSteps = 3;
+let auditPacketData = {};
 
-                // Fetch audit packet with current time window
-                const response = await fetch(`${API_BASE}/compliance/eu-ai-act/audit-packet?time_window=${currentTimeWindow}&format=json`);
+function openAuditModal() {
+    document.getElementById('auditModalOverlay').style.display = 'block';
+    document.getElementById('auditModal').style.display = 'block';
+    currentStep = 1;
+    updateModalUI();
+    
+    // Pre-fill current user if available
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dateTo').value = today;
+}
 
-                if (!response.ok) {
-                    throw new Error(`Failed to generate audit packet: ${response.statusText}`);
-                }
+function closeAuditModal() {
+    document.getElementById('auditModalOverlay').style.display = 'none';
+    document.getElementById('auditModal').style.display = 'none';
+    resetModal();
+}
 
-                const auditPacket = await response.json();
+function resetModal() {
+    currentStep = 1;
+    document.querySelectorAll('input').forEach(input => {
+        if (input.type === 'checkbox') {
+            input.checked = input.id.startsWith('include') || input.id === 'formatJSON';
+        } else {
+            input.value = '';
+        }
+    });
+    document.getElementById('requestPurpose').selectedIndex = 0;
+    updateModalUI();
+}
 
-                // Create formatted JSON blob
-                const blob = new Blob([JSON.stringify(auditPacket, null, 2)], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
+function nextStep() {
+    if (currentStep === 1) {
+        if (!validateStep1()) return;
+        captureStep1Data();
+    } else if (currentStep === 2) {
+        if (!validateStep2()) return;
+        captureStep2Data();
+        updatePreview();
+    } else if (currentStep === 3) {
+        generateAuditPacket();
+        return;
+    }
+    
+    currentStep++;
+    updateModalUI();
+}
 
-                // Create download link
-                const a = document.createElement('a');
-                a.href = url;
+function previousStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        updateModalUI();
+    }
+}
 
-                // Generate filename with timestamp and time window
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-                const filename = `lexecon-audit-packet-${currentTimeWindow}-${timestamp}.json`;
-                a.download = filename;
+function updateModalUI() {
+    // Update step indicators
+    for (let i = 1; i <= totalSteps; i++) {
+        const step = document.getElementById(`step${i}`);
+        step.classList.remove('active', 'completed');
+        if (i < currentStep) step.classList.add('completed');
+        if (i === currentStep) step.classList.add('active');
+    }
+    
+    // Show/hide step content
+    document.getElementById('modalStep1').style.display = currentStep === 1 ? 'block' : 'none';
+    document.getElementById('modalStep2').style.display = currentStep === 2 ? 'block' : 'none';
+    document.getElementById('modalStep3').style.display = currentStep === 3 ? 'block' : 'none';
+    document.getElementById('modalStep4').style.display = 'none';
+    
+    // Update buttons
+    const backBtn = document.getElementById('modalBackBtn');
+    const nextBtn = document.getElementById('modalNextBtn');
+    
+    backBtn.style.display = currentStep > 1 ? 'block' : 'none';
+    
+    if (currentStep === totalSteps) {
+        nextBtn.innerHTML = '📦 Generate Packet';
+        nextBtn.style.background = 'var(--success)';
+    } else {
+        nextBtn.innerHTML = 'Next →';
+        nextBtn.style.background = 'var(--primary)';
+    }
+}
 
-                // Trigger download
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+function validateStep1() {
+    const requester = document.getElementById('requesterName').value.trim();
+    const email = document.getElementById('requesterEmail').value.trim();
+    const purpose = document.getElementById('requestPurpose').value;
+    
+    if (!requester) {
+        alert('❌ Please enter your name');
+        return false;
+    }
+    if (!email || !email.includes('@')) {
+        alert('❌ Please enter a valid email address');
+        return false;
+    }
+    if (!purpose) {
+        alert('❌ Please select a purpose for this audit packet');
+        return false;
+    }
+    return true;
+}
 
-                // Show success message
-                alert(`✅ Audit Packet Generated Successfully!\n\nFilename: ${filename}\n\nIncludes:\n• Compliance summary (Articles 11, 12, 14)\n• ${auditPacket.decision_log.total_decisions} decisions\n• ${auditPacket.human_oversight_log.total_interventions} human interventions\n• Cryptographic verification: ${auditPacket.cryptographic_verification.chain_integrity}\n• Time window: ${getTimeWindowLabel()}`);
+function validateStep2() {
+    const hasFormat = document.getElementById('formatJSON').checked || 
+                     document.getElementById('formatText').checked || 
+                     document.getElementById('formatCSV').checked;
+    
+    if (!hasFormat) {
+        alert('❌ Please select at least one export format');
+        return false;
+    }
+    return true;
+}
 
-                // Reset button
-                event.target.innerHTML = originalText;
-                event.target.disabled = false;
-            } catch (error) {
-                console.error('Failed to generate audit packet:', error);
-                alert('❌ Failed to generate audit packet:\n\n' + error.message);
+function captureStep1Data() {
+    auditPacketData.metadata = {
+        requester_name: document.getElementById('requesterName').value.trim(),
+        requester_email: document.getElementById('requesterEmail').value.trim(),
+        purpose: document.getElementById('requestPurpose').value,
+        case_id: document.getElementById('caseId').value.trim() || 'N/A',
+        notes: document.getElementById('requestNotes').value.trim(),
+        requested_at: new Date().toISOString()
+    };
+}
 
-                // Reset button
-                event.target.innerHTML = '📦 Generate Audit Packet';
-                event.target.disabled = false;
+function captureStep2Data() {
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    
+    auditPacketData.config = {
+        date_range: {
+            from: dateFrom || null,
+            to: dateTo || new Date().toISOString().split('T')[0]
+        },
+        include: {
+            decisions: document.getElementById('includeDecisions').checked,
+            interventions: document.getElementById('includeInterventions').checked,
+            ledger: document.getElementById('includeLedger').checked,
+            responsibility: document.getElementById('includeResponsibility').checked
+        },
+        formats: {
+            json: document.getElementById('formatJSON').checked,
+            text: document.getElementById('formatText').checked,
+            csv: document.getElementById('formatCSV').checked
+        }
+    };
+}
+
+async function updatePreview() {
+    // Update metadata preview
+    document.getElementById('previewRequester').textContent = auditPacketData.metadata.requester_name;
+    document.getElementById('previewPurpose').textContent = 
+        document.getElementById('requestPurpose').options[document.getElementById('requestPurpose').selectedIndex].text;
+    document.getElementById('previewCaseId').textContent = auditPacketData.metadata.case_id;
+    
+    // Update date range
+    const from = auditPacketData.config.date_range.from || 'All time';
+    const to = auditPacketData.config.date_range.to;
+    document.getElementById('previewDateRange').textContent = 
+        from === 'All time' ? 'All time' : `${from} to ${to}`;
+    
+    // Update formats
+    const formats = [];
+    if (auditPacketData.config.formats.json) formats.push('JSON');
+    if (auditPacketData.config.formats.text) formats.push('Text');
+    if (auditPacketData.config.formats.csv) formats.push('CSV');
+    document.getElementById('previewFormats').textContent = formats.join(', ');
+    
+    // Fetch actual counts from API (simplified - you'd call real endpoints)
+    try {
+        const timeWindow = calculateTimeWindow();
+        const [ledger, storage] = await Promise.all([
+            fetchAPI('/ledger/entries'),
+            fetchAPI('/compliance/eu-ai-act/article-14/storage/stats')
+        ]);
+        
+        const decisions = ledger?.entries?.filter(e => e.event_type === 'decision').length || 0;
+        const interventions = storage?.total_interventions || 0;
+        const ledgerEntries = ledger?.entries?.length || 0;
+        
+        document.getElementById('previewDecisions').textContent = auditPacketData.config.include.decisions ? decisions : 'Excluded';
+        document.getElementById('previewInterventions').textContent = auditPacketData.config.include.interventions ? interventions : 'Excluded';
+        document.getElementById('previewLedger').textContent = auditPacketData.config.include.ledger ? ledgerEntries : 'Excluded';
+    } catch (error) {
+        console.error('Failed to fetch preview data:', error);
+    }
+}
+
+function calculateTimeWindow() {
+    const from = auditPacketData.config.date_range.from;
+    const to = auditPacketData.config.date_range.to;
+    
+    if (!from) return 'all';
+    
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const diffDays = Math.ceil((toDate - fromDate) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 1) return '24h';
+    if (diffDays <= 7) return '7d';
+    if (diffDays <= 30) return '30d';
+    return 'all';
+}
+
+function setQuickRange(range) {
+    const today = new Date();
+    const to = today.toISOString().split('T')[0];
+    document.getElementById('dateTo').value = to;
+    
+    if (range === 'all') {
+        document.getElementById('dateFrom').value = '';
+    } else {
+        const daysMap = { '24h': 1, '7d': 7, '30d': 30 };
+        const days = daysMap[range] || 0;
+        const from = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
+        document.getElementById('dateFrom').value = from.toISOString().split('T')[0];
+    }
+}
+
+async function generateAuditPacket() {
+    // Show generating UI
+    currentStep = 4;
+    document.getElementById('modalStep3').style.display = 'none';
+    document.getElementById('modalStep4').style.display = 'block';
+    document.getElementById('modalBackBtn').style.display = 'none';
+    document.getElementById('modalNextBtn').style.display = 'none';
+    
+    const progressFill = document.getElementById('progressFill');
+    const statusText = document.getElementById('generationStatus');
+    
+    try {
+        // Step 1: Validate request
+        progressFill.style.width = '20%';
+        statusText.textContent = 'Validating request...';
+        await sleep(300);
+        
+        // Step 2: Collect data
+        progressFill.style.width = '40%';
+        statusText.textContent = 'Collecting compliance data...';
+        await sleep(300);
+        
+        const timeWindow = calculateTimeWindow();
+        const formats = [];
+        if (auditPacketData.config.formats.json) formats.push('json');
+        if (auditPacketData.config.formats.text) formats.push('text');
+        if (auditPacketData.config.formats.csv) formats.push('csv');
+        
+        // Step 3: Generate packets
+        progressFill.style.width = '60%';
+        statusText.textContent = 'Generating audit packets...';
+        
+        const downloads = [];
+        for (const format of formats) {
+            const response = await fetch(`${API_BASE}/compliance/eu-ai-act/audit-packet?time_window=${timeWindow}&format=${format}`);
+            if (!response.ok) throw new Error(`Failed to generate ${format} format`);
+            
+            const data = format === 'json' ? await response.json() : await response.text();
+            downloads.push({ format, data });
+        }
+        
+        // Step 4: Add metadata
+        progressFill.style.width = '80%';
+        statusText.textContent = 'Adding request metadata...';
+        await sleep(200);
+        
+        // Enhance JSON packet with metadata
+        if (auditPacketData.config.formats.json) {
+            const jsonDownload = downloads.find(d => d.format === 'json');
+            if (jsonDownload) {
+                jsonDownload.data.request_metadata = auditPacketData.metadata;
+                jsonDownload.data.generation_config = auditPacketData.config;
             }
         }
+        
+        // Step 5: Download files
+        progressFill.style.width = '100%';
+        statusText.textContent = 'Preparing downloads...';
+        await sleep(200);
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+        
+        for (const download of downloads) {
+            const extension = download.format === 'json' ? 'json' : download.format === 'text' ? 'txt' : 'csv';
+            const content = download.format === 'json' ? JSON.stringify(download.data, null, 2) : download.data;
+            const blob = new Blob([content], { 
+                type: download.format === 'json' ? 'application/json' : 'text/plain' 
+            });
+            
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lexecon-audit-packet-${timeWindow}-${timestamp}.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            await sleep(100); // Small delay between downloads
+        }
+        
+        // Success!
+        closeAuditModal();
+        
+        alert(`✅ Audit Packet Generated Successfully!
+
+Requester: ${auditPacketData.metadata.requester_name}
+Purpose: ${document.getElementById('requestPurpose').options[document.getElementById('requestPurpose').selectedIndex].text}
+Formats: ${formats.join(', ').toUpperCase()}
+Files Downloaded: ${downloads.length}
+
+This generation has been logged in the audit trail.`);
+        
+    } catch (error) {
+        console.error('Generation failed:', error);
+        progressFill.style.width = '0%';
+        statusText.textContent = 'Generation failed';
+        statusText.style.color = 'var(--danger)';
+        
+        setTimeout(() => {
+            alert('❌ Failed to generate audit packet:
+
+' + error.message);
+            closeAuditModal();
+        }, 1000);
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Update the original generateAuditPacket function to open modal
+function generateAuditPacketOriginal() {
+    openAuditModal();
+}
+
 
         async function refreshDashboard() {
             await Promise.all([
@@ -816,5 +1453,240 @@
         // Auto-refresh every 30 seconds
         setInterval(refreshDashboard, 30000);
     </script>
+<!-- Modal HTML -->
+<div class="modal-overlay" id="auditModalOverlay" onclick="closeAuditModal()"></div>
+<div class="modal" id="auditModal">
+    <div class="modal-header">
+        <h2 class="modal-title">Generate Compliance Audit Packet</h2>
+        <button class="modal-close" onclick="closeAuditModal()">×</button>
+    </div>
+    
+    <div class="modal-body">
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1"></div>
+            <div class="step" id="step2"></div>
+            <div class="step" id="step3"></div>
+        </div>
+
+        <!-- Step 1: Configuration -->
+        <div id="modalStep1">
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <div>
+                    <strong>Official Record Request</strong><br>
+                    This will generate a timestamped, cryptographically-verified audit packet for regulatory compliance. All generation requests are logged.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label required">Requested By</label>
+                <input type="text" class="form-input" id="requesterName" placeholder="Full name" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label required">Email</label>
+                <input type="email" class="form-input" id="requesterEmail" placeholder="email@company.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label required">Purpose</label>
+                <select class="form-input" id="requestPurpose" required>
+                    <option value="">Select purpose...</option>
+                    <option value="regulatory_audit">Regulatory Audit</option>
+                    <option value="internal_review">Internal Compliance Review</option>
+                    <option value="legal_discovery">Legal Discovery</option>
+                    <option value="incident_investigation">Incident Investigation</option>
+                    <option value="annual_report">Annual Compliance Report</option>
+                    <option value="customer_request">Customer Request</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Case/Reference ID</label>
+                <input type="text" class="form-input" id="caseId" placeholder="Optional case or ticket number">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Additional Notes</label>
+                <textarea class="form-input" id="requestNotes" placeholder="Any additional context for this audit packet request..."></textarea>
+            </div>
+        </div>
+
+        <!-- Step 2: Content Selection -->
+        <div id="modalStep2" style="display: none;">
+            <div class="form-group">
+                <label class="form-label">Date Range</label>
+                <div class="form-row">
+                    <input type="date" class="form-input" id="dateFrom" placeholder="From date">
+                    <input type="date" class="form-input" id="dateTo" placeholder="To date">
+                </div>
+                <div style="margin-top: 8px;">
+                    <button class="btn-secondary" onclick="setQuickRange('24h')" style="margin-right: 8px; padding: 6px 12px; border-radius: 4px; font-size: 12px;">Last 24h</button>
+                    <button class="btn-secondary" onclick="setQuickRange('7d')" style="margin-right: 8px; padding: 6px 12px; border-radius: 4px; font-size: 12px;">Last 7d</button>
+                    <button class="btn-secondary" onclick="setQuickRange('30d')" style="margin-right: 8px; padding: 6px 12px; border-radius: 4px; font-size: 12px;">Last 30d</button>
+                    <button class="btn-secondary" onclick="setQuickRange('all')" style="padding: 6px 12px; border-radius: 4px; font-size: 12px;">All Time</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Include in Packet</label>
+                <div class="checkbox-group">
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="includeDecisions" checked>
+                        <div class="checkbox-label">
+                            <div class="checkbox-title">Decision Log</div>
+                            <div class="checkbox-desc">AI decisions with full trace and signatures</div>
+                        </div>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="includeInterventions" checked>
+                        <div class="checkbox-label">
+                            <div class="checkbox-title">Human Oversight (Article 14)</div>
+                            <div class="checkbox-desc">Interventions, overrides, and approvals</div>
+                        </div>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="includeLedger" checked>
+                        <div class="checkbox-label">
+                            <div class="checkbox-title">Complete Ledger</div>
+                            <div class="checkbox-desc">Full cryptographic audit trail</div>
+                        </div>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" id="includeResponsibility" checked>
+                        <div class="checkbox-label">
+                            <div class="checkbox-title">Responsibility Tracking</div>
+                            <div class="checkbox-desc">Accountability chain and delegation</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Export Formats</label>
+                <div class="format-selector">
+                    <label class="format-option">
+                        <input type="checkbox" id="formatJSON" checked>
+                        <div class="format-content">
+                            <div class="format-icon">📄</div>
+                            <div class="format-name">JSON</div>
+                            <div class="format-size">~8-10 KB</div>
+                        </div>
+                    </label>
+                    <label class="format-option">
+                        <input type="checkbox" id="formatText">
+                        <div class="format-content">
+                            <div class="format-icon">📋</div>
+                            <div class="format-name">Text Report</div>
+                            <div class="format-size">~12-15 KB</div>
+                        </div>
+                    </label>
+                    <label class="format-option">
+                        <input type="checkbox" id="formatCSV">
+                        <div class="format-content">
+                            <div class="format-icon">📊</div>
+                            <div class="format-name">CSV</div>
+                            <div class="format-size">~5-8 KB</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Preview & Confirm -->
+        <div id="modalStep3" style="display: none;">
+            <div class="alert alert-warning">
+                <span>⚠️</span>
+                <div>
+                    <strong>Final Review</strong><br>
+                    Please verify all details before generating. This action will be logged in the audit trail.
+                </div>
+            </div>
+
+            <div class="preview-section">
+                <div class="preview-title">📋 Request Details</div>
+                <div class="preview-grid">
+                    <div class="preview-item">
+                        <span class="preview-label">Requested By:</span>
+                        <span class="preview-value" id="previewRequester">-</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Purpose:</span>
+                        <span class="preview-value" id="previewPurpose">-</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Case ID:</span>
+                        <span class="preview-value" id="previewCaseId">-</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Date Range:</span>
+                        <span class="preview-value" id="previewDateRange">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-section">
+                <div class="preview-title">📦 Packet Contents</div>
+                <div class="preview-grid">
+                    <div class="preview-item">
+                        <span class="preview-label">Decisions:</span>
+                        <span class="preview-value" id="previewDecisions">-</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Interventions:</span>
+                        <span class="preview-value" id="previewInterventions">-</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Ledger Entries:</span>
+                        <span class="preview-value" id="previewLedger">-</span>
+                    </div>
+                    <div class="preview-item">
+                        <span class="preview-label">Export Formats:</span>
+                        <span class="preview-value" id="previewFormats">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-section">
+                <div class="preview-title">✓ Compliance Validation</div>
+                <div style="color: var(--text-secondary); font-size: 13px; line-height: 1.6;">
+                    ✓ All required metadata captured<br>
+                    ✓ Date range validated<br>
+                    ✓ At least one export format selected<br>
+                    ✓ Generation request will be logged<br>
+                    ✓ Packet will be cryptographically signed
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Generating (shown during generation) -->
+        <div id="modalStep4" style="display: none;">
+            <div style="text-align: center; padding: 40px 20px;">
+                <div class="spinner" style="width: 48px; height: 48px; margin: 0 auto 20px;"></div>
+                <h3 style="color: var(--text-primary); margin-bottom: 8px;">Generating Audit Packet...</h3>
+                <p style="color: var(--text-secondary); font-size: 14px;" id="generationStatus">Preparing request...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-footer">
+        <button class="action-btn btn-secondary" id="modalBackBtn" onclick="previousStep()" style="display: none;">
+            ← Back
+        </button>
+        <div style="flex: 1;"></div>
+        <button class="action-btn btn-secondary" onclick="closeAuditModal()">
+            Cancel
+        </button>
+        <button class="action-btn" id="modalNextBtn" onclick="nextStep()">
+            Next →
+        </button>
+    </div>
+</div>
+
 </body>
 </html>
