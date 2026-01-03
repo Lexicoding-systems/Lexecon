@@ -85,10 +85,22 @@ class HumanOversightEvidence:
     generates oversight effectiveness reports.
     """
 
-    def __init__(self, key_manager: Optional[KeyManager] = None):
+    def __init__(self, key_manager: Optional[KeyManager] = None, storage=None):
+        """
+        Initialize human oversight evidence system.
+
+        Args:
+            key_manager: Optional KeyManager for signing interventions
+            storage: Optional InterventionStorage for persistence
+        """
         self.key_manager = key_manager or KeyManager.generate()
+        self.storage = storage
         self.interventions: List[HumanIntervention] = []
         self.escalation_paths: Dict[str, EscalationPath] = {}
+
+        # Load existing interventions from storage if available
+        if self.storage:
+            self.interventions = self.storage.load_all_interventions()
 
         # Define default escalation paths
         self._initialize_default_escalations()
@@ -172,6 +184,11 @@ class HumanOversightEvidence:
             intervention.signature = self._sign_intervention(intervention)
 
         self.interventions.append(intervention)
+
+        # Auto-save to storage if available
+        if self.storage:
+            self.storage.save_intervention(intervention)
+
         return intervention
 
     def _sign_intervention(self, intervention: HumanIntervention) -> str:

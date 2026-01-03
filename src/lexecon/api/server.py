@@ -119,13 +119,14 @@ responsibility_storage: ResponsibilityStorage = ResponsibilityStorage("lexecon_r
 responsibility_tracker: ResponsibilityTracker = ResponsibilityTracker(storage=responsibility_storage)
 key_manager: Optional[KeyManager] = None
 oversight_system = None  # HumanOversightEvidence - initialized after key_manager
+intervention_storage = None  # InterventionStorage - initialized with oversight_system
 node_id: str = str(uuid.uuid4())
 startup_time: float = time.time()
 
 
 def initialize_services():
     """Initialize services with default configuration."""
-    global policy_engine, decision_service, key_manager, oversight_system
+    global policy_engine, decision_service, key_manager, oversight_system, intervention_storage
 
     if policy_engine is None:
         policy_engine = PolicyEngine(mode=PolicyMode.STRICT)
@@ -136,10 +137,18 @@ def initialize_services():
     if key_manager is None:
         key_manager = KeyManager.generate()
 
-    # Initialize oversight system after key_manager is available
+    # Initialize intervention storage
+    if intervention_storage is None:
+        from lexecon.compliance.eu_ai_act.storage import InterventionStorage
+        intervention_storage = InterventionStorage("lexecon_interventions.db")
+
+    # Initialize oversight system after key_manager and storage are available
     if oversight_system is None:
         from lexecon.compliance.eu_ai_act.article_14_oversight import HumanOversightEvidence
-        oversight_system = HumanOversightEvidence(key_manager=key_manager)
+        oversight_system = HumanOversightEvidence(
+            key_manager=key_manager,
+            storage=intervention_storage
+        )
 
 
 @app.on_event("startup")
@@ -588,6 +597,21 @@ async def simulate_escalation(
         raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
     except KeyError as e:
         raise HTTPException(status_code=404, detail=f"Escalation path not found: {str(e)}")
+
+
+@app.get("/compliance/eu-ai-act/article-14/storage/stats")
+async def get_intervention_storage_stats():
+    """Get Article 14 intervention storage statistics."""
+    initialize_services()
+
+    if not intervention_storage:
+        raise HTTPException(status_code=503, detail="Intervention persistence not configured")
+
+    stats = intervention_storage.get_statistics()
+    return {
+        "storage_enabled": True,
+        **stats
+    }
 
 
 @app.get("/responsibility/report")
