@@ -211,12 +211,14 @@ class TestDecisionResponse:
     def test_decision_hash_is_deterministic(self):
         """Test that decision hash is deterministic."""
         timestamp = "2025-01-01T00:00:00"
+        decision_id = "dec_TEST0000000000000000000000"
         response1 = DecisionResponse(
             request_id="req_det",
             decision="permit",
             reasoning="Test",
             policy_version_hash="hash5",
             timestamp=timestamp,
+            decision_id=decision_id,
         )
         response2 = DecisionResponse(
             request_id="req_det",
@@ -224,9 +226,10 @@ class TestDecisionResponse:
             reasoning="Different reasoning",  # Hash doesn't include reasoning
             policy_version_hash="hash5",
             timestamp=timestamp,
+            decision_id=decision_id,
         )
 
-        # Same request_id, decision, policy hash, timestamp -> same hash
+        # Same decision_id, request_id, decision, policy hash, timestamp -> same hash
         assert response1.decision_hash == response2.decision_hash
 
     def test_response_serialization(self):
@@ -683,3 +686,374 @@ class TestEdgeCases:
 
         assert response.signature is None
         assert response.ledger_entry_hash is not None  # Ledger still works
+
+
+class TestCanonicalGovernanceModels:
+    """Tests for canonical governance model integration."""
+
+    @pytest.fixture
+    def policy_engine(self):
+        """Create a permissive policy engine for testing."""
+        return PolicyEngine(mode=PolicyMode.PERMISSIVE)
+
+    @pytest.fixture
+    def service_with_canonical(self, policy_engine):
+        """Create a decision service with canonical storage enabled."""
+        return DecisionService(policy_engine, store_canonical=True)
+
+    def test_decision_id_format(self, service_with_canonical):
+        """Test that decision IDs follow canonical format."""
+        from lexecon.decision.service import generate_decision_id
+
+        decision_id = generate_decision_id()
+
+        # Format: dec_<26 uppercase alphanumeric>
+        assert decision_id.startswith("dec_")
+        assert len(decision_id) == 30  # dec_ (4) + 26 chars
+        assert decision_id[4:].isupper() or decision_id[4:].isdigit() or all(
+            c in "0123456789ABCDEFGHJKMNPQRSTVWXYZ" for c in decision_id[4:]
+        )
+
+    def test_response_has_decision_id(self, service_with_canonical):
+        """Test that response includes canonical decision ID."""
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web",
+            user_intent="Test",
+        )
+
+        response = service_with_canonical.evaluate_request(request)
+
+        assert response.decision_id is not None
+        assert response.decision_id.startswith("dec_")
+
+    def test_canonical_actor_id_conversion(self):
+        """Test conversion of legacy actor to canonical actor_id."""
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web",
+            user_intent="Test",
+        )
+
+        actor_id = request.to_canonical_actor_id()
+        assert actor_id.startswith("act_")
+        assert "model" in actor_id
+
+    def test_canonical_actor_id_ai_agent(self):
+        """Test AI agent actor conversion."""
+        for actor in ["model", "ai", "assistant"]:
+            request = DecisionRequest(
+                actor=actor, proposed_action="x", tool="t", user_intent="u"
+            )
+            assert request.to_canonical_actor_id().startswith("act_ai_agent:")
+
+    def test_canonical_actor_id_human(self):
+        """Test human actor conversion."""
+        for actor in ["user", "human"]:
+            request = DecisionRequest(
+                actor=actor, proposed_action="x", tool="t", user_intent="u"
+            )
+            assert request.to_canonical_actor_id().startswith("act_human_user:")
+
+    def test_canonical_actor_id_already_formatted(self):
+        """Test that already-formatted actor IDs are preserved."""
+        request = DecisionRequest(
+            actor="act_system_service:my-service",
+            proposed_action="x",
+            tool="t",
+            user_intent="u",
+        )
+        assert request.to_canonical_actor_id() == "act_system_service:my-service"
+
+    def test_canonical_action_id_conversion(self):
+        """Test conversion of legacy action to canonical action_id."""
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web",
+            user_intent="Test",
+        )
+
+        action_id = request.to_canonical_action_id()
+        assert action_id.startswith("axn_")
+        assert "search" in action_id
+
+    def test_canonical_action_id_read(self):
+        """Test read action conversion."""
+        for action in ["read_file", "get_data", "fetch_content", "view_resource"]:
+            request = DecisionRequest(
+                actor="model", proposed_action=action, tool="t", user_intent="u"
+            )
+            assert request.to_canonical_action_id().startswith("axn_read:")
+
+    def test_canonical_action_id_write(self):
+        """Test write action conversion."""
+        for action in ["write_file", "create_record", "update_data", "set_value"]:
+            request = DecisionRequest(
+                actor="model", proposed_action=action, tool="t", user_intent="u"
+            )
+            assert request.to_canonical_action_id().startswith("axn_write:")
+
+    def test_canonical_action_id_execute(self):
+        """Test execute action conversion."""
+        for action in ["execute_command", "run_script", "call_api"]:
+            request = DecisionRequest(
+                actor="model", proposed_action=action, tool="t", user_intent="u"
+            )
+            assert request.to_canonical_action_id().startswith("axn_execute:")
+
+    def test_canonical_action_id_delete(self):
+        """Test delete action conversion."""
+        for action in ["delete_file", "remove_entry"]:
+            request = DecisionRequest(
+                actor="model", proposed_action=action, tool="t", user_intent="u"
+            )
+            assert request.to_canonical_action_id().startswith("axn_delete:")
+
+    def test_canonical_action_id_transmit(self):
+        """Test transmit action conversion."""
+        for action in ["send_email", "transmit_data", "post_message"]:
+            request = DecisionRequest(
+                actor="model", proposed_action=action, tool="t", user_intent="u"
+            )
+            assert request.to_canonical_action_id().startswith("axn_transmit:")
+
+    def test_canonical_action_id_already_formatted(self):
+        """Test that already-formatted action IDs are preserved."""
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="axn_custom:my_action",
+            tool="t",
+            user_intent="u",
+        )
+        assert request.to_canonical_action_id() == "axn_custom:my_action"
+
+    def test_decision_id_in_serialized_response(self, service_with_canonical):
+        """Test that decision_id appears in serialized response."""
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web",
+            user_intent="Test",
+        )
+
+        response = service_with_canonical.evaluate_request(request)
+        data = response.to_dict()
+
+        assert "decision_id" in data
+        assert data["decision_id"].startswith("dec_")
+
+    def test_unique_decision_ids(self, service_with_canonical):
+        """Test that each decision gets a unique ID."""
+        ids = set()
+        for i in range(100):
+            request = DecisionRequest(
+                actor="model",
+                proposed_action="search",
+                tool="web",
+                user_intent=f"Test {i}",
+            )
+            response = service_with_canonical.evaluate_request(request)
+            ids.add(response.decision_id)
+
+        assert len(ids) == 100  # All IDs should be unique
+
+    def test_ulid_sortability(self):
+        """Test that generated ULIDs are chronologically sortable."""
+        import time
+        from lexecon.decision.service import generate_decision_id
+
+        ids = []
+        for _ in range(10):
+            ids.append(generate_decision_id())
+            time.sleep(0.001)  # Small delay for timestamp difference
+
+        # IDs should already be sorted chronologically
+        assert ids == sorted(ids)
+
+
+class TestCanonicalDecisionStorage:
+    """Tests for canonical decision storage and retrieval."""
+
+    @pytest.fixture
+    def policy_engine(self):
+        """Create a permissive policy engine."""
+        return PolicyEngine(mode=PolicyMode.PERMISSIVE)
+
+    def test_get_canonical_decision(self, policy_engine):
+        """Test retrieving canonical decision by ID."""
+        try:
+            from model_governance_pack.models import Decision as CanonicalDecision
+        except ImportError:
+            pytest.skip("Governance models not available")
+
+        service = DecisionService(policy_engine, store_canonical=True)
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web",
+            user_intent="Test",
+        )
+
+        response = service.evaluate_request(request)
+        canonical = service.get_canonical_decision(response.decision_id)
+
+        assert canonical is not None
+        assert canonical.decision_id == response.decision_id
+
+    def test_list_canonical_decisions(self, policy_engine):
+        """Test listing canonical decisions."""
+        try:
+            from model_governance_pack.models import Decision as CanonicalDecision
+        except ImportError:
+            pytest.skip("Governance models not available")
+
+        service = DecisionService(policy_engine, store_canonical=True)
+
+        # Create several decisions
+        for i in range(5):
+            request = DecisionRequest(
+                actor="model",
+                proposed_action="search",
+                tool="web",
+                user_intent=f"Test {i}",
+            )
+            service.evaluate_request(request)
+
+        decisions = service.list_canonical_decisions(limit=10)
+        assert len(decisions) == 5
+
+    def test_list_canonical_decisions_with_limit(self, policy_engine):
+        """Test listing with limit."""
+        try:
+            from model_governance_pack.models import Decision as CanonicalDecision
+        except ImportError:
+            pytest.skip("Governance models not available")
+
+        service = DecisionService(policy_engine, store_canonical=True)
+
+        for i in range(10):
+            request = DecisionRequest(
+                actor="model",
+                proposed_action="search",
+                tool="web",
+                user_intent=f"Test {i}",
+            )
+            service.evaluate_request(request)
+
+        decisions = service.list_canonical_decisions(limit=5)
+        assert len(decisions) == 5
+
+    def test_export_decisions_for_audit(self, policy_engine):
+        """Test exporting decisions for audit."""
+        try:
+            from model_governance_pack.models import Decision as CanonicalDecision
+        except ImportError:
+            pytest.skip("Governance models not available")
+
+        service = DecisionService(policy_engine, store_canonical=True)
+
+        for i in range(3):
+            request = DecisionRequest(
+                actor="model",
+                proposed_action="search",
+                tool="web",
+                user_intent=f"Test {i}",
+            )
+            service.evaluate_request(request)
+
+        export = service.export_decisions_for_audit()
+        assert len(export) == 3
+        assert all(isinstance(d, dict) for d in export)
+        assert all("decision_id" in d for d in export)
+
+    def test_canonical_decision_contains_context(self, policy_engine):
+        """Test that canonical decision contains context snapshot."""
+        try:
+            from model_governance_pack.models import Decision as CanonicalDecision
+        except ImportError:
+            pytest.skip("Governance models not available")
+
+        service = DecisionService(policy_engine, store_canonical=True)
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web_search",
+            user_intent="Research AI governance",
+            data_classes=["public"],
+            risk_level=2,
+            context={"session_id": "abc123"},
+        )
+
+        response = service.evaluate_request(request)
+        canonical = service.get_canonical_decision(response.decision_id)
+
+        assert canonical is not None
+        assert canonical.context_snapshot is not None
+        assert canonical.context_snapshot["user_intent"] == "Research AI governance"
+        assert canonical.context_snapshot["tool"] == "web_search"
+        assert canonical.context_snapshot["data_classes"] == ["public"]
+        assert canonical.context_snapshot["risk_level"] == 2
+
+    def test_store_canonical_disabled(self, policy_engine):
+        """Test that canonical storage can be disabled."""
+        service = DecisionService(policy_engine, store_canonical=False)
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web",
+            user_intent="Test",
+        )
+
+        response = service.evaluate_request(request)
+
+        # Decision should work but canonical shouldn't be stored
+        assert response.decision in ["permit", "deny"]
+        assert service.get_canonical_decision(response.decision_id) is None
+
+    def test_response_canonical_property(self, policy_engine):
+        """Test accessing canonical decision via response property."""
+        try:
+            from model_governance_pack.models import Decision as CanonicalDecision
+        except ImportError:
+            pytest.skip("Governance models not available")
+
+        service = DecisionService(policy_engine, store_canonical=True)
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web",
+            user_intent="Test",
+        )
+
+        response = service.evaluate_request(request)
+
+        # Can access canonical via response
+        assert response.canonical is not None
+        assert response.canonical.decision_id == response.decision_id
+
+    def test_response_to_canonical_dict(self, policy_engine):
+        """Test converting response to canonical dict."""
+        try:
+            from model_governance_pack.models import Decision as CanonicalDecision
+        except ImportError:
+            pytest.skip("Governance models not available")
+
+        service = DecisionService(policy_engine, store_canonical=True)
+        request = DecisionRequest(
+            actor="model",
+            proposed_action="search",
+            tool="web",
+            user_intent="Test",
+        )
+
+        response = service.evaluate_request(request)
+        canonical_dict = response.to_canonical_dict()
+
+        assert canonical_dict is not None
+        assert "decision_id" in canonical_dict
+        assert "actor_id" in canonical_dict
+        assert "action_id" in canonical_dict
+        assert "outcome" in canonical_dict
