@@ -802,9 +802,10 @@ async def generate_audit_packet(
 
     # Verify chain integrity
     try:
-        is_valid = ledger.verify_chain()
+        integrity_result = ledger.verify_integrity()
+        is_valid = integrity_result.get("valid", False)
         verification_report["chain_integrity"] = "VALID" if is_valid else "INVALID"
-        verification_report["verification_details"] = "All entries properly chained with valid hashes"
+        verification_report["verification_details"] = integrity_result.get("message", "Chain verification completed")
     except Exception as e:
         verification_report["chain_integrity"] = "ERROR"
         verification_report["verification_details"] = str(e)
