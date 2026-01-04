@@ -1421,9 +1421,7 @@ This generation has been logged in the audit trail.`);
         statusText.style.color = 'var(--danger)';
         
         setTimeout(() => {
-            alert('❌ Failed to generate audit packet:
-
-' + error.message);
+            alert('❌ Failed to generate audit packet:\n\n' + error.message);
             closeAuditModal();
         }, 1000);
     }
