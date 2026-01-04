@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/evidence_artifact.json",
+  "title": "Lexecon Evidence Artifact",
+  "description": "Immutable record supporting audit defensibility",
+  "type": "object",
+  "required": [
+    "artifact_id",
+    "artifact_type",
+    "sha256_hash",
+    "created_at",
+    "source"
+  ],
+  "properties": {
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^evd_[a-z]+_[a-f0-9]{8}$",
+      "description": "Unique artifact identifier"
+    },
+    "artifact_type": {
+      "type": "string",
+      "enum": ["decision_log", "policy_snapshot", "context_capture", "screenshot", "attestation", "signature", "audit_trail", "external_report"],
+      "description": "Type of evidence"
+    },
+    "sha256_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 hash of content"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When artifact was created"
+    },
+    "source": {
+      "type": "string",
+      "description": "System/process that created artifact"
+    },
+    "content_type": {
+      "type": "string",
+      "description": "MIME type of content"
+    },
+    "size_bytes": {
+      "type": "integer",
+      "description": "Content size in bytes"
+    },
+    "storage_uri": {
+      "type": "string",
+      "format": "uri",
+      "description": "Where artifact is stored"
+    },
+    "related_decision_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Decisions this evidence supports"
+    },
+    "related_control_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Compliance controls this satisfies"
+    },
+    "digital_signature": {
+      "type": "object",
+      "properties": {
+        "algorithm": { "type": "string" },
+        "signature": { "type": "string" },
+        "signer_id": { "type": "string" },
+        "signed_at": { "type": "string", "format": "date-time" }
+      },
+      "description": "Optional digital signature"
+    },
+    "retention_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Retention deadline"
+    },
+    "is_immutable": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether artifact can be modified"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

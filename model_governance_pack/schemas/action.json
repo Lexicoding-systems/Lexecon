@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/action.json",
+  "title": "Lexecon Action",
+  "description": "Discrete, auditable operation that an actor may request to perform",
+  "type": "object",
+  "required": [
+    "action_id",
+    "category",
+    "operation"
+  ],
+  "properties": {
+    "action_id": {
+      "type": "string",
+      "pattern": "^axn_[a-z_]+:.+$",
+      "description": "Unique action identifier"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["read", "write", "execute", "transmit", "delete", "approve", "escalate"],
+      "description": "Action category"
+    },
+    "operation": {
+      "type": "string",
+      "description": "Specific operation name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description"
+    },
+    "risk_weight": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "Inherent risk weight (1-10)"
+    },
+    "is_reversible": {
+      "type": "boolean",
+      "description": "Whether action can be undone"
+    },
+    "requires_confirmation": {
+      "type": "boolean",
+      "default": false,
+      "description": "Requires explicit user confirmation"
+    },
+    "parameters_schema": {
+      "type": "object",
+      "description": "JSON Schema for action parameters"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

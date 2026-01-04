@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/decision.json",
+  "title": "Lexecon Decision",
+  "description": "Immutable record of a governance evaluation outcome",
+  "type": "object",
+  "required": [
+    "decision_id",
+    "request_id",
+    "actor_id",
+    "action_id",
+    "outcome",
+    "timestamp",
+    "policy_ids"
+  ],
+  "properties": {
+    "decision_id": {
+      "type": "string",
+      "pattern": "^dec_[A-Z0-9]{26}$",
+      "description": "Unique decision identifier (ULID format)"
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Correlation ID linking to original request"
+    },
+    "actor_id": {
+      "type": "string",
+      "pattern": "^act_[a-z_]+:.+$",
+      "description": "Actor who requested the action"
+    },
+    "action_id": {
+      "type": "string",
+      "pattern": "^axn_[a-z_]+:.+$",
+      "description": "Action that was evaluated"
+    },
+    "resource_id": {
+      "type": "string",
+      "pattern": "^res_[a-z_]+:.+$",
+      "description": "Target resource of the action"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["approved", "denied", "escalated", "conditional"],
+      "description": "Decision outcome"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When decision was made (ISO 8601)"
+    },
+    "policy_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Policies evaluated for this decision"
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "Human-readable explanation of decision"
+    },
+    "risk_assessment": {
+      "type": "string",
+      "pattern": "^rsk_dec_.+$",
+      "description": "Reference to associated risk assessment"
+    },
+    "conditions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Conditions attached to conditional approval"
+    },
+    "evidence_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Evidence artifacts supporting this decision"
+    },
+    "context_snapshot": {
+      "type": "object",
+      "description": "Frozen context at decision time"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

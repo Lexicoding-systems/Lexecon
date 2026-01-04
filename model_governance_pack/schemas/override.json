@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/override.json",
+  "title": "Lexecon Override",
+  "description": "Authorized exception to normal policy evaluation",
+  "type": "object",
+  "required": [
+    "override_id",
+    "decision_id",
+    "override_type",
+    "authorized_by",
+    "justification",
+    "timestamp"
+  ],
+  "properties": {
+    "override_id": {
+      "type": "string",
+      "pattern": "^ovr_dec_.+$",
+      "description": "Unique override identifier"
+    },
+    "decision_id": {
+      "type": "string",
+      "description": "Decision being overridden"
+    },
+    "override_type": {
+      "type": "string",
+      "enum": ["emergency_bypass", "executive_override", "time_limited_exception", "risk_accepted"],
+      "description": "Type of override"
+    },
+    "authorized_by": {
+      "type": "string",
+      "description": "Actor ID who authorized override"
+    },
+    "justification": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Required justification (min 20 chars)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When override was granted"
+    },
+    "original_outcome": {
+      "type": "string",
+      "enum": ["denied", "escalated"],
+      "description": "What the decision was before override"
+    },
+    "new_outcome": {
+      "type": "string",
+      "enum": ["approved", "conditional"],
+      "description": "Outcome after override"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When time-limited override expires"
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "is_one_time": { "type": "boolean" },
+        "applies_to_policy": { "type": "string" },
+        "applies_to_actor": { "type": "string" }
+      },
+      "description": "Override scope limitations"
+    },
+    "review_required_by": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When override must be reviewed"
+    },
+    "evidence_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Supporting evidence for override"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

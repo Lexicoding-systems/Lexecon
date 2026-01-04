@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/compliance_control.json",
+  "title": "Lexecon Compliance Control",
+  "description": "Governance requirement derived from regulatory frameworks",
+  "type": "object",
+  "required": [
+    "control_id",
+    "framework",
+    "control_ref",
+    "name"
+  ],
+  "properties": {
+    "control_id": {
+      "type": "string",
+      "pattern": "^ctl_[a-z0-9_]+:.+$",
+      "description": "Unique control identifier"
+    },
+    "framework": {
+      "type": "string",
+      "enum": ["soc2", "hipaa", "gdpr", "pci_dss", "iso27001", "nist_csf", "fedramp", "ccpa"],
+      "description": "Compliance framework"
+    },
+    "control_ref": {
+      "type": "string",
+      "description": "Framework-specific control reference (e.g., CC6.1)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Control name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Control requirement description"
+    },
+    "category": {
+      "type": "string",
+      "description": "Control category within framework"
+    },
+    "policy_mappings": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Policy IDs that implement this control"
+    },
+    "evidence_requirements": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required evidence types for audit"
+    },
+    "test_procedure": {
+      "type": "string",
+      "description": "How to test control effectiveness"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether control is currently enforced"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

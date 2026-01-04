@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/resource.json",
+  "title": "Lexecon Resource",
+  "description": "Data, system, or capability that is the target of an action",
+  "type": "object",
+  "required": [
+    "resource_id",
+    "classification",
+    "name"
+  ],
+  "properties": {
+    "resource_id": {
+      "type": "string",
+      "pattern": "^res_[a-z_]+:.+$",
+      "description": "Unique resource identifier"
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "restricted", "critical"],
+      "description": "Data classification level"
+    },
+    "name": {
+      "type": "string",
+      "description": "Resource name"
+    },
+    "resource_type": {
+      "type": "string",
+      "enum": ["data", "system", "capability", "api", "file", "database", "service"],
+      "description": "Type of resource"
+    },
+    "description": {
+      "type": "string",
+      "description": "Resource description"
+    },
+    "owner_actor_id": {
+      "type": "string",
+      "description": "Actor who owns this resource"
+    },
+    "compliance_tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Compliance-relevant tags (pii, phi, financial)"
+    },
+    "retention_days": {
+      "type": "integer",
+      "description": "Data retention period in days"
+    },
+    "is_encrypted": {
+      "type": "boolean",
+      "description": "Whether resource is encrypted at rest"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

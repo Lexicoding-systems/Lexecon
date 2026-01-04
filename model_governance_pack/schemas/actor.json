@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/actor.json",
+  "title": "Lexecon Actor",
+  "description": "Entity capable of initiating or participating in governed actions",
+  "type": "object",
+  "required": [
+    "actor_id",
+    "actor_type",
+    "name"
+  ],
+  "properties": {
+    "actor_id": {
+      "type": "string",
+      "pattern": "^act_[a-z_]+:.+$",
+      "description": "Unique actor identifier"
+    },
+    "actor_type": {
+      "type": "string",
+      "enum": ["ai_agent", "human_user", "system_service", "organizational_role", "external_party"],
+      "description": "Classification of actor"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Actor description"
+    },
+    "parent_actor_id": {
+      "type": "string",
+      "description": "Hierarchical parent (for delegation)"
+    },
+    "roles": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Assigned roles"
+    },
+    "trust_level": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Trust score (0-100)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether actor is currently active"
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Type-specific attributes"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

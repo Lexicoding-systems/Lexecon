@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/escalation.json",
+  "title": "Lexecon Escalation",
+  "description": "Routing of a governance decision to a higher authority",
+  "type": "object",
+  "required": [
+    "escalation_id",
+    "decision_id",
+    "trigger",
+    "escalated_to",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "escalation_id": {
+      "type": "string",
+      "pattern": "^esc_dec_.+$",
+      "description": "Unique escalation identifier"
+    },
+    "decision_id": {
+      "type": "string",
+      "description": "Decision that triggered escalation"
+    },
+    "trigger": {
+      "type": "string",
+      "enum": ["risk_threshold", "policy_conflict", "explicit_rule", "actor_request", "anomaly_detected"],
+      "description": "What triggered the escalation"
+    },
+    "escalated_to": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Actor IDs to review"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "acknowledged", "resolved", "expired"],
+      "description": "Escalation status"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When escalation was created"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Escalation priority"
+    },
+    "sla_deadline": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When response is required"
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When escalation was acknowledged"
+    },
+    "acknowledged_by": {
+      "type": "string",
+      "description": "Actor who acknowledged"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When escalation was resolved"
+    },
+    "resolution": {
+      "type": "object",
+      "properties": {
+        "outcome": { "type": "string", "enum": ["approved", "denied", "deferred"] },
+        "resolved_by": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "description": "Resolution details"
+    },
+    "context_summary": {
+      "type": "string",
+      "description": "Summary for reviewer"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

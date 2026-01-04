@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/context.json",
+  "title": "Lexecon Context",
+  "description": "Situational metadata accompanying a governance request",
+  "type": "object",
+  "required": [
+    "context_id",
+    "session_id",
+    "timestamp"
+  ],
+  "properties": {
+    "context_id": {
+      "type": "string",
+      "pattern": "^ctx_.+$",
+      "description": "Unique context identifier"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session this context belongs to"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Context capture time"
+    },
+    "user_intent": {
+      "type": "string",
+      "description": "Stated user intent"
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "deployment": { "type": "string", "enum": ["production", "staging", "development"] },
+        "region": { "type": "string" },
+        "network_zone": { "type": "string" }
+      },
+      "description": "Environment metadata"
+    },
+    "temporal": {
+      "type": "object",
+      "properties": {
+        "is_business_hours": { "type": "boolean" },
+        "day_of_week": { "type": "string" },
+        "timezone": { "type": "string" }
+      },
+      "description": "Temporal context"
+    },
+    "behavioral": {
+      "type": "object",
+      "properties": {
+        "request_rate": { "type": "number" },
+        "anomaly_score": { "type": "number" },
+        "session_action_count": { "type": "integer" }
+      },
+      "description": "Behavioral signals"
+    },
+    "prior_decisions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Recent decision IDs in this session"
+    },
+    "custom": {
+      "type": "object",
+      "description": "Custom context attributes"
+    }
+  }
+}

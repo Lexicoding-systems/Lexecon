@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/risk.json",
+  "title": "Lexecon Risk Assessment",
+  "description": "Quantified assessment of potential harm associated with an action",
+  "type": "object",
+  "required": [
+    "risk_id",
+    "decision_id",
+    "overall_score",
+    "timestamp"
+  ],
+  "properties": {
+    "risk_id": {
+      "type": "string",
+      "pattern": "^rsk_dec_.+$",
+      "description": "Unique risk assessment identifier"
+    },
+    "decision_id": {
+      "type": "string",
+      "description": "Associated decision"
+    },
+    "overall_score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Aggregate risk score (1-100)"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Categorical risk level"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Assessment timestamp"
+    },
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "security": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "privacy": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "compliance": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "operational": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "reputational": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "financial": { "type": "integer", "minimum": 0, "maximum": 100 }
+      },
+      "description": "Risk scores by dimension"
+    },
+    "likelihood": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Probability of harm (0-1)"
+    },
+    "impact": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Severity of potential harm (1-5)"
+    },
+    "factors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "weight": { "type": "number" },
+          "value": { "type": "number" }
+        }
+      },
+      "description": "Contributing risk factors"
+    },
+    "mitigations_applied": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Mitigations factored into score"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  }
+}

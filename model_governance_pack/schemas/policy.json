@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lexecon.io/schemas/policy.json",
+  "title": "Lexecon Policy",
+  "description": "Declarative specification of permitted, forbidden, and conditionally-allowed behaviors",
+  "type": "object",
+  "required": [
+    "policy_id",
+    "name",
+    "version",
+    "mode",
+    "terms",
+    "relations"
+  ],
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "pattern": "^pol_[a-z0-9_]+_v[0-9]+$",
+      "description": "Unique policy identifier"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "description": "Human-readable policy name"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semantic version"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["permissive", "strict", "paranoid"],
+      "description": "Policy evaluation mode"
+    },
+    "terms": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/term" },
+      "description": "Defined terms (actors, actions, resources)"
+    },
+    "relations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/relation" },
+      "description": "Permission/prohibition rules"
+    },
+    "description": {
+      "type": "string",
+      "description": "Policy description and purpose"
+    },
+    "compliance_frameworks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Associated compliance frameworks"
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/constraint" },
+      "description": "Conditional constraints"
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When policy becomes active"
+    },
+    "effective_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When policy expires"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Extensible metadata"
+    }
+  },
+  "definitions": {
+    "term": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["actor", "action", "resource", "data_class"] },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "attributes": { "type": "object" }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "required": ["type", "subject", "action"],
+      "properties": {
+        "type": { "type": "string", "enum": ["permits", "forbids", "requires"] },
+        "subject": { "type": "string" },
+        "action": { "type": "string" },
+        "object": { "type": "string" },
+        "conditions": { "type": "array", "items": { "type": "string" } },
+        "justification": { "type": "string" }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "required": ["name", "condition", "action"],
+      "properties": {
+        "name": { "type": "string" },
+        "condition": { "type": "string" },
+        "action": { "type": "string" },
+        "justification": { "type": "string" }
+      }
+    }
+  }
+}
