@@ -687,7 +687,7 @@ mypy src/
 
 ### Reporting Vulnerabilities
 
-Please report security issues to: [security@lexecon.dev](mailto:security@lexecon.dev)
+Please report security issues to: [Jacobporter@lexicoding.tech]
 
 **Do not** open public issues for security vulnerabilities.
 
@@ -745,7 +745,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 - **Documentation**: [https://lexecon.readthedocs.io](https://lexecon.readthedocs.io) (coming soon)
 - **Issues**: [GitHub Issues](https://github.com/Lexicoding-systems/Lexecon/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Lexicoding-systems/Lexecon/discussions)
-- **Email**: [support@lexecon.dev](mailto:support@lexecon.dev)
+- **Email**: [Jacobporter@lexicoding.tech] (mailto:Jacobporter@lexicoding.tech)
 
 ---
 
