@@ -46,6 +46,11 @@ from lexecon.compliance_mapping.service import (
     GovernancePrimitive,
     ControlStatus
 )
+from lexecon.audit_export.service import (
+    AuditExportService,
+    ExportFormat,
+    ExportScope
+)
 
 # Import governance models for type hints
 try:
@@ -323,11 +328,15 @@ evidence_service: Optional[EvidenceService] = None
 # Compliance mapping service (Phase 7)
 compliance_mapping_service: Optional[ComplianceMappingService] = None
 
+# Audit export service (Phase 8)
+audit_export_service: Optional[AuditExportService] = None
+
 
 def initialize_services():
     """Initialize services with default configuration."""
     global policy_engine, decision_service, key_manager, oversight_system, intervention_storage
     global risk_service, escalation_service, override_service, evidence_service, compliance_mapping_service
+    global audit_export_service
 
     if policy_engine is None:
         policy_engine = PolicyEngine(mode=PolicyMode.STRICT)
@@ -367,6 +376,10 @@ def initialize_services():
     # Initialize compliance mapping service (Phase 7)
     if compliance_mapping_service is None:
         compliance_mapping_service = ComplianceMappingService()
+
+    # Initialize audit export service (Phase 8)
+    if audit_export_service is None:
+        audit_export_service = AuditExportService()
 
 
 @app.on_event("startup")
