@@ -50,6 +50,14 @@ class TestOverrideIdGeneration:
         assert id1.startswith("ovr_dec_")
         assert id2.startswith("ovr_dec_")
 
+    def test_generate_override_id_without_prefix(self):
+        """Test override ID generation with decision_id without dec_ prefix."""
+        decision_id = "custom_decision_123"
+        override_id = generate_override_id(decision_id)
+
+        assert override_id.startswith("ovr_dec_")
+        assert "custom_decision_123" in override_id
+
 
 class TestOverrideConfig:
     """Tests for override configuration."""
@@ -210,6 +218,43 @@ class TestOverrideService:
         assert isinstance(artifact, EvidenceArtifact)
         assert artifact.is_immutable is True
         assert len(artifact.sha256_hash) == 64  # SHA-256 hex
+
+    def test_get_evidence_artifact(self, service, executive_actor):
+        """Test retrieving evidence artifact by ID."""
+        override = service.create_override(
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH",
+            override_type=OverrideType.RISK_ACCEPTED,
+            authorized_by=executive_actor,
+            justification="Risk is acceptable given business context and current mitigations in place.",
+        )
+
+        # Get artifact ID
+        artifacts = service.list_evidence_artifacts(override_id=override.override_id)
+        artifact_id = artifacts[0].artifact_id
+
+        # Retrieve by ID
+        retrieved = service.get_evidence_artifact(artifact_id)
+        assert retrieved is not None
+        assert retrieved.artifact_id == artifact_id
+
+    def test_list_evidence_artifacts_by_decision_id(self, service, executive_actor):
+        """Test listing evidence artifacts filtered by decision_id."""
+        decision_id = "dec_01JQXYZ1234567890ABCDEFGH"
+
+        service.create_override(
+            decision_id=decision_id,
+            override_type=OverrideType.RISK_ACCEPTED,
+            authorized_by=executive_actor,
+            justification="Risk is acceptable given business context and current mitigations in place.",
+        )
+
+        # List by decision_id
+        artifacts = service.list_evidence_artifacts(decision_id=decision_id)
+        assert len(artifacts) >= 1
+
+        # Verify all artifacts are related to the decision
+        for artifact in artifacts:
+            assert decision_id in artifact.related_decision_ids
 
     def test_get_override(self, service, executive_actor):
         """Test retrieving override by ID."""

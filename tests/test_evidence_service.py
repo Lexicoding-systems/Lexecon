@@ -575,6 +575,39 @@ class TestArtifactBuilder:
         diff = abs((artifact.retention_until - expected).total_seconds())
         assert diff < 60  # Within 1 minute
 
+    def test_builder_with_storage_uri(self, service):
+        """Test builder with storage URI."""
+        artifact = (
+            ArtifactBuilder(
+                artifact_type=ArtifactType.DECISION_LOG,
+                content="Test",
+                source="test_service",
+            )
+            .with_storage_uri("s3://bucket/path/to/artifact.json")
+            .build(service)
+        )
+
+        assert str(artifact.storage_uri) == "s3://bucket/path/to/artifact.json"
+
+
+class TestEvidenceServiceBytesContent:
+    """Tests for evidence service with bytes content."""
+
+    def test_store_artifact_with_bytes_content(self):
+        """Test storing artifact with bytes content."""
+        service = EvidenceService()
+
+        # Store with bytes content (not string)
+        content_bytes = b"Binary content data"
+        artifact = service.store_artifact(
+            artifact_type=ArtifactType.SCREENSHOT,
+            content=content_bytes,
+            source="screenshot_tool"
+        )
+
+        assert artifact.artifact_id.startswith("evd_screenshot_")
+        assert len(artifact.sha256_hash) == 64  # SHA-256 hex
+
 
 class TestIntegrationWorkflows:
     """Integration tests for complete evidence workflows."""

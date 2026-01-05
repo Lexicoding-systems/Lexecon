@@ -68,6 +68,158 @@ class TestAuthService:
         assert any(u.username == "user1" for u in users)
         assert any(u.username == "user2" for u in users)
 
+    def test_authenticate_success(self, auth_service):
+        """Test successful authentication."""
+        auth_service.create_user(
+            username="authuser",
+            email="auth@example.com",
+            password="ValidPass123!",
+            role=Role.VIEWER,
+            full_name="Auth User",
+        )
+
+        user, error = auth_service.authenticate("authuser", "ValidPass123!")
+
+        assert user is not None
+        assert error is None
+        assert user.username == "authuser"
+
+    def test_authenticate_wrong_password(self, auth_service):
+        """Test authentication with wrong password."""
+        auth_service.create_user(
+            username="authuser",
+            email="auth@example.com",
+            password="ValidPass123!",
+            role=Role.VIEWER,
+            full_name="Auth User",
+        )
+
+        user, error = auth_service.authenticate("authuser", "WrongPassword!")
+
+        assert user is None
+        assert error is not None
+        assert "password" in error.lower()
+
+    def test_authenticate_nonexistent_user(self, auth_service):
+        """Test authentication with non-existent user."""
+        user, error = auth_service.authenticate("nonexistent", "SomePassword")
+
+        assert user is None
+        assert error is not None
+
+    def test_create_session(self, auth_service):
+        """Test session creation."""
+        user = auth_service.create_user(
+            username="sessionuser",
+            email="session@example.com",
+            password="Pass123!",
+            role=Role.AUDITOR,
+            full_name="Session User",
+        )
+
+        session = auth_service.create_session(
+            user=user,
+            ip_address="192.168.1.1"
+        )
+
+        assert session is not None
+        assert session.username == "sessionuser"
+        assert session.role == Role.AUDITOR
+
+    def test_validate_session_valid(self, auth_service):
+        """Test validating a valid session."""
+        user = auth_service.create_user(
+            username="sessuser",
+            email="sess@example.com",
+            password="Pass123!",
+            role=Role.VIEWER,
+            full_name="Sess User",
+        )
+
+        session = auth_service.create_session(user=user)
+
+        validated, error = auth_service.validate_session(session.session_id)
+
+        assert validated is not None
+        assert error is None
+        assert validated.session_id == session.session_id
+
+    def test_validate_session_invalid(self, auth_service):
+        """Test validating an invalid session."""
+        validated, error = auth_service.validate_session("invalid_session_id")
+
+        assert validated is None
+        assert error is not None
+
+    def test_revoke_session(self, auth_service):
+        """Test revoking a session."""
+        user = auth_service.create_user(
+            username="revokeuser",
+            email="revoke@example.com",
+            password="Pass123!",
+            role=Role.VIEWER,
+            full_name="Revoke User",
+        )
+
+        session = auth_service.create_session(user=user)
+
+        # Revoke session
+        auth_service.revoke_session(session.session_id)
+
+        # Session should no longer be valid
+        validated, error = auth_service.validate_session(session.session_id)
+        assert validated is None
+
+    def test_has_permission(self, auth_service):
+        """Test permission checking."""
+        from lexecon.security.auth_service import Permission
+
+        # Admin should have export permission
+        assert auth_service.has_permission(Role.ADMIN, Permission.EXPORT_DATA) is True
+
+        # Viewer should not have export permission
+        assert auth_service.has_permission(Role.VIEWER, Permission.EXPORT_DATA) is False
+
+    def test_get_user_by_id(self, auth_service):
+        """Test getting user by ID."""
+        user = auth_service.create_user(
+            username="getuser",
+            email="get@example.com",
+            password="Pass123!",
+            role=Role.AUDITOR,
+            full_name="Get User",
+        )
+
+        retrieved = auth_service.get_user_by_id(user.user_id)
+
+        assert retrieved is not None
+        assert retrieved.user_id == user.user_id
+        assert retrieved.username == "getuser"
+
+    def test_get_user_by_id_nonexistent(self, auth_service):
+        """Test getting non-existent user."""
+        retrieved = auth_service.get_user_by_id("nonexistent_id")
+        assert retrieved is None
+
+    def test_get_active_sessions(self, auth_service):
+        """Test getting active sessions for a user."""
+        user = auth_service.create_user(
+            username="sessiontest",
+            email="sessiontest@example.com",
+            password="Pass123!",
+            role=Role.VIEWER,
+            full_name="Session Test User",
+        )
+
+        # Create a session
+        session = auth_service.create_session(user=user)
+
+        # Get active sessions
+        sessions = auth_service.get_active_sessions(user.user_id)
+
+        assert len(sessions) >= 1
+        assert any(s.session_id == session.session_id for s in sessions)
+
 
 class TestSignatureService:
     """Tests for SignatureService (RSA packet signing)."""

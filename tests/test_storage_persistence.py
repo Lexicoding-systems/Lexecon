@@ -205,3 +205,130 @@ class TestLedgerStorage:
         assert storage.load_all_entries() == []
         assert storage.get_latest_hash() is None
         assert storage.get_entries_by_type("any") == []
+
+    def test_hash_mismatch_detection_on_load(self, storage, temp_db):
+        """Test that hash mismatches are detected when loading entries."""
+        import sqlite3
+
+        # Create an entry with incorrect hash
+        entry = LedgerEntry(
+            entry_id="tampered",
+            event_type="test",
+            data={"test": "data"},
+            previous_hash="prev",
+            timestamp=datetime.now(timezone.utc).isoformat()
+        )
+
+        # Save entry normally
+        storage.save_entry(entry)
+
+        # Tamper with the stored hash directly in database
+        conn = sqlite3.connect(temp_db)
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE ledger_entries
+            SET entry_hash = 'tampered_hash'
+            WHERE entry_id = ?
+        """, (entry.entry_id,))
+        conn.commit()
+        conn.close()
+
+        # Loading should detect mismatch
+        with pytest.raises(ValueError, match="Hash mismatch"):
+            storage.load_all_entries()
+
+    def test_hash_mismatch_detection_by_type(self, storage, temp_db):
+        """Test that hash mismatches are detected when loading by type."""
+        import sqlite3
+
+        # Create an entry
+        entry = LedgerEntry(
+            entry_id="tampered2",
+            event_type="testtype",
+            data={"test": "data"},
+            previous_hash="prev",
+            timestamp=datetime.now(timezone.utc).isoformat()
+        )
+
+        # Save entry normally
+        storage.save_entry(entry)
+
+        # Tamper with the stored hash
+        conn = sqlite3.connect(temp_db)
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE ledger_entries
+            SET entry_hash = 'bad_hash'
+            WHERE entry_id = ?
+        """, (entry.entry_id,))
+        conn.commit()
+        conn.close()
+
+        # Loading by type should detect mismatch
+        with pytest.raises(ValueError, match="Hash mismatch"):
+            storage.get_entries_by_type("testtype")
+
+    def test_verify_chain_integrity_with_corruption(self, storage, temp_db):
+        """Test integrity verification detects corruption."""
+        import sqlite3
+
+        # Add entries
+        for i in range(3):
+            entry = LedgerEntry(
+                entry_id=f"entry_{i}",
+                event_type="test",
+                data={"index": i},
+                previous_hash=f"prev_{i}",
+                timestamp=datetime.now(timezone.utc).isoformat()
+            )
+            storage.save_entry(entry)
+
+        # Corrupt one entry's hash
+        conn = sqlite3.connect(temp_db)
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE ledger_entries
+            SET entry_hash = 'corrupted'
+            WHERE entry_id = 'entry_1'
+        """)
+        conn.commit()
+        conn.close()
+
+        # Integrity check should fail
+        is_valid = storage.verify_chain_integrity()
+        assert is_valid is False
+
+    def test_export_to_json(self, storage, temp_db):
+        """Test exporting ledger to JSON file."""
+        import json
+        import os
+
+        # Add some entries
+        for i in range(3):
+            entry = LedgerEntry(
+                entry_id=f"export_entry_{i}",
+                event_type="test",
+                data={"index": i},
+                previous_hash=f"prev_{i}",
+                timestamp=datetime.now(timezone.utc).isoformat()
+            )
+            storage.save_entry(entry)
+
+        # Export to JSON
+        output_path = os.path.join(os.path.dirname(temp_db), "export.json")
+        storage.export_to_json(output_path)
+
+        # Verify export file exists and has correct structure
+        assert os.path.exists(output_path)
+
+        with open(output_path, 'r') as f:
+            data = json.load(f)
+
+        assert "exported_at" in data
+        assert "total_entries" in data
+        assert data["total_entries"] == 3
+        assert "entries" in data
+        assert len(data["entries"]) == 3
+
+        # Cleanup
+        os.unlink(output_path)
