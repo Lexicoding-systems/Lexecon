@@ -1,0 +1,105 @@
+graph TB
+    subgraph "External Systems"
+        AI[AI System]
+        Client[Client Application]
+    end
+
+    subgraph "API Layer"
+        REST[REST API<br/>FastAPI]
+        WH[Webhooks]
+    end
+
+    subgraph "Service Layer"
+        RAS[RiskAssessmentService]
+        ESC[EscalationService]
+        OVR[OverrideService]
+        EVD[EvidenceService]
+        CMP[ComplianceMappingService]
+        AUD[AuditExportService]
+    end
+
+    subgraph "Data Layer"
+        LED[ImmutableLedger<br/>Decision Log]
+        EVS[EvidenceStore<br/>Artifact Storage]
+        CMS[ComplianceMapping<br/>Control Linkage]
+    end
+
+    subgraph "Data Artifacts"
+        DEC[Decision<br/>dec_*]
+        RSK[RiskAssessment<br/>risk_*]
+        ESCR[Escalation<br/>esc_*]
+        OVRR[Override<br/>ovr_dec_*]
+        EVDA[EvidenceArtifact<br/>evd_*<br/>SHA-256 hash]
+        PKT[AuditPacket<br/>exp_*<br/>Hash chain]
+    end
+
+    subgraph "UI Layer"
+        DASH[Governance Dashboard]
+        ESCQ[Escalation Queue]
+        OVRM[Override Management]
+        AUDX[Audit Export Wizard]
+    end
+
+    %% Decision flow
+    AI -->|submit decision| REST
+    REST -->|create| DEC
+    DEC -->|log| LED
+    DEC -->|assess| RAS
+    RAS -->|create| RSK
+    RSK -->|link decision_id| DEC
+
+    %% Escalation path
+    RSK -->|if high risk| ESC
+    ESC -->|create| ESCR
+    ESCR -->|link decision_id| DEC
+    ESCR -->|notify| ESCQ
+
+    %% Override path
+    OVRM -->|authorize| OVR
+    OVR -->|create| OVRR
+    OVRR -->|link decision_id| DEC
+
+    %% Evidence capture
+    RSK -->|capture| EVD
+    ESCR -->|capture| EVD
+    OVRR -->|capture| EVD
+    EVD -->|create| EVDA
+    EVDA -->|store with hash| EVS
+    EVDA -->|link decision_id| DEC
+    EVDA -->|link control_ids| CMP
+
+    %% Compliance mapping
+    EVDA -->|map to controls| CMP
+    CMP -->|update coverage| CMS
+
+    %% Audit export
+    LED -->|extract| AUD
+    EVS -->|include| AUD
+    CMS -->|include| AUD
+    AUD -->|generate| PKT
+    PKT -->|verify integrity| AUDX
+
+    %% UI interactions
+    Client -->|view status| DASH
+    DASH -->|query| REST
+    ESCQ -->|resolve| REST
+    REST -->|update| ESC
+
+    %% Webhooks for integrations
+    ESC -->|notify| WH
+    OVR -->|notify| WH
+    AUD -->|notify| WH
+
+    %% Evidence hash chain
+    EVDA -.->|hash references| EVDA
+    PKT -.->|root hash| EVDA
+
+    style DEC fill:#e1f5ff
+    style RSK fill:#e1f5ff
+    style ESCR fill:#e1f5ff
+    style OVRR fill:#e1f5ff
+    style EVDA fill:#ffe1e1
+    style PKT fill:#ffe1e1
+    style LED fill:#f5f5f5
+    style EVS fill:#f5f5f5
+    style CMS fill:#f5f5f5
