@@ -176,7 +176,7 @@ class TestEscalationAPI:
             f"/api/governance/escalation/{escalation_id}/resolve",
             json={
                 "resolved_by": "act_human_user:reviewer",
-                "outcome": "approved_with_conditions",
+                "outcome": "approved",
                 "notes": "Approved after review with additional monitoring",
             },
         )
@@ -185,7 +185,7 @@ class TestEscalationAPI:
         data = response.json()
         assert data["escalation_id"] == escalation_id
         assert data["status"] == "resolved"
-        assert data["outcome"] == "approved_with_conditions"
+        assert data["outcome"] == "approved"
         assert "resolved_at" in data
 
     def test_get_escalation(self, client):
@@ -195,10 +195,10 @@ class TestEscalationAPI:
             "/api/governance/escalation",
             json={
                 "decision_id": "dec_esc_003",
-                "trigger": "Test trigger",
-                "escalated_to": "act_human_user:admin",
+                "trigger": "risk_threshold",
+                "escalated_to": ["act_human_user:admin"],
                 "priority": "low",
-                "reason": "Test escalation",
+                "context_summary": "Test escalation",
             },
         )
         escalation_id = create_response.json()["escalation_id"]
@@ -222,10 +222,10 @@ class TestEscalationAPI:
                 "/api/governance/escalation",
                 json={
                     "decision_id": decision_id,
-                    "trigger": f"Trigger {i}",
-                    "escalated_to": "act_human_user:admin",
+                    "trigger": "risk_threshold",
+                    "escalated_to": ["act_human_user:admin"],
                     "priority": "low",
-                    "reason": f"Reason {i}",
+                    "context_summary": f"Context {i}",
                 },
             )
 
@@ -254,14 +254,14 @@ class TestEscalationAPI:
             "/api/governance/escalation",
             json={
                 "decision_id": "dec_esc_invalid",
-                "trigger": "Test",
-                "escalated_to": "act_human_user:admin",
+                "trigger": "risk_threshold",
+                "escalated_to": ["act_human_user:admin"],
                 "priority": "invalid_priority",
-                "reason": "Test",
+                "context_summary": "Test",
             },
         )
 
-        assert response.status_code == 400
+        assert response.status_code == 400  # Endpoint catches ValueError and returns 400
 
 
 class TestOverrideAPI:
@@ -273,11 +273,11 @@ class TestOverrideAPI:
             "/api/governance/override",
             json={
                 "decision_id": "dec_ovr_001",
-                "override_type": "policy_exception",
+                "override_type": "executive_override",
                 "authorized_by": "act_human_user:executive:ceo",
                 "justification": "Emergency business requirement necessitates temporary policy exception for critical customer deployment.",
-                "original_outcome": "deny",
-                "new_outcome": "allow",
+                "original_outcome": "denied",
+                "new_outcome": "approved",
             },
         )
 
@@ -285,7 +285,7 @@ class TestOverrideAPI:
         data = response.json()
         assert "override_id" in data
         assert data["decision_id"] == "dec_ovr_001"
-        assert data["override_type"] == "policy_exception"
+        assert data["override_type"] == "executive_override"
         assert "timestamp" in data
         assert "evidence_ids" in data
 
@@ -296,7 +296,7 @@ class TestOverrideAPI:
             "/api/governance/override",
             json={
                 "decision_id": "dec_ovr_002",
-                "override_type": "human_review",
+                "override_type": "risk_accepted",
                 "authorized_by": "act_human_user:governance_lead:john",
                 "justification": "Manual review completed and decision approved after detailed analysis of risk factors.",
             },
@@ -321,7 +321,7 @@ class TestOverrideAPI:
                 "/api/governance/override",
                 json={
                     "decision_id": decision_id,
-                    "override_type": "policy_exception",
+                    "override_type": "time_limited_exception",
                     "authorized_by": "act_human_user:executive:ceo",
                     "justification": f"Override justification number {i} with sufficient detail for audit trail.",
                 },
@@ -344,7 +344,7 @@ class TestOverrideAPI:
             "/api/governance/override",
             json={
                 "decision_id": decision_id,
-                "override_type": "policy_exception",
+                "override_type": "emergency_bypass",
                 "authorized_by": "act_human_user:executive:ceo",
                 "justification": "Active override test with detailed business justification for policy exception.",
             },
@@ -368,7 +368,7 @@ class TestOverrideAPI:
             "/api/governance/override",
             json={
                 "decision_id": decision_id,
-                "override_type": "policy_exception",
+                "override_type": "executive_override",
                 "authorized_by": "act_human_user:executive:ceo",
                 "justification": "Testing override status enrichment with proper justification length requirement.",
             },
@@ -388,7 +388,7 @@ class TestOverrideAPI:
             "/api/governance/override",
             json={
                 "decision_id": "dec_ovr_short",
-                "override_type": "policy_exception",
+                "override_type": "risk_accepted",
                 "authorized_by": "act_human_user:executive:ceo",
                 "justification": "Too short",  # Less than 20 chars
             },

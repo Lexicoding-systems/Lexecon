@@ -202,8 +202,8 @@ class RecordKeepingSystem:
     def apply_legal_hold(
         self,
         hold_id: str,
-        reason: str,
         entry_ids: Optional[List[str]] = None,
+        reason: str = "",
         requester: str = "system"
     ) -> Dict[str, Any]:
         """
@@ -247,6 +247,14 @@ class RecordKeepingSystem:
             "records_affected": affected_count,
             "status": "released"
         }
+
+    def _record_to_dict(self, record: ComplianceRecord) -> Dict[str, Any]:
+        """Convert ComplianceRecord to dict with enum values as strings."""
+        record_dict = asdict(record)
+        # Convert enums to their string values
+        record_dict['retention_class'] = record.retention_class.value
+        record_dict['status'] = record.status.value
+        return record_dict
 
     def generate_regulatory_package(
         self,
@@ -305,7 +313,7 @@ class RecordKeepingSystem:
                 "chain_intact": self.ledger.verify_integrity()["chain_intact"],
                 "root_hash": self.ledger.entries[-1].entry_hash if self.ledger.entries else None
             },
-            "records": [asdict(r) for r in records],
+            "records": [self._record_to_dict(r) for r in records],
             "compliance_attestation": {
                 "article_12_compliance": True,
                 "retention_policies_applied": True,
@@ -413,9 +421,9 @@ We attest that this package complies with EU AI Act Article 12 requirements:
                 "record_id": record['record_id'],
                 "event_type": entry['event_type'],
                 "timestamp": record['created_at'],
-                "retention_class": record['retention_class'],
+                "retention_class": record['retention_class'],  # Already converted to string
                 "expires_at": record['expires_at'],
-                "status": record['status'],
+                "status": record['status'],  # Already converted to string
                 "decision": data.get('decision', ''),
                 "actor": data.get('actor', ''),
                 "action": data.get('action', '')

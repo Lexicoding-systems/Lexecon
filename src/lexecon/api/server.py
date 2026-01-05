@@ -1633,10 +1633,10 @@ async def create_escalation(request: EscalationCreateRequest):
             "escalation_id": escalation.escalation_id,
             "decision_id": escalation.decision_id,
             "status": escalation.status.value,
-            "priority": escalation.priority.value,
-            "trigger": escalation.trigger,
+            "priority": escalation.priority.value if escalation.priority else None,
+            "trigger": escalation.trigger.value,
             "escalated_to": escalation.escalated_to,
-            "reason": escalation.reason,
+            "context_summary": escalation.context_summary,
             "created_at": escalation.created_at.isoformat(),
             "sla_deadline": escalation.sla_deadline.isoformat() if escalation.sla_deadline else None,
         }
@@ -1655,22 +1655,34 @@ async def resolve_escalation(escalation_id: str, request: EscalationResolveReque
         raise HTTPException(status_code=500, detail="Escalation service not initialized")
 
     try:
+        # Import ResolutionOutcome enum
+        from model_governance_pack.models import ResolutionOutcome
+
+        # Convert string to enum
+        outcome_enum = ResolutionOutcome(request.outcome.lower())
+
         escalation = escalation_service.resolve_escalation(
             escalation_id=escalation_id,
             resolved_by=request.resolved_by,
-            outcome=request.outcome,
+            outcome=outcome_enum,
             notes=request.notes
         )
+
+        # Extract outcome value - handle both enum and string
+        outcome_value = None
+        if escalation.resolution and escalation.resolution.outcome:
+            if hasattr(escalation.resolution.outcome, 'value'):
+                outcome_value = escalation.resolution.outcome.value
+            else:
+                outcome_value = escalation.resolution.outcome
 
         return {
             "escalation_id": escalation.escalation_id,
             "decision_id": escalation.decision_id,
             "status": escalation.status.value,
-            "priority": escalation.priority.value,
+            "priority": escalation.priority.value if escalation.priority else None,
             "resolved_at": escalation.resolved_at.isoformat() if escalation.resolved_at else None,
-            "resolved_by": escalation.resolved_by,
-            "outcome": escalation.outcome,
-            "resolution_notes": escalation.resolution_notes,
+            "outcome": outcome_value,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1694,15 +1706,14 @@ async def get_escalation(escalation_id: str):
         "escalation_id": escalation.escalation_id,
         "decision_id": escalation.decision_id,
         "status": escalation.status.value,
-        "priority": escalation.priority.value,
-        "trigger": escalation.trigger,
+        "priority": escalation.priority.value if escalation.priority else None,
+        "trigger": escalation.trigger.value,
         "escalated_to": escalation.escalated_to,
-        "reason": escalation.reason,
+        "context_summary": escalation.context_summary,
         "created_at": escalation.created_at.isoformat(),
         "sla_deadline": escalation.sla_deadline.isoformat() if escalation.sla_deadline else None,
         "resolved_at": escalation.resolved_at.isoformat() if escalation.resolved_at else None,
-        "resolved_by": escalation.resolved_by,
-        "outcome": escalation.outcome,
+        "resolution": escalation.resolution.model_dump() if escalation.resolution else None,
     }
 
 
@@ -1964,6 +1975,19 @@ async def store_evidence_artifact(request: EvidenceStoreRequest):
         raise HTTPException(status_code=500, detail=f"Artifact storage failed: {str(e)}")
 
 
+@app.get("/api/governance/evidence/statistics")
+async def get_evidence_statistics():
+    """Get evidence service statistics."""
+    initialize_services()
+
+    if not evidence_service:
+        raise HTTPException(status_code=500, detail="Evidence service not initialized")
+
+    stats = evidence_service.get_statistics()
+
+    return stats
+
+
 @app.get("/api/governance/evidence/{artifact_id}")
 async def get_evidence_artifact(artifact_id: str):
     """Get evidence artifact by ID."""
@@ -2084,19 +2108,6 @@ async def sign_evidence_artifact(artifact_id: str, request: EvidenceSignRequest)
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Signing failed: {str(e)}")
-
-
-@app.get("/api/governance/evidence/statistics")
-async def get_evidence_statistics():
-    """Get evidence service statistics."""
-    initialize_services()
-
-    if not evidence_service:
-        raise HTTPException(status_code=500, detail="Evidence service not initialized")
-
-    stats = evidence_service.get_statistics()
-
-    return stats
 
 
 # ---------- Compliance Mapping Service Endpoints (Phase 7) ----------

@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 import uuid
+import copy
 
 
 class RegulatoryFramework(Enum):
@@ -238,9 +239,9 @@ class ComplianceMappingService:
         """Initialize compliance mapping service."""
         self._mappings: Dict[str, ControlMapping] = {}
         self._control_registry: Dict[RegulatoryFramework, Dict[str, ComplianceControl]] = {
-            RegulatoryFramework.SOC2: self.SOC2_CONTROLS.copy(),
-            RegulatoryFramework.ISO27001: self.ISO27001_CONTROLS.copy(),
-            RegulatoryFramework.GDPR: self.GDPR_CONTROLS.copy(),
+            RegulatoryFramework.SOC2: copy.deepcopy(self.SOC2_CONTROLS),
+            RegulatoryFramework.ISO27001: copy.deepcopy(self.ISO27001_CONTROLS),
+            RegulatoryFramework.GDPR: copy.deepcopy(self.GDPR_CONTROLS),
         }
         self._reports: Dict[str, ComplianceReport] = {}
 
