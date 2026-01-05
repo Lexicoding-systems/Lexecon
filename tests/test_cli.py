@@ -298,7 +298,7 @@ class TestVerifyLedgerCommand:
         assert result.exit_code != 0
 
     def test_verify_ledger_tampered(self, runner, temp_dir):
-        """Test verifying a tampered ledger."""
+        """Test verifying a tampered ledger that fails from_dict."""
         from lexecon.ledger.chain import LedgerChain
 
         # Create ledger
@@ -315,16 +315,37 @@ class TestVerifyLedgerCommand:
 
         result = runner.invoke(cli, ["verify-ledger", "--ledger-file", str(ledger_file)])
 
-        # Should fail with tamper detection
-        # CLI raises exception which is caught by Click
+        # Should fail (from_dict raises ValueError for tampering)
         assert result.exit_code == 1
-        # Error can be in output or exception
-        assert (
-            result.exception is not None
-            or "validation failed" in result.output.lower()
-            or "invalid" in result.output.lower()
-            or len(result.output) == 0
-        )  # Exception without output
+        assert result.exception is not None
+
+    def test_verify_ledger_validation_failed(self, runner, temp_dir, monkeypatch):
+        """Test verify-ledger when verification fails (not from_dict)."""
+        from lexecon.ledger.chain import LedgerChain
+
+        # Create a valid ledger file
+        ledger = LedgerChain()
+        ledger.append("event1", {"data": 1})
+        ledger_file = Path(temp_dir) / "ledger.json"
+        ledger_file.write_text(json.dumps(ledger.to_dict()))
+
+        # Mock verify_integrity to return failure
+        original_verify = LedgerChain.verify_integrity
+        def mock_verify(self):
+            return {
+                "valid": False,
+                "error": "Simulated verification failure",
+                "entries_verified": 0
+            }
+
+        monkeypatch.setattr(LedgerChain, "verify_integrity", mock_verify)
+
+        result = runner.invoke(cli, ["verify-ledger", "--ledger-file", str(ledger_file)])
+
+        # Should fail with validation failed message
+        assert result.exit_code == 1
+        assert "validation failed" in result.output.lower() or "✗" in result.output
+        assert "Error" in result.output or "error" in result.output.lower()
 
 
 class TestServerCommand:
@@ -337,6 +358,40 @@ class TestServerCommand:
         assert "Start the API server" in result.output
         assert "--port" in result.output
         assert "--host" in result.output
+
+    def test_server_with_node_id(self, runner, monkeypatch):
+        """Test server command with node ID."""
+        import uvicorn
+
+        # Mock uvicorn.run to avoid actually starting the server
+        def mock_run(*args, **kwargs):
+            pass
+
+        monkeypatch.setattr(uvicorn, "run", mock_run)
+
+        result = runner.invoke(cli, ["server", "--node-id", "test-node", "--port", "8080"])
+
+        # Should output starting message and node ID
+        assert "Starting Lexecon API server" in result.output
+        assert "Node ID: test-node" in result.output
+        assert result.exit_code == 0
+
+    def test_server_without_node_id(self, runner, monkeypatch):
+        """Test server command without node ID."""
+        import uvicorn
+
+        # Mock uvicorn.run
+        def mock_run(*args, **kwargs):
+            pass
+
+        monkeypatch.setattr(uvicorn, "run", mock_run)
+
+        result = runner.invoke(cli, ["server", "--port", "9000"])
+
+        # Should output starting message but no node ID
+        assert "Starting Lexecon API server" in result.output
+        assert "Node ID:" not in result.output
+        assert result.exit_code == 0
 
     # Note: We can't easily test the actual server startup in unit tests
     # as it would start a real server. Integration tests would handle that.
@@ -426,6 +481,17 @@ class TestCLIErrorHandling:
         # Either succeeds (overwrite) or fails (file exists)
         # Both are acceptable behaviors
         assert result2.exit_code in [0, 1]
+
+
+class TestCLIMainEntryPoint:
+    """Tests for CLI main entry point."""
+
+    def test_main_entry_point(self, runner):
+        """Test that main entry point executes correctly."""
+        # Test that the CLI can be invoked through the main entry point
+        result = runner.invoke(cli, ["--help"])
+        assert result.exit_code == 0
+        assert "Lexecon" in result.output
 
 
 class TestCLIOutput:
