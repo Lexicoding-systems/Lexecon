@@ -718,6 +718,156 @@
         background: rgba(100, 116, 139, 0.3);
     }
 
+    /* Attestation Styles */
+    .attestation-container {
+        background: var(--card-bg);
+        border: 2px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .attestation-header {
+        background: rgba(239, 68, 68, 0.1);
+        border-bottom: 2px solid #ef4444;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .attestation-header h3 {
+        color: #ef4444;
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        letter-spacing: 0.5px;
+    }
+
+    .attestation-header p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .attestation-scroll {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 24px;
+        background: rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .attestation-scroll::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .attestation-scroll::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    .attestation-scroll::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 4px;
+    }
+
+    .attestation-content {
+        color: var(--text-primary);
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .attestation-intro {
+        font-size: 15px;
+        margin-bottom: 24px;
+        padding: 16px;
+        background: rgba(8, 145, 178, 0.1);
+        border-left: 3px solid var(--primary);
+        border-radius: 4px;
+    }
+
+    .attestation-content h4 {
+        color: var(--primary);
+        margin: 24px 0 12px 0;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .attestation-content p {
+        margin: 0 0 16px 0;
+        color: var(--text-secondary);
+    }
+
+    .attestation-content ul {
+        margin: 8px 0 16px 24px;
+        color: var(--text-secondary);
+    }
+
+    .attestation-content li {
+        margin: 6px 0;
+    }
+
+    .attestation-signature-block {
+        margin-top: 32px;
+        padding: 20px;
+        background: rgba(8, 145, 178, 0.05);
+        border: 1px solid var(--primary);
+        border-radius: 4px;
+    }
+
+    .signature-line {
+        margin: 12px 0;
+    }
+
+    .signature-line strong {
+        color: var(--primary);
+        font-size: 13px;
+    }
+
+    .attestation-acceptance {
+        padding: 24px;
+        background: rgba(8, 145, 178, 0.05);
+    }
+
+    .attestation-checkbox {
+        display: flex;
+        align-items: flex-start;
+        cursor: pointer;
+        gap: 16px;
+    }
+
+    .attestation-checkbox input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+        margin-top: 4px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .attestation-checkbox-label {
+        flex: 1;
+    }
+
+    .attestation-checkbox-label strong {
+        display: block;
+        color: var(--text-primary);
+        font-size: 15px;
+        margin-bottom: 8px;
+    }
+
+    .attestation-checkbox-label p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .attestation-error {
+        margin: 16px 24px;
+        padding: 12px 16px;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid #ef4444;
+        border-radius: 4px;
+        color: #fca5a5;
+        font-size: 13px;
+    }
+
     </style>
 </head>
 <body>
@@ -1097,7 +1247,8 @@
 
         // Enterprise Audit Packet Generation Workflow
 let currentStep = 1;
-const totalSteps = 3;
+const totalSteps = 4;
+let attestationScrolledToBottom = false;
 let auditPacketData = {};
 
 function openAuditModal() {
@@ -1137,12 +1288,16 @@ function nextStep() {
     } else if (currentStep === 2) {
         if (!validateStep2()) return;
         captureStep2Data();
-        updatePreview();
+        prepareAttestation();
     } else if (currentStep === 3) {
+        if (!validateStep3()) return;
+        captureStep3Data();
+        updatePreview();
+    } else if (currentStep === 4) {
         generateAuditPacket();
         return;
     }
-    
+
     currentStep++;
     updateModalUI();
 }
@@ -1162,21 +1317,22 @@ function updateModalUI() {
         if (i < currentStep) step.classList.add('completed');
         if (i === currentStep) step.classList.add('active');
     }
-    
+
     // Show/hide step content
     document.getElementById('modalStep1').style.display = currentStep === 1 ? 'block' : 'none';
     document.getElementById('modalStep2').style.display = currentStep === 2 ? 'block' : 'none';
     document.getElementById('modalStep3').style.display = currentStep === 3 ? 'block' : 'none';
-    document.getElementById('modalStep4').style.display = 'none';
-    
+    document.getElementById('modalStep4').style.display = currentStep === 4 ? 'block' : 'none';
+    document.getElementById('modalStep5').style.display = 'none';
+
     // Update buttons
     const backBtn = document.getElementById('modalBackBtn');
     const nextBtn = document.getElementById('modalNextBtn');
-    
+
     backBtn.style.display = currentStep > 1 ? 'block' : 'none';
-    
+
     if (currentStep === totalSteps) {
-        nextBtn.innerHTML = '📦 Generate Packet';
+        nextBtn.innerHTML = 'Generate Packet';
         nextBtn.style.background = 'var(--success)';
     } else {
         nextBtn.innerHTML = 'Next →';
@@ -1321,11 +1477,83 @@ function setQuickRange(range) {
     }
 }
 
+// Attestation functions
+function prepareAttestation() {
+    // Fill in requester name and purpose from Step 1
+    document.getElementById('attestRequester').textContent = auditPacketData.metadata.requester_name;
+    document.getElementById('attestPurpose').textContent = auditPacketData.metadata.purpose;
+
+    // Reset attestation state
+    attestationScrolledToBottom = false;
+    document.getElementById('attestationCheckbox').checked = false;
+    document.getElementById('attestationError').style.display = 'none';
+
+    // Add scroll listener to detect when user reaches bottom
+    const scrollEl = document.getElementById('attestationScroll');
+    scrollEl.addEventListener('scroll', function() {
+        const isAtBottom = scrollEl.scrollHeight - scrollEl.scrollTop <= scrollEl.clientHeight + 50;
+        if (isAtBottom) {
+            attestationScrolledToBottom = true;
+        }
+    });
+}
+
+function validateAttestation() {
+    const checkbox = document.getElementById('attestationCheckbox');
+    const errorEl = document.getElementById('attestationError');
+
+    if (!attestationScrolledToBottom && checkbox.checked) {
+        checkbox.checked = false;
+        errorEl.style.display = 'block';
+        return false;
+    }
+
+    errorEl.style.display = 'none';
+    return true;
+}
+
+function validateStep3() {
+    const checkbox = document.getElementById('attestationCheckbox');
+    const errorEl = document.getElementById('attestationError');
+
+    if (!checkbox.checked) {
+        errorEl.textContent = 'You must read the attestation and check the acceptance box to proceed.';
+        errorEl.style.display = 'block';
+        return false;
+    }
+
+    if (!attestationScrolledToBottom) {
+        errorEl.textContent = 'You must scroll through the entire attestation before accepting.';
+        errorEl.style.display = 'block';
+        return false;
+    }
+
+    errorEl.style.display = 'none';
+    return true;
+}
+
+function captureStep3Data() {
+    // Capture attestation
+    const now = new Date().toISOString();
+    const attestationText = document.querySelector('.attestation-content').innerText;
+
+    auditPacketData.attestation = {
+        accepted: true,
+        text: attestationText,
+        timestamp: now,
+        scrolled_to_bottom: attestationScrolledToBottom
+    };
+
+    // Update signature info display
+    document.getElementById('attestTimestamp').textContent = now;
+    document.getElementById('digitalSignature').textContent = `ATTEST-${now.replace(/[:\-T.Z]/g, '').substring(0, 16)}`;
+}
+
 async function generateAuditPacket() {
     // Show generating UI
-    currentStep = 4;
-    document.getElementById('modalStep3').style.display = 'none';
-    document.getElementById('modalStep4').style.display = 'block';
+    currentStep = 5;
+    document.getElementById('modalStep4').style.display = 'none';
+    document.getElementById('modalStep5').style.display = 'block';
     document.getElementById('modalBackBtn').style.display = 'none';
     document.getElementById('modalNextBtn').style.display = 'none';
     
@@ -1465,6 +1693,7 @@ function generateAuditPacketOriginal() {
             <div class="step active" id="step1"></div>
             <div class="step" id="step2"></div>
             <div class="step" id="step3"></div>
+            <div class="step" id="step4"></div>
         </div>
 
         <!-- Step 1: Configuration -->
@@ -1593,8 +1822,124 @@ function generateAuditPacketOriginal() {
             </div>
         </div>
 
-        <!-- Step 3: Preview & Confirm -->
+        <!-- Step 3: Legal Attestation -->
         <div id="modalStep3" style="display: none;">
+            <div class="alert alert-warning">
+                <span>⚠</span>
+                <div>
+                    <strong>Legal Notice</strong><br>
+                    You must read and accept the legal attestation before proceeding. This is a legally binding statement.
+                </div>
+            </div>
+
+            <div class="attestation-container">
+                <div class="attestation-header">
+                    <h3>LEGAL ATTESTATION FOR DATA EXPORT</h3>
+                    <p>Audit Packet Generation - Regulatory Compliance</p>
+                </div>
+
+                <div class="attestation-scroll" id="attestationScroll">
+                    <div class="attestation-content">
+                        <p class="attestation-intro">
+                            I, <span id="attestRequester" style="font-weight: 600; color: var(--primary);"></span>,
+                            hereby make the following attestations under penalty of law:
+                        </p>
+
+                        <h4>1. Authorization</h4>
+                        <p>I am authorized by my organization to request this audit packet for the stated purpose:
+                        <span id="attestPurpose" style="font-weight: 600;"></span>. I have the appropriate role and
+                        authority to access and export this compliance data.</p>
+
+                        <h4>2. Legitimate Business Purpose</h4>
+                        <p>This export is for a legitimate business purpose as documented in the request metadata.
+                        The information will be used solely for the stated purpose and not for any unauthorized or
+                        unlawful activities.</p>
+
+                        <h4>3. Data Protection Obligations</h4>
+                        <p>I acknowledge that this audit packet may contain sensitive information subject to:</p>
+                        <ul>
+                            <li>EU AI Act (Regulation 2024/1689) compliance requirements</li>
+                            <li>General Data Protection Regulation (GDPR) data protection rules</li>
+                            <li>Organizational data handling policies and procedures</li>
+                            <li>Confidentiality and non-disclosure obligations</li>
+                        </ul>
+
+                        <h4>4. Handling Requirements</h4>
+                        <p>I agree to:</p>
+                        <ul>
+                            <li>Store the exported data securely using approved encryption methods</li>
+                            <li>Limit access to authorized personnel with a legitimate need to know</li>
+                            <li>Not distribute, share, or transmit the data without proper authorization</li>
+                            <li>Destroy or return the data when no longer needed for the stated purpose</li>
+                            <li>Report any unauthorized access, loss, or disclosure immediately</li>
+                        </ul>
+
+                        <h4>5. Audit Trail Acknowledgment</h4>
+                        <p>I understand that:</p>
+                        <ul>
+                            <li>This export request is logged in an immutable audit trail</li>
+                            <li>The audit packet includes a digital signature for non-repudiation</li>
+                            <li>I cannot deny having made this request or receiving this data</li>
+                            <li>All access and usage may be monitored and audited</li>
+                        </ul>
+
+                        <h4>6. Legal Consequences</h4>
+                        <p>I acknowledge that unauthorized use, disclosure, or mishandling of this data may result in:</p>
+                        <ul>
+                            <li>Disciplinary action up to and including termination of employment</li>
+                            <li>Civil liability and damages under data protection laws</li>
+                            <li>Criminal prosecution under applicable laws and regulations</li>
+                            <li>Regulatory fines and penalties imposed on the organization</li>
+                        </ul>
+
+                        <h4>7. Accuracy of Information</h4>
+                        <p>I certify that all information provided in this request (name, email, purpose, case ID, notes)
+                        is true, accurate, and complete to the best of my knowledge.</p>
+
+                        <div class="attestation-signature-block">
+                            <div class="signature-line">
+                                <strong>Digital Signature:</strong>
+                                <div style="margin-top: 8px;">
+                                    <div style="font-family: 'Courier New', monospace; color: var(--primary); font-size: 14px;" id="digitalSignature">
+                                        [Generated upon acceptance]
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="signature-line">
+                                <strong>Timestamp:</strong>
+                                <div style="margin-top: 4px; font-family: 'Courier New', monospace;" id="attestTimestamp">
+                                    [Captured upon acceptance]
+                                </div>
+                            </div>
+                            <div class="signature-line">
+                                <strong>IP Address:</strong>
+                                <div style="margin-top: 4px; font-family: 'Courier New', monospace;" id="attestIP">
+                                    [Recorded upon acceptance]
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="attestation-acceptance">
+                    <label class="attestation-checkbox">
+                        <input type="checkbox" id="attestationCheckbox" onchange="validateAttestation()">
+                        <div class="attestation-checkbox-label">
+                            <strong>I have read, understood, and accept all terms of this legal attestation</strong>
+                            <p>By checking this box, I acknowledge that I have scrolled through and read the entire attestation above,
+                            and I agree to be legally bound by its terms. I understand this creates a binding legal obligation.</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div id="attestationError" class="attestation-error" style="display: none;">
+                    You must scroll to the bottom of the attestation and check the acceptance box to proceed.
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Preview & Confirm -->
+        <div id="modalStep4" style="display: none;">
             <div class="alert alert-warning">
                 <span>⚠️</span>
                 <div>
@@ -1659,8 +2004,8 @@ function generateAuditPacketOriginal() {
             </div>
         </div>
 
-        <!-- Step 4: Generating (shown during generation) -->
-        <div id="modalStep4" style="display: none;">
+        <!-- Step 5: Generating (shown during generation) -->
+        <div id="modalStep5" style="display: none;">
             <div style="text-align: center; padding: 40px 20px;">
                 <div class="spinner" style="width: 48px; height: 48px; margin: 0 auto 20px;"></div>
                 <h3 style="color: var(--text-primary); margin-bottom: 8px;">Generating Audit Packet...</h3>

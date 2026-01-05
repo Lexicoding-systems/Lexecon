@@ -40,6 +40,12 @@ from lexecon.risk.service import RiskService, RiskScoringEngine
 from lexecon.escalation.service import EscalationService
 from lexecon.override.service import OverrideService
 from lexecon.evidence.service import EvidenceService
+from lexecon.compliance_mapping.service import (
+    ComplianceMappingService,
+    RegulatoryFramework,
+    GovernancePrimitive,
+    ControlStatus
+)
 
 # Import governance models for type hints
 try:
@@ -252,6 +258,26 @@ class EvidenceSignRequest(BaseModel):
     algorithm: str = Field(default="RSA-SHA256", description="Signature algorithm")
 
 
+# ========== Compliance Mapping API Models (Phase 7) ==========
+
+class ComplianceMappingRequest(BaseModel):
+    """Request to map a primitive to compliance controls."""
+    primitive_type: str = Field(..., description="Type of governance primitive")
+    primitive_id: str = Field(..., description="ID of primitive instance")
+    framework: str = Field(..., description="Regulatory framework")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+
+class ComplianceLinkEvidenceRequest(BaseModel):
+    """Request to link evidence to a control."""
+    evidence_artifact_id: str = Field(..., description="Evidence artifact ID")
+
+
+class ComplianceVerifyControlRequest(BaseModel):
+    """Request to verify a control."""
+    notes: Optional[str] = Field(default=None, description="Verification notes")
+
+
 # Create FastAPI app
 app = FastAPI(
     title="Lexecon Governance API",
@@ -294,11 +320,14 @@ escalation_service: Optional[EscalationService] = None
 override_service: Optional[OverrideService] = None
 evidence_service: Optional[EvidenceService] = None
 
+# Compliance mapping service (Phase 7)
+compliance_mapping_service: Optional[ComplianceMappingService] = None
+
 
 def initialize_services():
     """Initialize services with default configuration."""
     global policy_engine, decision_service, key_manager, oversight_system, intervention_storage
-    global risk_service, escalation_service, override_service, evidence_service
+    global risk_service, escalation_service, override_service, evidence_service, compliance_mapping_service
 
     if policy_engine is None:
         policy_engine = PolicyEngine(mode=PolicyMode.STRICT)
@@ -334,6 +363,10 @@ def initialize_services():
 
     if evidence_service is None:
         evidence_service = EvidenceService()
+
+    # Initialize compliance mapping service (Phase 7)
+    if compliance_mapping_service is None:
+        compliance_mapping_service = ComplianceMappingService()
 
 
 @app.on_event("startup")
@@ -2039,6 +2072,335 @@ async def get_evidence_statistics():
     return stats
 
 
+# ---------- Compliance Mapping Service Endpoints (Phase 7) ----------
+
+@app.post("/api/governance/compliance/map")
+async def map_primitive_to_controls(request: ComplianceMappingRequest):
+    """Map a governance primitive to compliance controls."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        # Convert strings to enums
+        primitive_type = GovernancePrimitive(request.primitive_type.lower())
+        framework = RegulatoryFramework(request.framework.lower())
+
+        mapping = compliance_mapping_service.map_primitive_to_controls(
+            primitive_type=primitive_type,
+            primitive_id=request.primitive_id,
+            framework=framework,
+            metadata=request.metadata
+        )
+
+        return {
+            "mapping_id": mapping.mapping_id,
+            "primitive_type": mapping.primitive_type.value,
+            "primitive_id": mapping.primitive_id,
+            "framework": mapping.framework.value,
+            "control_ids": mapping.control_ids,
+            "mapped_at": mapping.mapped_at.isoformat(),
+            "verification_status": mapping.verification_status,
+            "metadata": mapping.metadata,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Mapping failed: {str(e)}")
+
+
+@app.get("/api/governance/compliance/{framework}/controls")
+async def list_compliance_controls(
+    framework: str,
+    status: Optional[str] = None,
+    category: Optional[str] = None
+):
+    """List compliance controls for a framework with optional filtering."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        framework_enum = RegulatoryFramework(framework.lower())
+        status_enum = ControlStatus(status.lower()) if status else None
+
+        controls = compliance_mapping_service.list_controls(
+            framework=framework_enum,
+            status=status_enum,
+            category=category
+        )
+
+        return {
+            "framework": framework,
+            "count": len(controls),
+            "filters": {
+                "status": status,
+                "category": category,
+            },
+            "controls": [
+                {
+                    "control_id": c.control_id,
+                    "title": c.title,
+                    "description": c.description,
+                    "category": c.category,
+                    "status": c.status.value,
+                    "required_evidence_types": c.required_evidence_types,
+                    "mapped_primitives": [p.value for p in c.mapped_primitives],
+                    "last_verified": c.last_verified.isoformat() if c.last_verified else None,
+                }
+                for c in controls
+            ],
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list controls: {str(e)}")
+
+
+@app.get("/api/governance/compliance/{framework}/{control_id}")
+async def get_control_status(framework: str, control_id: str):
+    """Get status of a specific compliance control."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        framework_enum = RegulatoryFramework(framework.lower())
+        control = compliance_mapping_service.get_control_status(control_id, framework_enum)
+
+        if not control:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Control {control_id} not found in framework {framework}"
+            )
+
+        return {
+            "control_id": control.control_id,
+            "framework": control.framework.value,
+            "title": control.title,
+            "description": control.description,
+            "category": control.category,
+            "status": control.status.value,
+            "required_evidence_types": control.required_evidence_types,
+            "mapped_primitives": [p.value for p in control.mapped_primitives],
+            "evidence_artifact_ids": control.evidence_artifact_ids,
+            "last_verified": control.last_verified.isoformat() if control.last_verified else None,
+            "verification_notes": control.verification_notes,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get control status: {str(e)}")
+
+
+@app.post("/api/governance/compliance/{framework}/{control_id}/verify")
+async def verify_control(framework: str, control_id: str, request: ComplianceVerifyControlRequest):
+    """Mark a compliance control as verified."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        framework_enum = RegulatoryFramework(framework.lower())
+
+        success = compliance_mapping_service.verify_control(
+            control_id=control_id,
+            framework=framework_enum,
+            notes=request.notes
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Control {control_id} not found in framework {framework}"
+            )
+
+        # Get updated control
+        control = compliance_mapping_service.get_control_status(control_id, framework_enum)
+
+        return {
+            "success": True,
+            "control_id": control_id,
+            "framework": framework,
+            "status": control.status.value,
+            "last_verified": control.last_verified.isoformat() if control.last_verified else None,
+            "verification_notes": control.verification_notes,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
+
+
+@app.post("/api/governance/compliance/{framework}/{control_id}/link-evidence")
+async def link_evidence_to_control(
+    framework: str,
+    control_id: str,
+    request: ComplianceLinkEvidenceRequest
+):
+    """Link an evidence artifact to a compliance control."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        framework_enum = RegulatoryFramework(framework.lower())
+
+        success = compliance_mapping_service.link_evidence_to_control(
+            control_id=control_id,
+            framework=framework_enum,
+            evidence_artifact_id=request.evidence_artifact_id
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Control {control_id} not found in framework {framework}"
+            )
+
+        # Get updated control
+        control = compliance_mapping_service.get_control_status(control_id, framework_enum)
+
+        return {
+            "success": True,
+            "control_id": control_id,
+            "framework": framework,
+            "evidence_artifact_id": request.evidence_artifact_id,
+            "total_evidence_artifacts": len(control.evidence_artifact_ids),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to link evidence: {str(e)}")
+
+
+@app.get("/api/governance/compliance/{framework}/gaps")
+async def analyze_compliance_gaps(framework: str):
+    """Analyze compliance gaps for a framework."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        framework_enum = RegulatoryFramework(framework.lower())
+        gaps = compliance_mapping_service.analyze_gaps(framework_enum)
+
+        return {
+            "framework": framework,
+            "gap_count": len(gaps),
+            "gaps": gaps,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gap analysis failed: {str(e)}")
+
+
+@app.get("/api/governance/compliance/{framework}/report")
+async def generate_compliance_report(framework: str):
+    """Generate comprehensive compliance report for a framework."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        framework_enum = RegulatoryFramework(framework.lower())
+        report = compliance_mapping_service.generate_compliance_report(framework_enum)
+
+        return {
+            "report_id": report.report_id,
+            "framework": report.framework.value,
+            "generated_at": report.generated_at.isoformat(),
+            "total_controls": report.total_controls,
+            "implemented_controls": report.implemented_controls,
+            "verified_controls": report.verified_controls,
+            "non_compliant_controls": report.non_compliant_controls,
+            "compliance_percentage": report.compliance_percentage,
+            "gaps": report.gaps,
+            "recommendations": report.recommendations,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
+
+
+@app.get("/api/governance/compliance/{framework}/coverage")
+async def get_framework_coverage(framework: str):
+    """Get coverage statistics for a framework."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        framework_enum = RegulatoryFramework(framework.lower())
+        coverage = compliance_mapping_service.get_framework_coverage(framework_enum)
+
+        return coverage
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get coverage: {str(e)}")
+
+
+@app.get("/api/governance/compliance/primitive/{primitive_id}/mappings")
+async def get_primitive_mappings(primitive_id: str):
+    """Get all control mappings for a governance primitive."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        mappings = compliance_mapping_service.get_primitive_mappings(primitive_id)
+
+        return {
+            "primitive_id": primitive_id,
+            "mapping_count": len(mappings),
+            "mappings": [
+                {
+                    "mapping_id": m.mapping_id,
+                    "primitive_type": m.primitive_type.value,
+                    "framework": m.framework.value,
+                    "control_ids": m.control_ids,
+                    "mapped_at": m.mapped_at.isoformat(),
+                    "verification_status": m.verification_status,
+                }
+                for m in mappings
+            ],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get mappings: {str(e)}")
+
+
+@app.get("/api/governance/compliance/statistics")
+async def get_compliance_statistics():
+    """Get overall compliance mapping statistics."""
+    initialize_services()
+
+    if not compliance_mapping_service:
+        raise HTTPException(status_code=500, detail="Compliance mapping service not initialized")
+
+    try:
+        stats = compliance_mapping_service.get_statistics()
+
+        # Convert framework enums to strings in the response
+        if "frameworks" in stats:
+            stats["frameworks"] = [f.value for f in stats["frameworks"]]
+
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get statistics: {str(e)}")
+
+
 # ============================================================================
 # Root Endpoint
 # ============================================================================
@@ -2090,5 +2452,16 @@ async def root():
             "evidence_lineage": "/api/governance/evidence/decision/{decision_id}/lineage",
             "evidence_sign": "/api/governance/evidence/{artifact_id}/sign",
             "evidence_stats": "/api/governance/evidence/statistics",
+            # Compliance Mapping API (Phase 7)
+            "compliance_map": "/api/governance/compliance/map",
+            "compliance_controls": "/api/governance/compliance/{framework}/controls",
+            "compliance_control_status": "/api/governance/compliance/{framework}/{control_id}",
+            "compliance_verify_control": "/api/governance/compliance/{framework}/{control_id}/verify",
+            "compliance_link_evidence": "/api/governance/compliance/{framework}/{control_id}/link-evidence",
+            "compliance_gaps": "/api/governance/compliance/{framework}/gaps",
+            "compliance_report": "/api/governance/compliance/{framework}/report",
+            "compliance_coverage": "/api/governance/compliance/{framework}/coverage",
+            "compliance_primitive_mappings": "/api/governance/compliance/primitive/{primitive_id}/mappings",
+            "compliance_statistics": "/api/governance/compliance/statistics",
         },
     }

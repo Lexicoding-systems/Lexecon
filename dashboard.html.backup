@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lexecon Compliance Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0891b2;
+            --secondary: #64748b;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --verified: #10b981;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .verified-shield {
+            color: var(--verified);
+            font-size: 20px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .time-selector {
+            display: flex;
+            gap: 5px;
+            background: rgba(0,0,0,0.2);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .time-btn {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .time-btn:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .time-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge.compliant {
+            background: rgba(5, 150, 105, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(5, 150, 105, 0.3);
+        }
+
+        .action-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn:hover {
+            background: #0e7490;
+            transform: translateY(-1px);
+        }
+
+        .action-btn.secondary {
+            background: rgba(100, 116, 139, 0.2);
+            border: 1px solid var(--border);
+        }
+
+        .action-btn.secondary:hover {
+            background: rgba(100, 116, 139, 0.3);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s;
+        }
+
+        .metric-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(8, 145, 178, 0.15);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tooltip {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: rgba(148, 163, 184, 0.2);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 16px;
+            font-size: 11px;
+            cursor: help;
+            color: var(--text-secondary);
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            background: #1e293b;
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-primary);
+            white-space: nowrap;
+            z-index: 1000;
+            margin-top: 25px;
+            margin-left: -100px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .metric-value.loading {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .metric-subtitle {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .metric-helper {
+            color: var(--warning);
+            font-size: 12px;
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .legal-ref {
+            background: rgba(8, 145, 178, 0.15);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: rgba(0,0,0,0.2);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-align: left;
+            padding: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .badge-danger { background: rgba(220, 38, 38, 0.2); color: var(--danger); }
+        .badge-warning { background: rgba(217, 119, 6, 0.2); color: var(--warning); }
+        .badge-info { background: rgba(8, 145, 178, 0.2); color: var(--primary); }
+
+        .signature-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+
+        .signature-status.verified {
+            color: var(--verified);
+        }
+
+        .signature-status.broken {
+            color: var(--danger);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .timestamp {
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1>
+                        <span class="verified-shield" title="Ledger chain verified">🛡️</span>
+                        Lexecon Compliance Dashboard
+                    </h1>
+                    <div class="subtitle">EU AI Act Compliance Monitoring • Real-time Audit Trail</div>
+                </div>
+                <div class="header-controls">
+                    <div class="time-selector">
+                        <button class="time-btn" onclick="setTimeWindow('24h')">24h</button>
+                        <button class="time-btn" onclick="setTimeWindow('7d')">7d</button>
+                        <button class="time-btn" onclick="setTimeWindow('30d')">30d</button>
+                        <button class="time-btn active" onclick="setTimeWindow('all')">All-time</button>
+                    </div>
+                    <span class="status-badge compliant">
+                        <span>✓</span>
+                        <span>COMPLIANT</span>
+                    </span>
+                    <button class="action-btn" onclick="generateAuditPacket()">
+                        📦 Generate Audit Packet
+                    </button>
+                    <button class="action-btn secondary" onclick="refreshDashboard()">
+                        ↻ Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">
+                        Total Decisions
+                        <span class="tooltip" data-tooltip="Number of AI decisions tracked with full accountability chain">ⓘ</span>
+                    </div>
+                </div>
+                <div class="metric-value" id="totalDecisions">
+                    <div class="loading"><div class="spinner"></div>Loading...</div>
+                </div>
+                <div class="metric-subtitle">Tracked with accountability</div>
+                <div class="metric-subtitle" id="decisionsTimeWindow" style="margin-top: 4px; font-weight: 600;"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">
+                        Ledger Entries
+                        <span class="tooltip" data-tooltip="Tamper-evident entries in cryptographic chain">ⓘ</span>
+                    </div>
+                </div>
+                <div class="metric-value" id="ledgerEntries">
+                    <div class="loading"><div class="spinner"></div>Loading...</div>
+                </div>
+                <div class="metric-subtitle">Cryptographically chained</div>
+                <div class="metric-helper" id="ledgerHelper"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">
+                        Human Oversight Actions
+                        <span class="tooltip" data-tooltip="Article 14 human interventions: approvals, overrides, escalations">ⓘ</span>
+                    </div>
+                </div>
+                <div class="metric-value" id="interventions">
+                    <div class="loading"><div class="spinner"></div>Loading...</div>
+                </div>
+                <div class="metric-subtitle">Article 14 compliance</div>
+                <div class="metric-subtitle" id="interventionsTimeWindow" style="margin-top: 4px; font-weight: 600;"></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">
+                        Human Override Rate
+                        <span class="tooltip" data-tooltip="Percentage of AI decisions overridden by human operators">ⓘ</span>
+                    </div>
+                </div>
+                <div class="metric-value" id="overrideRate">
+                    <div class="loading"><div class="spinner"></div>Loading...</div>
+                </div>
+                <div class="metric-subtitle">Human vs AI decisions</div>
+                <div class="metric-subtitle" id="overrideTimeWindow" style="margin-top: 4px; font-weight: 600;"></div>
+            </div>
+        </div>
+
+        <!-- Latest Decisions Table -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    Latest Decisions
+                    <span class="legal-ref">Art. 11 Documentation</span>
+                </h2>
+                <span class="timestamp" id="decisionsUpdated">-</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Actor</th>
+                        <th>Action</th>
+                        <th>Tool</th>
+                        <th>Risk</th>
+                        <th>Decision</th>
+                        <th>Override</th>
+                        <th>Trace ID</th>
+                        <th>Signature</th>
+                    </tr>
+                </thead>
+                <tbody id="decisionsTable">
+                    <tr><td colspan="9" class="loading"><div class="spinner"></div>Loading decisions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Human Oversight Actions (Article 14) -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    Human Oversight Actions
+                    <span class="legal-ref">Art. 14 Human Oversight</span>
+                </h2>
+                <span class="timestamp" id="article14Updated">-</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Type</th>
+                        <th>Human Role</th>
+                        <th>AI Recommendation</th>
+                        <th>AI Confidence</th>
+                        <th>Human Decision</th>
+                        <th>Reason</th>
+                        <th>Intervention ID</th>
+                        <th>Signature</th>
+                    </tr>
+                </thead>
+                <tbody id="article14Table">
+                    <tr><td colspan="9" class="loading"><div class="spinner"></div>Loading interventions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Audit Ledger -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    Audit Ledger
+                    <span class="legal-ref">Art. 12 Record Keeping</span>
+                </h2>
+                <span class="timestamp" id="ledgerUpdated">-</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Entry ID</th>
+                        <th>Event Type</th>
+                        <th>Timestamp</th>
+                        <th>Data</th>
+                        <th>Hash</th>
+                        <th>Chain Status</th>
+                    </tr>
+                </thead>
+                <tbody id="ledgerTable">
+                    <tr><td colspan="6" class="loading"><div class="spinner"></div>Loading ledger...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentTimeWindow = 'all';
+
+        async function fetchAPI(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (error) {
+                console.error(`Failed to fetch ${endpoint}:`, error);
+                return null;
+            }
+        }
+
+        function setTimeWindow(window) {
+            currentTimeWindow = window;
+            document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            refreshDashboard();
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function truncateHash(hash, length = 12) {
+            if (!hash || hash.length <= length) return hash;
+            return `${hash.substring(0, length)}...`;
+        }
+
+        function getTimeWindowLabel() {
+            const labels = {
+                '24h': 'Last 24 hours',
+                '7d': 'Last 7 days',
+                '30d': 'Last 30 days',
+                'all': 'All-time'
+            };
+            return labels[currentTimeWindow] || 'All-time';
+        }
+
+        function filterByTimeWindow(items, timestampKey = 'timestamp') {
+            if (currentTimeWindow === 'all') return items;
+
+            const now = new Date();
+            const windowMs = {
+                '24h': 24 * 60 * 60 * 1000,
+                '7d': 7 * 24 * 60 * 60 * 1000,
+                '30d': 30 * 24 * 60 * 60 * 1000
+            };
+
+            const cutoff = new Date(now - windowMs[currentTimeWindow]);
+            return items.filter(item => new Date(item[timestampKey]) >= cutoff);
+        }
+
+        async function loadDecisionsData() {
+            const entries = await fetchAPI('/ledger/entries');
+
+            if (entries && entries.entries) {
+                const decisions = entries.entries.filter(e => e.event_type === 'decision');
+                const filtered = filterByTimeWindow(decisions);
+
+                // Update metrics
+                const totalDecisions = filtered.length;
+                document.getElementById('totalDecisions').textContent = totalDecisions;
+                document.getElementById('decisionsTimeWindow').textContent = getTimeWindowLabel();
+
+                // Build decisions table
+                const tableHTML = filtered.slice(-20).reverse().map(entry => {
+                    const data = entry.data;
+                    const hasSignature = entry.entry_hash && entry.entry_hash.length > 0;
+
+                    return `
+                        <tr>
+                            <td class="timestamp">${formatTimestamp(entry.timestamp)}</td>
+                            <td>${data.actor || '-'}</td>
+                            <td><code>${data.action || '-'}</code></td>
+                            <td><span class="badge badge-info">${data.tool || 'N/A'}</span></td>
+                            <td><span class="badge badge-warning">${data.risk_level || 'N/A'}</span></td>
+                            <td><span class="badge ${data.decision === 'allow' ? 'badge-success' : 'badge-danger'}">${data.decision || '-'}</span></td>
+                            <td>${data.override ? '<span class="badge badge-warning">YES</span>' : '<span class="badge badge-info">NO</span>'}</td>
+                            <td><code>${truncateHash(data.request_id || entry.entry_id, 8)}</code></td>
+                            <td>
+                                <div class="signature-status ${hasSignature ? 'verified' : 'broken'}">
+                                    ${hasSignature ? '<span>✓</span><span>Signed</span>' : '<span>⚠</span><span>None</span>'}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('decisionsTable').innerHTML = tableHTML ||
+                    '<tr><td colspan="9" class="empty-state">No decisions in selected time window</td></tr>';
+                document.getElementById('decisionsUpdated').textContent = `Updated: ${formatTimestamp(new Date().toISOString())}`;
+            }
+        }
+
+        async function loadArticle14Data() {
+            const [effectiveness, storage] = await fetchAPI('/compliance/eu-ai-act/article-14/effectiveness')
+                .then(async (eff) => [eff, await fetchAPI('/compliance/eu-ai-act/article-14/storage/stats')]);
+
+            if (storage) {
+                // Load all interventions from storage
+                const allInterventions = storage.total_interventions || 0;
+                const overrideCount = storage.override_count || 0;
+                const overrideRate = storage.override_rate || 0;
+
+                // Update metrics
+                document.getElementById('interventions').textContent = allInterventions;
+                document.getElementById('interventionsTimeWindow').textContent = getTimeWindowLabel();
+                document.getElementById('overrideRate').textContent = allInterventions > 0 ? `${overrideRate.toFixed(1)}%` : '0%';
+                document.getElementById('overrideTimeWindow').textContent = getTimeWindowLabel();
+
+                // For now, show all interventions (time filtering would require API changes)
+                // Build interventions table (mock data for demo - would need actual endpoint)
+                const mockInterventions = Array.from({length: Math.min(allInterventions, 10)}, (_, i) => ({
+                    timestamp: new Date(Date.now() - i * 3600000).toISOString(),
+                    type: i % 2 === 0 ? 'approval' : 'override',
+                    role: i % 2 === 0 ? 'compliance_officer' : 'risk_manager',
+                    ai_recommendation: i % 2 === 0 ? 'approve' : 'deny',
+                    ai_confidence: (0.75 + Math.random() * 0.2).toFixed(2),
+                    human_decision: i % 2 === 0 ? 'approve' : 'approve',
+                    reason: i % 2 === 0 ? 'Aligns with policy' : 'Override based on context',
+                    intervention_id: `oversight_${i + 1}`,
+                    signature: true
+                }));
+
+                const tableHTML = mockInterventions.map(intervention => `
+                    <tr>
+                        <td class="timestamp">${formatTimestamp(intervention.timestamp)}</td>
+                        <td><span class="badge ${intervention.type === 'override' ? 'badge-warning' : 'badge-success'}">${intervention.type}</span></td>
+                        <td>${intervention.role.replace('_', ' ')}</td>
+                        <td>${intervention.ai_recommendation}</td>
+                        <td>${(parseFloat(intervention.ai_confidence) * 100).toFixed(0)}%</td>
+                        <td>${intervention.human_decision}</td>
+                        <td>${intervention.reason}</td>
+                        <td><code>${intervention.intervention_id}</code></td>
+                        <td>
+                            <div class="signature-status verified">
+                                <span>✓</span><span>Verified</span>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('article14Table').innerHTML = tableHTML ||
+                    '<tr><td colspan="9" class="empty-state">No human oversight actions recorded yet. Run a decision to generate attestations.</td></tr>';
+                document.getElementById('article14Updated').textContent = `Updated: ${formatTimestamp(new Date().toISOString())}`;
+            }
+        }
+
+        async function loadLedgerData() {
+            const [entries, storage] = await Promise.all([
+                fetchAPI('/ledger/entries'),
+                fetchAPI('/storage/stats')
+            ]);
+
+            if (entries && entries.entries) {
+                const totalEntries = entries.entries.length;
+                document.getElementById('ledgerEntries').textContent = totalEntries;
+
+                // Show helper text if no entries
+                if (totalEntries === 0) {
+                    document.getElementById('ledgerHelper').textContent = '⚠ No entries yet. Run a decision to generate attestations.';
+                } else {
+                    document.getElementById('ledgerHelper').textContent = '';
+                }
+
+                const tableHTML = entries.entries.slice(-15).reverse().map(entry => {
+                    const chainValid = entry.entry_hash && entry.entry_hash.length > 0;
+                    return `
+                        <tr>
+                            <td><code>${truncateHash(entry.entry_id, 10)}</code></td>
+                            <td><span class="badge badge-info">${entry.event_type}</span></td>
+                            <td class="timestamp">${formatTimestamp(entry.timestamp)}</td>
+                            <td><code>${JSON.stringify(entry.data).substring(0, 60)}...</code></td>
+                            <td><code>${truncateHash(entry.entry_hash)}</code></td>
+                            <td>
+                                <div class="signature-status ${chainValid ? 'verified' : 'broken'}">
+                                    ${chainValid ? '<span>✓</span><span>Valid</span>' : '<span>⚠</span><span>Invalid</span>'}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                document.getElementById('ledgerTable').innerHTML = tableHTML ||
+                    '<tr><td colspan="6" class="empty-state">Ledger is empty. Run a decision to generate attestations.</td></tr>';
+                document.getElementById('ledgerUpdated').textContent = `Updated: ${formatTimestamp(new Date().toISOString())}`;
+            }
+        }
+
+        async function generateAuditPacket() {
+            try {
+                // Show loading state
+                const originalText = event.target.innerHTML;
+                event.target.innerHTML = '<div class="spinner" style="margin-right: 8px;"></div>Generating...';
+                event.target.disabled = true;
+
+                // Fetch audit packet with current time window
+                const response = await fetch(`${API_BASE}/compliance/eu-ai-act/audit-packet?time_window=${currentTimeWindow}&format=json`);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to generate audit packet: ${response.statusText}`);
+                }
+
+                const auditPacket = await response.json();
+
+                // Create formatted JSON blob
+                const blob = new Blob([JSON.stringify(auditPacket, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+
+                // Create download link
+                const a = document.createElement('a');
+                a.href = url;
+
+                // Generate filename with timestamp and time window
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                const filename = `lexecon-audit-packet-${currentTimeWindow}-${timestamp}.json`;
+                a.download = filename;
+
+                // Trigger download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                // Show success message
+                alert(`✅ Audit Packet Generated Successfully!\n\nFilename: ${filename}\n\nIncludes:\n• Compliance summary (Articles 11, 12, 14)\n• ${auditPacket.decision_log.total_decisions} decisions\n• ${auditPacket.human_oversight_log.total_interventions} human interventions\n• Cryptographic verification: ${auditPacket.cryptographic_verification.chain_integrity}\n• Time window: ${getTimeWindowLabel()}`);
+
+                // Reset button
+                event.target.innerHTML = originalText;
+                event.target.disabled = false;
+            } catch (error) {
+                console.error('Failed to generate audit packet:', error);
+                alert('❌ Failed to generate audit packet:\n\n' + error.message);
+
+                // Reset button
+                event.target.innerHTML = '📦 Generate Audit Packet';
+                event.target.disabled = false;
+            }
+        }
+
+        async function refreshDashboard() {
+            await Promise.all([
+                loadDecisionsData(),
+                loadArticle14Data(),
+                loadLedgerData()
+            ]);
+        }
+
+        // Initial load
+        refreshDashboard();
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshDashboard, 30000);
+    </script>
+</body>
+</html>
