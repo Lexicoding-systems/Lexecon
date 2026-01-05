@@ -669,3 +669,39 @@ class TestIntegrationWorkflows:
         # Statistics should reflect signed artifact
         stats = service.get_statistics()
         assert stats["signed_artifacts"] == 1
+
+
+class TestAppendOnlyEvidenceStore:
+    """Tests for AppendOnlyEvidenceStore wrapper."""
+
+    def test_enable_on_already_wrapped_store(self):
+        """Test enabling append-only mode when already wrapped with AppendOnlyStore."""
+        from lexecon.evidence.append_only_store import AppendOnlyEvidenceStore, AppendOnlyStore
+
+        # Create evidence service
+        service = EvidenceService()
+
+        # Create append-only wrapper with enabled=True (this wraps _artifacts)
+        append_store = AppendOnlyEvidenceStore(service, enabled=True)
+        assert append_store.enabled
+        assert isinstance(service._artifacts, AppendOnlyStore)
+
+        # Disable it
+        append_store.disable()
+        assert not append_store.enabled
+
+        # Store an artifact while disabled
+        artifact = service.store_artifact(
+            artifact_type=ArtifactType.DECISION_LOG,
+            content="Test artifact",
+            source="test",
+        )
+
+        # Re-enable - this should call the else branch at line 193
+        append_store.enable()
+        assert append_store.enabled
+
+        # Verify append-only enforcement works
+        from lexecon.evidence.append_only_store import AppendOnlyViolationError
+        with pytest.raises(AppendOnlyViolationError):
+            service._artifacts[artifact.artifact_id] = artifact  # Try to update

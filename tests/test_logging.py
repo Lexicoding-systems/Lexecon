@@ -2,6 +2,8 @@
 
 import json
 import logging
+import os
+import tempfile
 from io import StringIO
 
 import pytest
@@ -309,6 +311,27 @@ class TestConfigureLogging:
 
         # Should have only 1 handler now
         assert len(root.handlers) == 1
+
+    def test_configure_with_file_output(self):
+        """Test configuring logging with file output."""
+        # Create temp file
+        fd, temp_path = tempfile.mkstemp(suffix=".log")
+        os.close(fd)
+
+        try:
+            configure_logging(level="INFO", format="json", output=temp_path)
+
+            root = logging.getLogger()
+            assert len(root.handlers) > 0
+
+            # Check that handler is a FileHandler
+            handler = root.handlers[0]
+            assert isinstance(handler, logging.FileHandler)
+            assert isinstance(handler.formatter, StructuredFormatter)
+        finally:
+            # Cleanup
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
 
 
 class TestGetLogger:

@@ -1,5 +1,7 @@
 """Tests for policy engine."""
 
+import pytest
+
 from lexecon.policy.engine import PolicyEngine, PolicyMode
 from lexecon.policy.relations import PolicyRelation, RelationType
 from lexecon.policy.terms import PolicyTerm, TermType
@@ -40,6 +42,38 @@ class TestPolicyTerm:
         term = PolicyTerm.from_dict(data)
         assert term.term_id == "action:delete"
         assert term.term_type == TermType.ACTION
+
+    def test_create_data_class(self):
+        """Test creating a data class term."""
+        term = PolicyTerm.create_data_class("pii", "Personal Information")
+        assert term.term_id == "data:pii"
+        assert term.term_type == TermType.DATA_CLASS
+        assert term.label == "Personal Information"
+
+    def test_create_resource(self):
+        """Test creating a resource term."""
+        term = PolicyTerm.create_resource("database", "Database Resource")
+        assert term.term_id == "resource:database"
+        assert term.term_type == TermType.RESOURCE
+        assert term.label == "Database Resource"
+
+    def test_from_dict_missing_term_id(self):
+        """Test from_dict raises ValueError when term_id is missing."""
+        data = {
+            "term_type": "action",
+            "label": "Test",
+        }
+        with pytest.raises(ValueError, match="Missing term_id or id field"):
+            PolicyTerm.from_dict(data)
+
+    def test_from_dict_missing_term_type(self):
+        """Test from_dict raises ValueError when term_type is missing."""
+        data = {
+            "term_id": "action:test",
+            "label": "Test",
+        }
+        with pytest.raises(ValueError, match="Missing term_type or type field"):
+            PolicyTerm.from_dict(data)
 
 
 class TestPolicyRelation:

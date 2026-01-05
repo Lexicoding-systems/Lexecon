@@ -353,3 +353,136 @@ class TestComplianceMappingService:
         # All should reference the same primitive
         mappings = compliance_service.get_primitive_mappings("rsk_multi_test")
         assert len(mappings) == 3
+
+
+class TestComplianceMappingEdgeCases:
+    """Tests for edge cases and error handling in compliance mapping."""
+
+    def test_link_evidence_invalid_framework(self, compliance_service):
+        """Test linking evidence with invalid framework."""
+        # Create a custom enum value that's not in the registry
+        from enum import Enum
+
+        class FakeFramework(Enum):
+            FAKE = "fake"
+
+        # This should return False for invalid framework
+        result = compliance_service.link_evidence_to_control(
+            control_id="fake_control",
+            framework=FakeFramework.FAKE,
+            evidence_artifact_id="art_fake"
+        )
+        assert result is False
+
+    def test_verify_control_invalid_framework(self, compliance_service):
+        """Test verifying control with invalid framework."""
+        from enum import Enum
+
+        class FakeFramework(Enum):
+            FAKE = "fake"
+
+        result = compliance_service.verify_control(
+            control_id="fake_control",
+            framework=FakeFramework.FAKE
+        )
+        assert result is False
+
+    def test_get_control_status_invalid_framework(self, compliance_service):
+        """Test getting control status with invalid framework."""
+        from enum import Enum
+
+        class FakeFramework(Enum):
+            FAKE = "fake"
+
+        result = compliance_service.get_control_status(
+            control_id="fake_control",
+            framework=FakeFramework.FAKE
+        )
+        assert result is None
+
+    def test_list_controls_invalid_framework(self, compliance_service):
+        """Test listing controls with invalid framework."""
+        from enum import Enum
+
+        class FakeFramework(Enum):
+            FAKE = "fake"
+
+        result = compliance_service.list_controls(framework=FakeFramework.FAKE)
+        assert result == []
+
+    def test_analyze_gaps_invalid_framework(self, compliance_service):
+        """Test analyzing gaps with invalid framework."""
+        from enum import Enum
+
+        class FakeFramework(Enum):
+            FAKE = "fake"
+
+        result = compliance_service.analyze_gaps(framework=FakeFramework.FAKE)
+        assert result == []
+
+    def test_generate_compliance_report_invalid_framework(self, compliance_service):
+        """Test generating compliance report with invalid framework."""
+        from enum import Enum
+
+        class FakeFramework(Enum):
+            FAKE = "fake"
+
+        with pytest.raises(ValueError, match="not supported"):
+            compliance_service.generate_compliance_report(framework=FakeFramework.FAKE)
+
+    def test_get_framework_coverage_invalid_framework(self, compliance_service):
+        """Test getting framework coverage with invalid framework."""
+        from enum import Enum
+
+        class FakeFramework(Enum):
+            FAKE = "fake"
+
+        result = compliance_service.get_framework_coverage(framework=FakeFramework.FAKE)
+        assert result == {}
+
+    def test_generate_report_with_non_compliant_controls(self, compliance_service):
+        """Test report generation recommendations for non-compliant controls."""
+        from lexecon.compliance_mapping.service import RegulatoryFramework, GovernancePrimitive, ControlStatus
+
+        # Map a primitive
+        compliance_service.map_primitive_to_controls(
+            primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
+            primitive_id="rsk_test_123",
+            framework=RegulatoryFramework.SOC2
+        )
+
+        # Get a control and mark it as non-compliant
+        controls = compliance_service.list_controls(framework=RegulatoryFramework.SOC2)
+        if controls:
+            # Manually set a control to non-compliant
+            control = controls[0]
+            control.status = ControlStatus.NON_COMPLIANT
+
+        # Generate report
+        report = compliance_service.generate_compliance_report(RegulatoryFramework.SOC2)
+
+        # Should have recommendation about non-compliant controls
+        assert any("non-compliant" in rec.lower() for rec in report.recommendations)
+
+    def test_generate_report_with_unverified_controls(self, compliance_service):
+        """Test report generation recommendations for unverified controls."""
+        from lexecon.compliance_mapping.service import RegulatoryFramework, GovernancePrimitive, ControlStatus
+
+        # Map a primitive
+        compliance_service.map_primitive_to_controls(
+            primitive_type=GovernancePrimitive.ESCALATION,
+            primitive_id="esc_verify_test",
+            framework=RegulatoryFramework.ISO27001
+        )
+
+        # Get controls and mark some as implemented but not verified
+        controls = compliance_service.list_controls(framework=RegulatoryFramework.ISO27001)
+        if controls:
+            control = controls[0]
+            control.status = ControlStatus.IMPLEMENTED
+
+        # Generate report
+        report = compliance_service.generate_compliance_report(RegulatoryFramework.ISO27001)
+
+        # Should have recommendation about verifying implemented controls
+        assert any("verify" in rec.lower() for rec in report.recommendations)
