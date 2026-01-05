@@ -8,12 +8,13 @@ and audit operations.
 import json
 import time
 import uuid
-from datetime import datetime
+import secrets
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 import os
 
@@ -28,6 +29,39 @@ from lexecon.responsibility.tracker import (
     ResponsibilityLevel
 )
 from lexecon.responsibility.storage import ResponsibilityStorage
+
+# Security imports
+from lexecon.security.auth_service import AuthService, Role, Permission, User, Session
+from lexecon.security.audit_service import AuditService, ExportStatus
+from lexecon.security.signature_service import SignatureService
+
+# Governance service imports
+from lexecon.risk.service import RiskService, RiskScoringEngine
+from lexecon.escalation.service import EscalationService
+from lexecon.override.service import OverrideService
+from lexecon.evidence.service import EvidenceService
+
+# Import governance models for type hints
+try:
+    from model_governance_pack.models import (
+        Risk,
+        RiskLevel,
+        RiskDimensions,
+        Escalation,
+        EscalationPriority,
+        EscalationStatus,
+        Override,
+        OverrideType,
+        OriginalOutcome,
+        NewOutcome,
+        OverrideScope,
+        EvidenceArtifact,
+        ArtifactType,
+        DigitalSignature,
+    )
+    GOVERNANCE_MODELS_AVAILABLE = True
+except ImportError:
+    GOVERNANCE_MODELS_AVAILABLE = False
 
 
 # Pydantic models for request/response validation
@@ -94,6 +128,130 @@ class StatusResponse(BaseModel):
     timestamp: str
 
 
+# Security models
+class LoginRequest(BaseModel):
+    """Login request."""
+    username: str
+    password: str
+
+
+class LoginResponse(BaseModel):
+    """Login response."""
+    success: bool
+    session_id: Optional[str] = None
+    user: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+class CreateUserRequest(BaseModel):
+    """Create user request."""
+    username: str
+    email: str
+    password: str
+    role: str
+    full_name: str
+
+
+class ExportRequestModel(BaseModel):
+    """Audit packet export request with attestation."""
+    # Step 1: Metadata
+    requester_name: str
+    requester_email: str
+    purpose: str
+    case_id: Optional[str] = None
+    notes: Optional[str] = None
+
+    # Step 2: Configuration
+    time_window: str = "all"
+    formats: List[str] = ["json"]
+    include_decisions: bool = True
+    include_interventions: bool = True
+    include_ledger: bool = True
+    include_responsibility: bool = True
+
+    # Step 3: Legal Attestation
+    attestation_accepted: bool
+    attestation_text: str
+
+
+# ========== Governance API Models (Phase 5) ==========
+
+# Risk Service Models
+class RiskDimensionsModel(BaseModel):
+    """Risk dimensions for assessment."""
+    security: Optional[int] = Field(None, ge=0, le=100, description="Security risk score")
+    privacy: Optional[int] = Field(None, ge=0, le=100, description="Privacy risk score")
+    compliance: Optional[int] = Field(None, ge=0, le=100, description="Compliance risk score")
+    operational: Optional[int] = Field(None, ge=0, le=100, description="Operational risk score")
+    reputational: Optional[int] = Field(None, ge=0, le=100, description="Reputational risk score")
+    financial: Optional[int] = Field(None, ge=0, le=100, description="Financial risk score")
+
+
+class RiskAssessmentRequest(BaseModel):
+    """Request to assess risk for a decision."""
+    decision_id: str = Field(..., description="Decision ID to assess")
+    dimensions: RiskDimensionsModel = Field(..., description="Risk dimensions")
+    context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context")
+
+
+# Escalation Service Models
+class EscalationCreateRequest(BaseModel):
+    """Request to create an escalation."""
+    decision_id: str = Field(..., description="Decision ID being escalated")
+    trigger: str = Field(..., description="What triggered the escalation (risk_threshold/policy_conflict/explicit_rule/actor_request/anomaly_detected)")
+    escalated_to: List[str] = Field(..., description="List of actor IDs to escalate to")
+    priority: Optional[str] = Field(default=None, description="Escalation priority (critical/high/medium/low)")
+    context_summary: Optional[str] = Field(default=None, description="Summary for reviewers")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+
+class EscalationResolveRequest(BaseModel):
+    """Request to resolve an escalation."""
+    resolved_by: str = Field(..., description="Actor ID resolving escalation")
+    outcome: str = Field(..., description="Resolution outcome")
+    notes: str = Field(..., description="Resolution notes")
+
+
+# Override Service Models
+class OverrideCreateRequest(BaseModel):
+    """Request to create an override."""
+    decision_id: str = Field(..., description="Decision ID to override")
+    override_type: str = Field(..., description="Type of override")
+    authorized_by: str = Field(..., description="Actor ID authorizing override")
+    justification: str = Field(..., min_length=20, description="Justification (min 20 chars)")
+    original_outcome: Optional[str] = Field(default=None, description="Original decision outcome")
+    new_outcome: Optional[str] = Field(default=None, description="New outcome after override")
+    expires_at: Optional[str] = Field(default=None, description="Expiration timestamp (ISO 8601)")
+    scope: Optional[Dict[str, Any]] = Field(default=None, description="Override scope limitations")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+
+# Evidence Service Models
+class EvidenceStoreRequest(BaseModel):
+    """Request to store an evidence artifact."""
+    artifact_type: str = Field(..., description="Type of artifact")
+    content: str = Field(..., description="Artifact content")
+    source: str = Field(..., description="System/process that created artifact")
+    related_decision_ids: Optional[List[str]] = Field(default=None, description="Related decision IDs")
+    related_control_ids: Optional[List[str]] = Field(default=None, description="Related control IDs")
+    content_type: Optional[str] = Field(default=None, description="MIME type")
+    storage_uri: Optional[str] = Field(default=None, description="External storage location")
+    retention_days: Optional[int] = Field(default=None, description="Custom retention period")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+
+class EvidenceVerifyRequest(BaseModel):
+    """Request to verify artifact integrity."""
+    content: str = Field(..., description="Content to verify against stored hash")
+
+
+class EvidenceSignRequest(BaseModel):
+    """Request to sign an artifact."""
+    signer_id: str = Field(..., description="Actor ID of signer")
+    signature: str = Field(..., description="Signature value (base64 encoded)")
+    algorithm: str = Field(default="RSA-SHA256", description="Signature algorithm")
+
+
 # Create FastAPI app
 app = FastAPI(
     title="Lexecon Governance API",
@@ -125,10 +283,22 @@ intervention_storage = None  # InterventionStorage - initialized with oversight_
 node_id: str = str(uuid.uuid4())
 startup_time: float = time.time()
 
+# Security services
+auth_service: AuthService = AuthService("lexecon_auth.db")
+audit_service: AuditService = AuditService("lexecon_export_audit.db")
+signature_service: SignatureService = SignatureService("lexecon_keys")
+
+# Governance services (Phase 1-4)
+risk_service: Optional[RiskService] = None
+escalation_service: Optional[EscalationService] = None
+override_service: Optional[OverrideService] = None
+evidence_service: Optional[EvidenceService] = None
+
 
 def initialize_services():
     """Initialize services with default configuration."""
     global policy_engine, decision_service, key_manager, oversight_system, intervention_storage
+    global risk_service, escalation_service, override_service, evidence_service
 
     if policy_engine is None:
         policy_engine = PolicyEngine(mode=PolicyMode.STRICT)
@@ -151,6 +321,19 @@ def initialize_services():
             key_manager=key_manager,
             storage=intervention_storage
         )
+
+    # Initialize governance services (Phase 1-4)
+    if risk_service is None:
+        risk_service = RiskService()
+
+    if escalation_service is None:
+        escalation_service = EscalationService()
+
+    if override_service is None:
+        override_service = OverrideService()
+
+    if evidence_service is None:
+        evidence_service = EvidenceService()
 
 
 @app.on_event("startup")
@@ -911,7 +1094,10 @@ Framework: EU AI Act (Regulation 2024/1689)
 """
         return PlainTextResponse(content=text_report, media_type="text/plain")
 
-    return audit_packet
+    # Add digital signature to JSON packet
+    signed_packet = signature_service.sign_and_enrich_packet(audit_packet)
+
+    return signed_packet
 
 
 @app.get("/responsibility/report")
@@ -994,6 +1180,854 @@ async def get_responsibility_storage_stats():
     }
 
 
+# ============================================================================
+# Authentication Endpoints
+# ============================================================================
+
+
+@app.post("/auth/login", response_model=LoginResponse)
+async def login(request: Request, login_req: LoginRequest):
+    """Authenticate user and create session."""
+    ip_address = request.client.host if request.client else None
+
+    user, error = auth_service.authenticate(
+        login_req.username,
+        login_req.password,
+        ip_address
+    )
+
+    if not user:
+        return LoginResponse(success=False, error=error)
+
+    # Create session
+    session = auth_service.create_session(user, ip_address)
+
+    # Log access
+    audit_service.log_access(
+        endpoint="/auth/login",
+        method="POST",
+        status_code=200,
+        user_id=user.user_id,
+        username=user.username,
+        ip_address=ip_address
+    )
+
+    return LoginResponse(
+        success=True,
+        session_id=session.session_id,
+        user={
+            "user_id": user.user_id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value,
+            "full_name": user.full_name
+        }
+    )
+
+
+@app.post("/auth/logout")
+async def logout(request: Request):
+    """Logout user and revoke session."""
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = request.headers.get("Authorization", "").replace("Bearer ", "")
+
+    if session_id:
+        auth_service.revoke_session(session_id)
+
+    return {"success": True, "message": "Logged out successfully"}
+
+
+@app.get("/auth/me")
+async def get_current_user_info(request: Request):
+    """Get current authenticated user info."""
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = request.headers.get("Authorization", "").replace("Bearer ", "")
+
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    user = auth_service.get_user_by_id(session.user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "user_id": user.user_id,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role.value,
+        "full_name": user.full_name,
+        "last_login": user.last_login
+    }
+
+
+@app.post("/auth/users")
+async def create_user(request: Request, user_req: CreateUserRequest):
+    """Create a new user (admin only)."""
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    if not auth_service.has_permission(session.role, Permission.MANAGE_USERS):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    try:
+        user = auth_service.create_user(
+            username=user_req.username,
+            email=user_req.email,
+            password=user_req.password,
+            role=Role(user_req.role),
+            full_name=user_req.full_name
+        )
+
+        return {
+            "success": True,
+            "user": {
+                "user_id": user.user_id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role.value,
+                "full_name": user.full_name
+            }
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/auth/users")
+async def list_users(request: Request):
+    """List all users (admin only)."""
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    if not auth_service.has_permission(session.role, Permission.MANAGE_USERS):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    users = auth_service.list_users()
+
+    return {
+        "users": [
+            {
+                "user_id": u.user_id,
+                "username": u.username,
+                "email": u.email,
+                "role": u.role.value,
+                "full_name": u.full_name,
+                "last_login": u.last_login,
+                "is_active": u.is_active
+            }
+            for u in users
+        ]
+    }
+
+
+# ============================================================================
+# Digital Signature Endpoints
+# ============================================================================
+
+
+@app.post("/compliance/verify-signature")
+async def verify_signature(packet: Dict[str, Any]):
+    """Verify digital signature on an audit packet."""
+    is_valid, message = signature_service.verify_packet_signature(packet)
+
+    return {
+        "valid": is_valid,
+        "message": message,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@app.get("/compliance/public-key")
+async def get_public_key():
+    """Get public key for signature verification."""
+    return {
+        "public_key_pem": signature_service.get_public_key_pem(),
+        "fingerprint": signature_service.get_public_key_fingerprint(),
+        "algorithm": "RSA-PSS-SHA256",
+        "key_size": 4096
+    }
+
+
+# ============================================================================
+# Export Audit Log Endpoints
+# ============================================================================
+
+
+@app.get("/compliance/export-requests")
+async def list_export_requests(request: Request, limit: int = 100):
+    """List export requests (compliance officer+ only)."""
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    if not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    requests = audit_service.list_export_requests(limit=limit)
+
+    return {
+        "requests": [
+            {
+                "request_id": r.request_id,
+                "username": r.username,
+                "purpose": r.purpose,
+                "case_id": r.case_id,
+                "requested_at": r.requested_at,
+                "export_status": r.export_status.value,
+                "approval_status": r.approval_status.value,
+                "completed_at": r.completed_at
+            }
+            for r in requests
+        ]
+    }
+
+
+@app.get("/compliance/audit-chain-verification")
+async def verify_audit_chain(request: Request):
+    """Verify integrity of export audit chain."""
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    result = audit_service.verify_audit_chain()
+
+    return result
+
+
+# ============================================================================
+# Governance API Endpoints (Phase 5)
+# ============================================================================
+
+# ---------- Risk Service Endpoints ----------
+
+@app.post("/api/governance/risk/assess")
+async def assess_risk(request: RiskAssessmentRequest):
+    """Assess risk for a decision."""
+    initialize_services()
+
+    if not risk_service:
+        raise HTTPException(status_code=500, detail="Risk service not initialized")
+
+    try:
+        # Convert RiskDimensionsModel to RiskDimensions
+        dimensions_dict = request.dimensions.model_dump(exclude_none=True)
+        dimensions = RiskDimensions(**dimensions_dict)
+
+        # Assess risk
+        risk = risk_service.assess_risk(
+            decision_id=request.decision_id,
+            dimensions=dimensions,
+            metadata=request.context
+        )
+
+        # Convert to dict for response
+        return {
+            "risk_id": risk.risk_id,
+            "decision_id": risk.decision_id,
+            "overall_score": risk.overall_score,
+            "risk_level": risk.risk_level.value,
+            "dimensions": {
+                "security": risk.dimensions.security,
+                "privacy": risk.dimensions.privacy,
+                "compliance": risk.dimensions.compliance,
+                "operational": risk.dimensions.operational,
+                "reputational": risk.dimensions.reputational,
+                "financial": risk.dimensions.financial,
+            },
+            "timestamp": risk.timestamp.isoformat(),
+            "factors": risk.factors,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Risk assessment failed: {str(e)}")
+
+
+@app.get("/api/governance/risk/{risk_id}")
+async def get_risk(risk_id: str):
+    """Get risk by ID."""
+    initialize_services()
+
+    if not risk_service:
+        raise HTTPException(status_code=500, detail="Risk service not initialized")
+
+    risk = risk_service.get_risk(risk_id)
+    if not risk:
+        raise HTTPException(status_code=404, detail=f"Risk {risk_id} not found")
+
+    return {
+        "risk_id": risk.risk_id,
+        "decision_id": risk.decision_id,
+        "overall_score": risk.overall_score,
+        "risk_level": risk.risk_level.value,
+        "dimensions": {
+            "security": risk.dimensions.security,
+            "privacy": risk.dimensions.privacy,
+            "compliance": risk.dimensions.compliance,
+            "operational": risk.dimensions.operational,
+            "reputational": risk.dimensions.reputational,
+            "financial": risk.dimensions.financial,
+        },
+        "timestamp": risk.timestamp.isoformat(),
+        "factors": risk.factors,
+    }
+
+
+@app.get("/api/governance/risk/decision/{decision_id}")
+async def get_risk_for_decision(decision_id: str):
+    """Get risk for a decision."""
+    initialize_services()
+
+    if not risk_service:
+        raise HTTPException(status_code=500, detail="Risk service not initialized")
+
+    risk = risk_service.get_risk_for_decision(decision_id)
+    if not risk:
+        raise HTTPException(status_code=404, detail=f"No risk found for decision {decision_id}")
+
+    return {
+        "risk_id": risk.risk_id,
+        "decision_id": risk.decision_id,
+        "overall_score": risk.overall_score,
+        "risk_level": risk.risk_level.value,
+        "dimensions": {
+            "security": risk.dimensions.security,
+            "privacy": risk.dimensions.privacy,
+            "compliance": risk.dimensions.compliance,
+            "operational": risk.dimensions.operational,
+            "reputational": risk.dimensions.reputational,
+            "financial": risk.dimensions.financial,
+        },
+        "timestamp": risk.timestamp.isoformat(),
+        "factors": risk.factors,
+    }
+
+
+# ---------- Escalation Service Endpoints ----------
+
+@app.post("/api/governance/escalation")
+async def create_escalation(request: EscalationCreateRequest):
+    """Create an escalation."""
+    initialize_services()
+
+    if not escalation_service:
+        raise HTTPException(status_code=500, detail="Escalation service not initialized")
+
+    try:
+        # Import EscalationTrigger enum
+        from model_governance_pack.models import EscalationTrigger
+
+        # Convert strings to enums (values are lowercase)
+        trigger = EscalationTrigger(request.trigger.lower())
+        priority = EscalationPriority(request.priority.lower()) if request.priority else None
+
+        escalation = escalation_service.create_escalation(
+            decision_id=request.decision_id,
+            trigger=trigger,
+            escalated_to=request.escalated_to,
+            priority=priority,
+            context_summary=request.context_summary,
+            metadata=request.metadata
+        )
+
+        return {
+            "escalation_id": escalation.escalation_id,
+            "decision_id": escalation.decision_id,
+            "status": escalation.status.value,
+            "priority": escalation.priority.value,
+            "trigger": escalation.trigger,
+            "escalated_to": escalation.escalated_to,
+            "reason": escalation.reason,
+            "created_at": escalation.created_at.isoformat(),
+            "sla_deadline": escalation.sla_deadline.isoformat() if escalation.sla_deadline else None,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Escalation creation failed: {str(e)}")
+
+
+@app.post("/api/governance/escalation/{escalation_id}/resolve")
+async def resolve_escalation(escalation_id: str, request: EscalationResolveRequest):
+    """Resolve an escalation."""
+    initialize_services()
+
+    if not escalation_service:
+        raise HTTPException(status_code=500, detail="Escalation service not initialized")
+
+    try:
+        escalation = escalation_service.resolve_escalation(
+            escalation_id=escalation_id,
+            resolved_by=request.resolved_by,
+            outcome=request.outcome,
+            notes=request.notes
+        )
+
+        return {
+            "escalation_id": escalation.escalation_id,
+            "decision_id": escalation.decision_id,
+            "status": escalation.status.value,
+            "priority": escalation.priority.value,
+            "resolved_at": escalation.resolved_at.isoformat() if escalation.resolved_at else None,
+            "resolved_by": escalation.resolved_by,
+            "outcome": escalation.outcome,
+            "resolution_notes": escalation.resolution_notes,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Escalation resolution failed: {str(e)}")
+
+
+@app.get("/api/governance/escalation/{escalation_id}")
+async def get_escalation(escalation_id: str):
+    """Get escalation by ID."""
+    initialize_services()
+
+    if not escalation_service:
+        raise HTTPException(status_code=500, detail="Escalation service not initialized")
+
+    escalation = escalation_service.get_escalation(escalation_id)
+    if not escalation:
+        raise HTTPException(status_code=404, detail=f"Escalation {escalation_id} not found")
+
+    return {
+        "escalation_id": escalation.escalation_id,
+        "decision_id": escalation.decision_id,
+        "status": escalation.status.value,
+        "priority": escalation.priority.value,
+        "trigger": escalation.trigger,
+        "escalated_to": escalation.escalated_to,
+        "reason": escalation.reason,
+        "created_at": escalation.created_at.isoformat(),
+        "sla_deadline": escalation.sla_deadline.isoformat() if escalation.sla_deadline else None,
+        "resolved_at": escalation.resolved_at.isoformat() if escalation.resolved_at else None,
+        "resolved_by": escalation.resolved_by,
+        "outcome": escalation.outcome,
+    }
+
+
+@app.get("/api/governance/escalation/decision/{decision_id}")
+async def get_escalations_for_decision(decision_id: str):
+    """Get all escalations for a decision."""
+    initialize_services()
+
+    if not escalation_service:
+        raise HTTPException(status_code=500, detail="Escalation service not initialized")
+
+    escalations = escalation_service.list_escalations(decision_id=decision_id)
+
+    return {
+        "decision_id": decision_id,
+        "count": len(escalations),
+        "escalations": [
+            {
+                "escalation_id": e.escalation_id,
+                "status": e.status.value,
+                "priority": e.priority.value,
+                "created_at": e.created_at.isoformat(),
+                "resolved_at": e.resolved_at.isoformat() if e.resolved_at else None,
+            }
+            for e in escalations
+        ],
+    }
+
+
+@app.get("/api/governance/escalation/sla/violations")
+async def get_sla_violations():
+    """Get escalations with SLA violations."""
+    initialize_services()
+
+    if not escalation_service:
+        raise HTTPException(status_code=500, detail="Escalation service not initialized")
+
+    # check_sla_status returns notification events, not escalations
+    # We need to list pending escalations that are past their SLA deadline
+    from datetime import datetime, timezone
+
+    pending_escalations = escalation_service.list_escalations(
+        status=EscalationStatus.PENDING
+    )
+
+    now = datetime.now(timezone.utc)
+    violations = [
+        e for e in pending_escalations
+        if e.sla_deadline and now > e.sla_deadline
+    ]
+
+    return {
+        "count": len(violations),
+        "violations": [
+            {
+                "escalation_id": e.escalation_id,
+                "decision_id": e.decision_id,
+                "priority": e.priority.value,
+                "sla_deadline": e.sla_deadline.isoformat() if e.sla_deadline else None,
+                "created_at": e.created_at.isoformat(),
+            }
+            for e in violations
+        ],
+    }
+
+
+# ---------- Override Service Endpoints ----------
+
+@app.post("/api/governance/override")
+async def create_override(request: OverrideCreateRequest):
+    """Create an override."""
+    initialize_services()
+
+    if not override_service:
+        raise HTTPException(status_code=500, detail="Override service not initialized")
+
+    try:
+        # Convert string enums to proper types (values are lowercase)
+        override_type = OverrideType(request.override_type.lower())
+        original_outcome = OriginalOutcome(request.original_outcome.lower()) if request.original_outcome else None
+        new_outcome = NewOutcome(request.new_outcome.lower()) if request.new_outcome else None
+
+        # Parse expires_at if provided
+        expires_at = None
+        if request.expires_at:
+            from datetime import datetime
+            expires_at = datetime.fromisoformat(request.expires_at.replace('Z', '+00:00'))
+
+        # Create scope if provided
+        scope = None
+        if request.scope:
+            scope = OverrideScope(**request.scope)
+
+        override = override_service.create_override(
+            decision_id=request.decision_id,
+            override_type=override_type,
+            authorized_by=request.authorized_by,
+            justification=request.justification,
+            original_outcome=original_outcome,
+            new_outcome=new_outcome,
+            expires_at=expires_at,
+            scope=scope,
+            metadata=request.metadata
+        )
+
+        return {
+            "override_id": override.override_id,
+            "decision_id": override.decision_id,
+            "override_type": override.override_type.value,
+            "authorized_by": override.authorized_by,
+            "justification": override.justification,
+            "timestamp": override.timestamp.isoformat(),
+            "expires_at": override.expires_at.isoformat() if override.expires_at else None,
+            "evidence_ids": override.evidence_ids,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Override creation failed: {str(e)}")
+
+
+@app.get("/api/governance/override/{override_id}")
+async def get_override(override_id: str):
+    """Get override by ID."""
+    initialize_services()
+
+    if not override_service:
+        raise HTTPException(status_code=500, detail="Override service not initialized")
+
+    override = override_service.get_override(override_id)
+    if not override:
+        raise HTTPException(status_code=404, detail=f"Override {override_id} not found")
+
+    return {
+        "override_id": override.override_id,
+        "decision_id": override.decision_id,
+        "override_type": override.override_type.value,
+        "authorized_by": override.authorized_by,
+        "justification": override.justification,
+        "timestamp": override.timestamp.isoformat(),
+        "original_outcome": override.original_outcome.value if override.original_outcome else None,
+        "new_outcome": override.new_outcome.value if override.new_outcome else None,
+        "expires_at": override.expires_at.isoformat() if override.expires_at else None,
+        "evidence_ids": override.evidence_ids,
+    }
+
+
+@app.get("/api/governance/override/decision/{decision_id}")
+async def get_overrides_for_decision(decision_id: str):
+    """Get all overrides for a decision."""
+    initialize_services()
+
+    if not override_service:
+        raise HTTPException(status_code=500, detail="Override service not initialized")
+
+    overrides = override_service.get_overrides_for_decision(decision_id)
+
+    return {
+        "decision_id": decision_id,
+        "count": len(overrides),
+        "overrides": [
+            {
+                "override_id": o.override_id,
+                "override_type": o.override_type.value,
+                "authorized_by": o.authorized_by,
+                "timestamp": o.timestamp.isoformat(),
+                "expires_at": o.expires_at.isoformat() if o.expires_at else None,
+            }
+            for o in overrides
+        ],
+    }
+
+
+@app.get("/api/governance/override/decision/{decision_id}/active")
+async def check_active_override(decision_id: str):
+    """Check if decision has an active override."""
+    initialize_services()
+
+    if not override_service:
+        raise HTTPException(status_code=500, detail="Override service not initialized")
+
+    active_override = override_service.get_active_override(decision_id)
+    is_overridden = active_override is not None
+
+    result = {
+        "decision_id": decision_id,
+        "is_overridden": is_overridden,
+    }
+
+    if active_override:
+        result["override"] = {
+            "override_id": active_override.override_id,
+            "override_type": active_override.override_type.value,
+            "authorized_by": active_override.authorized_by,
+            "timestamp": active_override.timestamp.isoformat(),
+            "expires_at": active_override.expires_at.isoformat() if active_override.expires_at else None,
+        }
+
+    return result
+
+
+@app.get("/api/governance/override/decision/{decision_id}/status")
+async def get_decision_with_override_status(decision_id: str):
+    """Get decision data enriched with override status."""
+    initialize_services()
+
+    if not override_service:
+        raise HTTPException(status_code=500, detail="Override service not initialized")
+
+    # For this endpoint, we need the decision data
+    # In a real implementation, this would fetch from decision service
+    # For now, return a minimal decision structure with override status
+    decision_data = {"decision_id": decision_id}
+
+    enriched = override_service.get_decision_with_override_status(decision_id, decision_data)
+
+    return enriched
+
+
+# ---------- Evidence Service Endpoints ----------
+
+@app.post("/api/governance/evidence")
+async def store_evidence_artifact(request: EvidenceStoreRequest):
+    """Store an evidence artifact."""
+    initialize_services()
+
+    if not evidence_service:
+        raise HTTPException(status_code=500, detail="Evidence service not initialized")
+
+    try:
+        # Convert artifact type string to enum (values are lowercase)
+        artifact_type = ArtifactType(request.artifact_type.lower())
+
+        artifact = evidence_service.store_artifact(
+            artifact_type=artifact_type,
+            content=request.content,
+            source=request.source,
+            related_decision_ids=request.related_decision_ids,
+            related_control_ids=request.related_control_ids,
+            content_type=request.content_type,
+            storage_uri=request.storage_uri,
+            retention_days=request.retention_days,
+            metadata=request.metadata
+        )
+
+        return {
+            "artifact_id": artifact.artifact_id,
+            "artifact_type": artifact.artifact_type.value,
+            "sha256_hash": artifact.sha256_hash,
+            "created_at": artifact.created_at.isoformat(),
+            "source": artifact.source,
+            "size_bytes": artifact.size_bytes,
+            "retention_until": artifact.retention_until.isoformat() if artifact.retention_until else None,
+            "is_immutable": artifact.is_immutable,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Artifact storage failed: {str(e)}")
+
+
+@app.get("/api/governance/evidence/{artifact_id}")
+async def get_evidence_artifact(artifact_id: str):
+    """Get evidence artifact by ID."""
+    initialize_services()
+
+    if not evidence_service:
+        raise HTTPException(status_code=500, detail="Evidence service not initialized")
+
+    artifact = evidence_service.get_artifact(artifact_id)
+    if not artifact:
+        raise HTTPException(status_code=404, detail=f"Artifact {artifact_id} not found")
+
+    return {
+        "artifact_id": artifact.artifact_id,
+        "artifact_type": artifact.artifact_type.value,
+        "sha256_hash": artifact.sha256_hash,
+        "created_at": artifact.created_at.isoformat(),
+        "source": artifact.source,
+        "content_type": artifact.content_type,
+        "size_bytes": artifact.size_bytes,
+        "storage_uri": artifact.storage_uri,
+        "related_decision_ids": artifact.related_decision_ids,
+        "related_control_ids": artifact.related_control_ids,
+        "retention_until": artifact.retention_until.isoformat() if artifact.retention_until else None,
+        "is_immutable": artifact.is_immutable,
+        "has_signature": artifact.digital_signature is not None,
+    }
+
+
+@app.post("/api/governance/evidence/{artifact_id}/verify")
+async def verify_evidence_artifact(artifact_id: str, request: EvidenceVerifyRequest):
+    """Verify artifact integrity by recomputing hash."""
+    initialize_services()
+
+    if not evidence_service:
+        raise HTTPException(status_code=500, detail="Evidence service not initialized")
+
+    try:
+        is_valid = evidence_service.verify_artifact_integrity(artifact_id, request.content)
+
+        artifact = evidence_service.get_artifact(artifact_id)
+
+        return {
+            "artifact_id": artifact_id,
+            "is_valid": is_valid,
+            "stored_hash": artifact.sha256_hash if artifact else None,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
+
+
+@app.get("/api/governance/evidence/decision/{decision_id}")
+async def get_artifacts_for_decision(decision_id: str):
+    """Get all evidence artifacts for a decision."""
+    initialize_services()
+
+    if not evidence_service:
+        raise HTTPException(status_code=500, detail="Evidence service not initialized")
+
+    artifacts = evidence_service.get_artifacts_for_decision(decision_id)
+
+    return {
+        "decision_id": decision_id,
+        "count": len(artifacts),
+        "artifacts": [
+            {
+                "artifact_id": a.artifact_id,
+                "artifact_type": a.artifact_type.value,
+                "sha256_hash": a.sha256_hash,
+                "created_at": a.created_at.isoformat(),
+                "source": a.source,
+                "size_bytes": a.size_bytes,
+            }
+            for a in artifacts
+        ],
+    }
+
+
+@app.get("/api/governance/evidence/decision/{decision_id}/lineage")
+async def export_artifact_lineage(decision_id: str):
+    """Export complete artifact lineage for a decision."""
+    initialize_services()
+
+    if not evidence_service:
+        raise HTTPException(status_code=500, detail="Evidence service not initialized")
+
+    lineage = evidence_service.export_artifact_lineage(decision_id)
+
+    return lineage
+
+
+@app.post("/api/governance/evidence/{artifact_id}/sign")
+async def sign_evidence_artifact(artifact_id: str, request: EvidenceSignRequest):
+    """Add digital signature to an artifact."""
+    initialize_services()
+
+    if not evidence_service:
+        raise HTTPException(status_code=500, detail="Evidence service not initialized")
+
+    try:
+        artifact = evidence_service.sign_artifact(
+            artifact_id=artifact_id,
+            signer_id=request.signer_id,
+            signature=request.signature,
+            algorithm=request.algorithm
+        )
+
+        return {
+            "artifact_id": artifact.artifact_id,
+            "signed": True,
+            "signer_id": artifact.digital_signature.signer_id if artifact.digital_signature else None,
+            "signed_at": artifact.digital_signature.signed_at.isoformat() if artifact.digital_signature else None,
+            "algorithm": artifact.digital_signature.algorithm if artifact.digital_signature else None,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Signing failed: {str(e)}")
+
+
+@app.get("/api/governance/evidence/statistics")
+async def get_evidence_statistics():
+    """Get evidence service statistics."""
+    initialize_services()
+
+    if not evidence_service:
+        raise HTTPException(status_code=500, detail="Evidence service not initialized")
+
+    stats = evidence_service.get_statistics()
+
+    return stats
+
+
+# ============================================================================
+# Root Endpoint
+# ============================================================================
+
+
 @app.get("/")
 async def root():
     """Root endpoint."""
@@ -1018,5 +2052,26 @@ async def root():
             "compliance_article_14_intervention": "/compliance/eu-ai-act/article-14/intervention",
             "compliance_article_14_effectiveness": "/compliance/eu-ai-act/article-14/effectiveness",
             "compliance_article_14_evidence": "/compliance/eu-ai-act/article-14/evidence-package",
+            # Governance API (Phase 5)
+            "risk_assess": "/api/governance/risk/assess",
+            "risk_get": "/api/governance/risk/{risk_id}",
+            "risk_decision": "/api/governance/risk/decision/{decision_id}",
+            "escalation_create": "/api/governance/escalation",
+            "escalation_resolve": "/api/governance/escalation/{escalation_id}/resolve",
+            "escalation_get": "/api/governance/escalation/{escalation_id}",
+            "escalation_decision": "/api/governance/escalation/decision/{decision_id}",
+            "escalation_sla_violations": "/api/governance/escalation/sla/violations",
+            "override_create": "/api/governance/override",
+            "override_get": "/api/governance/override/{override_id}",
+            "override_decision": "/api/governance/override/decision/{decision_id}",
+            "override_active": "/api/governance/override/decision/{decision_id}/active",
+            "override_status": "/api/governance/override/decision/{decision_id}/status",
+            "evidence_store": "/api/governance/evidence",
+            "evidence_get": "/api/governance/evidence/{artifact_id}",
+            "evidence_verify": "/api/governance/evidence/{artifact_id}/verify",
+            "evidence_decision": "/api/governance/evidence/decision/{decision_id}",
+            "evidence_lineage": "/api/governance/evidence/decision/{decision_id}/lineage",
+            "evidence_sign": "/api/governance/evidence/{artifact_id}/sign",
+            "evidence_stats": "/api/governance/evidence/statistics",
         },
     }
