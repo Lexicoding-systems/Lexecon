@@ -283,6 +283,20 @@ class ComplianceVerifyControlRequest(BaseModel):
     notes: Optional[str] = Field(default=None, description="Verification notes")
 
 
+# ========== Audit Export API Models (Phase 8) ==========
+
+class AuditExportCreateRequest(BaseModel):
+    """Request to create an audit export."""
+    requester: str = Field(..., min_length=1, description="User or system requesting export")
+    purpose: str = Field(..., min_length=10, description="Purpose of the export (min 10 chars)")
+    scope: str = Field(default="all", description="Scope of data: all, risk_only, escalation_only, override_only, evidence_only, compliance_only, decision_log_only")
+    format: str = Field(default="json", description="Output format: json, csv, markdown, html")
+    start_date: Optional[str] = Field(default=None, description="Start date filter (ISO 8601)")
+    end_date: Optional[str] = Field(default=None, description="End date filter (ISO 8601)")
+    include_deleted: bool = Field(default=False, description="Include deleted records")
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+
 # Create FastAPI app
 app = FastAPI(
     title="Lexecon Governance API",
@@ -2414,6 +2428,429 @@ async def get_compliance_statistics():
         raise HTTPException(status_code=500, detail=f"Failed to get statistics: {str(e)}")
 
 
+# ---------- Audit Export Service Endpoints (Phase 8) ----------
+
+@app.post("/api/governance/audit-export/request")
+async def create_audit_export_request(request: AuditExportCreateRequest, http_request: Request):
+    """Create a new audit export request."""
+    initialize_services()
+
+    if not audit_export_service:
+        raise HTTPException(status_code=500, detail="Audit export service not initialized")
+
+    # Authentication check
+    session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+    if session_id:
+        session, error = auth_service.validate_session(session_id)
+        if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+            raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+
+    try:
+        # Convert string enums to service enums
+        scope = ExportScope(request.scope.upper())
+        format_enum = ExportFormat(request.format.upper())
+
+        # Parse date strings if provided
+        start_date = None
+        if request.start_date:
+            start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+            if start_date.tzinfo is None:
+                start_date = start_date.replace(tzinfo=timezone.utc)
+
+        end_date = None
+        if request.end_date:
+            end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+            if end_date.tzinfo is None:
+                end_date = end_date.replace(tzinfo=timezone.utc)
+
+        # Create export request
+        export_request = audit_export_service.create_export_request(
+            requester=request.requester,
+            purpose=request.purpose,
+            scope=scope,
+            format=format_enum,
+            start_date=start_date,
+            end_date=end_date,
+            include_deleted=request.include_deleted,
+            metadata=request.metadata
+        )
+
+        return {
+            "export_id": export_request.export_id,
+            "requester": export_request.requester,
+            "purpose": export_request.purpose,
+            "scope": export_request.scope.value,
+            "format": export_request.format.value,
+            "start_date": export_request.start_date.isoformat() if export_request.start_date else None,
+            "end_date": export_request.end_date.isoformat() if export_request.end_date else None,
+            "include_deleted": export_request.include_deleted,
+            "requested_at": export_request.requested_at.isoformat(),
+            "status": export_request.status.value,
+            "metadata": export_request.metadata,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create export request: {str(e)}")
+
+
+@app.post("/api/governance/audit-export/{export_id}/generate")
+async def generate_audit_export(export_id: str, http_request: Request):
+    """Generate the actual export package from a request."""
+    initialize_services()
+
+    if not audit_export_service:
+        raise HTTPException(status_code=500, detail="Audit export service not initialized")
+
+    # Authentication check
+    session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+    if session_id:
+        session, error = auth_service.validate_session(session_id)
+        if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+            raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+
+    try:
+        # Get export request
+        export_request = audit_export_service._requests.get(export_id)
+        if not export_request:
+            raise HTTPException(status_code=404, detail=f"Export request {export_id} not found")
+
+        # Check if already generated
+        existing_export = audit_export_service.get_export(export_id)
+        if existing_export:
+            raise HTTPException(status_code=400, detail=f"Export {export_id} already generated")
+
+        # Generate export with all services
+        package = audit_export_service.generate_export(
+            request=export_request,
+            risk_service=risk_service,
+            escalation_service=escalation_service,
+            override_service=override_service,
+            evidence_service=evidence_service,
+            compliance_service=compliance_mapping_service,
+            ledger=ledger
+        )
+
+        # Log audit event
+        audit_service.log_access(
+            endpoint=f"/api/governance/audit-export/{export_id}/generate",
+            method="POST",
+            status_code=200,
+            user_id=session.user_id if session_id and session else None,
+            ip_address=http_request.client.host if http_request.client else None
+        )
+
+        return {
+            "export_id": package.export_id,
+            "generated_at": package.generated_at.isoformat(),
+            "format": package.format.value,
+            "size_bytes": package.size_bytes,
+            "record_count": package.record_count,
+            "checksum": package.checksum,
+            "signature": package.signature,
+            "statistics": package.data.get("statistics", {}),
+            "request": {
+                "requester": package.request.requester,
+                "purpose": package.request.purpose,
+                "scope": package.request.scope.value,
+                "status": package.request.status.value,
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export generation failed: {str(e)}")
+
+
+@app.get("/api/governance/audit-export/{export_id}")
+async def get_audit_export(export_id: str, include_content: bool = False, http_request: Request = None):
+    """Retrieve a completed export by ID."""
+    initialize_services()
+
+    if not audit_export_service:
+        raise HTTPException(status_code=500, detail="Audit export service not initialized")
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+
+    try:
+        package = audit_export_service.get_export(export_id)
+        if not package:
+            raise HTTPException(status_code=404, detail=f"Export {export_id} not found")
+
+        response = {
+            "export_id": package.export_id,
+            "generated_at": package.generated_at.isoformat(),
+            "format": package.format.value,
+            "size_bytes": package.size_bytes,
+            "record_count": package.record_count,
+            "checksum": package.checksum,
+            "signature": package.signature,
+            "statistics": package.data.get("statistics", {}),
+            "request": {
+                "requester": package.request.requester,
+                "purpose": package.request.purpose,
+                "scope": package.request.scope.value,
+                "format": package.request.format.value,
+                "status": package.request.status.value,
+                "requested_at": package.request.requested_at.isoformat(),
+            },
+            "metadata": package.metadata,
+        }
+
+        # Include content if requested
+        if include_content:
+            response["content"] = package.content
+        else:
+            # Include preview (first 500 chars)
+            response["content_preview"] = package.content[:500] if len(package.content) > 500 else package.content
+
+        return response
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get export: {str(e)}")
+
+
+@app.get("/api/governance/audit-export/{export_id}/download")
+async def download_audit_export(export_id: str, http_request: Request):
+    """Download export content as file."""
+    initialize_services()
+
+    if not audit_export_service:
+        raise HTTPException(status_code=500, detail="Audit export service not initialized")
+
+    # Authentication check
+    session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+    if session_id:
+        session, error = auth_service.validate_session(session_id)
+        if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+            raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+
+    try:
+        package = audit_export_service.get_export(export_id)
+        if not package:
+            raise HTTPException(status_code=404, detail=f"Export {export_id} not found")
+
+        # Log audit event
+        audit_service.log_access(
+            endpoint=f"/api/governance/audit-export/{export_id}/download",
+            method="GET",
+            status_code=200,
+            user_id=session.user_id if session_id and session else None,
+            ip_address=http_request.client.host if http_request.client else None
+        )
+
+        # Determine Content-Type and filename based on format
+        content_type_map = {
+            "json": "application/json",
+            "csv": "text/csv",
+            "markdown": "text/markdown",
+            "html": "text/html",
+        }
+        extension_map = {
+            "json": "json",
+            "csv": "csv",
+            "markdown": "md",
+            "html": "html",
+        }
+
+        format_str = package.format.value
+        content_type = content_type_map.get(format_str, "text/plain")
+        extension = extension_map.get(format_str, "txt")
+        timestamp = package.generated_at.strftime("%Y%m%d_%H%M%S")
+        filename = f"export_{export_id}_{timestamp}.{extension}"
+
+        return PlainTextResponse(
+            content=package.content,
+            media_type=content_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+
+@app.get("/api/governance/audit-export/list")
+async def list_audit_exports(
+    requester: Optional[str] = None,
+    scope: Optional[str] = None,
+    format: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 100,
+    http_request: Request = None
+):
+    """List export packages with filtering."""
+    initialize_services()
+
+    if not audit_export_service:
+        raise HTTPException(status_code=500, detail="Audit export service not initialized")
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+
+    try:
+        # Validate limit
+        if limit < 1 or limit > 1000:
+            raise HTTPException(status_code=400, detail="Limit must be between 1 and 1000")
+
+        # Get exports from service
+        exports = audit_export_service.list_exports(requester=requester, limit=limit)
+
+        # Apply additional filters
+        if scope:
+            try:
+                scope_enum = ExportScope(scope.upper())
+                exports = [e for e in exports if e.request.scope == scope_enum]
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid scope: {scope}")
+
+        if format:
+            try:
+                format_enum = ExportFormat(format.upper())
+                exports = [e for e in exports if e.format == format_enum]
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid format: {format}")
+
+        if status:
+            from lexecon.audit_export.service import ExportStatus
+            try:
+                status_enum = ExportStatus(status.upper())
+                exports = [e for e in exports if e.request.status == status_enum]
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
+        # Format response
+        return {
+            "count": len(exports),
+            "limit": limit,
+            "filters": {
+                "requester": requester,
+                "scope": scope,
+                "format": format,
+                "status": status,
+            },
+            "exports": [
+                {
+                    "export_id": e.export_id,
+                    "requester": e.request.requester,
+                    "purpose": e.request.purpose,
+                    "scope": e.request.scope.value,
+                    "format": e.format.value,
+                    "status": e.request.status.value,
+                    "generated_at": e.generated_at.isoformat(),
+                    "size_bytes": e.size_bytes,
+                    "record_count": e.record_count,
+                }
+                for e in exports
+            ],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list exports: {str(e)}")
+
+
+@app.get("/api/governance/audit-export/requests")
+async def list_audit_export_requests(
+    status: Optional[str] = None,
+    limit: int = 100,
+    http_request: Request = None
+):
+    """List export requests (including pending ones)."""
+    initialize_services()
+
+    if not audit_export_service:
+        raise HTTPException(status_code=500, detail="Audit export service not initialized")
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+
+    try:
+        # Validate limit
+        if limit < 1 or limit > 1000:
+            raise HTTPException(status_code=400, detail="Limit must be between 1 and 1000")
+
+        # Get all requests from service
+        requests = list(audit_export_service._requests.values())
+
+        # Filter by status if provided
+        if status:
+            from lexecon.audit_export.service import ExportStatus
+            try:
+                status_enum = ExportStatus(status.upper())
+                requests = [r for r in requests if r.status == status_enum]
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
+        # Sort by requested_at (newest first)
+        requests.sort(key=lambda r: r.requested_at, reverse=True)
+
+        # Apply limit
+        requests = requests[:limit]
+
+        return {
+            "count": len(requests),
+            "requests": [
+                {
+                    "export_id": r.export_id,
+                    "requester": r.requester,
+                    "purpose": r.purpose,
+                    "scope": r.scope.value,
+                    "format": r.format.value,
+                    "status": r.status.value,
+                    "requested_at": r.requested_at.isoformat(),
+                    "start_date": r.start_date.isoformat() if r.start_date else None,
+                    "end_date": r.end_date.isoformat() if r.end_date else None,
+                }
+                for r in requests
+            ],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list requests: {str(e)}")
+
+
+@app.get("/api/governance/audit-export/statistics")
+async def get_audit_export_statistics(http_request: Request = None):
+    """Get overall export statistics."""
+    initialize_services()
+
+    if not audit_export_service:
+        raise HTTPException(status_code=500, detail="Audit export service not initialized")
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+
+    try:
+        stats = audit_export_service.get_export_statistics()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get statistics: {str(e)}")
+
+
 # ============================================================================
 # Root Endpoint
 # ============================================================================
@@ -2476,5 +2913,13 @@ async def root():
             "compliance_coverage": "/api/governance/compliance/{framework}/coverage",
             "compliance_primitive_mappings": "/api/governance/compliance/primitive/{primitive_id}/mappings",
             "compliance_statistics": "/api/governance/compliance/statistics",
+            # Audit Export API (Phase 8)
+            "audit_export_create": "/api/governance/audit-export/request",
+            "audit_export_generate": "/api/governance/audit-export/{export_id}/generate",
+            "audit_export_get": "/api/governance/audit-export/{export_id}",
+            "audit_export_download": "/api/governance/audit-export/{export_id}/download",
+            "audit_export_list": "/api/governance/audit-export/list",
+            "audit_export_requests": "/api/governance/audit-export/requests",
+            "audit_export_statistics": "/api/governance/audit-export/statistics",
         },
     }
