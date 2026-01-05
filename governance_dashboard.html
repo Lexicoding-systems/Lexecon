@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lexecon Governance Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0891b2;
+            --secondary: #64748b;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #2d3b52;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --risk-critical: #dc2626;
+            --risk-high: #f59e0b;
+            --risk-medium: #eab308;
+            --risk-low: #84cc16;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: var(--bg-card);
+            border-bottom: 2px solid var(--primary);
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-content {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            border-color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-trend {
+            font-size: 0.875rem;
+            margin-top: 8px;
+        }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--danger); }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            min-height: 400px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0e7490;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(8, 145, 178, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8125rem;
+        }
+
+        /* Risk Cards */
+        .risk-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .risk-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .risk-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--primary);
+        }
+
+        .risk-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .risk-level {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .risk-level.critical {
+            background: var(--risk-critical);
+            color: white;
+        }
+
+        .risk-level.high {
+            background: var(--risk-high);
+            color: white;
+        }
+
+        .risk-level.medium {
+            background: var(--risk-medium);
+            color: var(--bg-dark);
+        }
+
+        .risk-level.low {
+            background: var(--risk-low);
+            color: var(--bg-dark);
+        }
+
+        .risk-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .risk-decision-id {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .risk-dimensions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .dimension {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            font-size: 0.8125rem;
+        }
+
+        .dimension-label {
+            color: var(--text-secondary);
+        }
+
+        .dimension-value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Escalation Cards */
+        .escalation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .escalation-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--primary);
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .escalation-card.sla-violation {
+            border-left-color: var(--danger);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .escalation-card:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .escalation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .escalation-priority {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .escalation-priority.critical {
+            background: var(--danger);
+            color: white;
+        }
+
+        .escalation-priority.high {
+            background: var(--warning);
+            color: white;
+        }
+
+        .escalation-priority.medium {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .escalation-priority.low {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .escalation-status {
+            font-size: 0.875rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .escalation-meta {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .escalation-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Override Cards */
+        .override-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .override-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--warning);
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .override-card:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .override-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .override-type {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--warning);
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .override-justification {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 4px;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* Evidence Cards */
+        .evidence-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .evidence-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .evidence-card:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .evidence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .artifact-type {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--primary);
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--success);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .hash-display {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-help {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 2000;
+        }
+
+        .toast.active {
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning);
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .risk-dimensions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>🛡️ Governance Dashboard</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="refreshAll()">
+                    🔄 Refresh All
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Statistics Overview -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-label">Total Risk Assessments</div>
+                <div class="stat-value" id="total-risks">--</div>
+                <div class="stat-trend trend-up">Active monitoring</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pending Escalations</div>
+                <div class="stat-value" id="pending-escalations">--</div>
+                <div class="stat-trend" id="escalation-trend">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Overrides</div>
+                <div class="stat-value" id="active-overrides">--</div>
+                <div class="stat-trend">Requires review</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Evidence Artifacts</div>
+                <div class="stat-value" id="total-artifacts">--</div>
+                <div class="stat-trend trend-up">100% immutable</div>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Risk Assessment Section -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2 class="section-title">⚠️ Risk Assessments</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary btn-sm" onclick="openRiskModal()">
+                            + Assess Risk
+                        </button>
+                    </div>
+                </div>
+                <div id="risk-list" class="risk-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <div>Loading risk assessments...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Escalation Management Section -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2 class="section-title">🚨 Escalations</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary btn-sm" onclick="openEscalationModal()">
+                            + Create Escalation
+                        </button>
+                    </div>
+                </div>
+                <div id="escalation-list" class="escalation-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <div>Loading escalations...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Override Management Section -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2 class="section-title">🔐 Overrides</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-danger btn-sm" onclick="openOverrideModal()">
+                            + Create Override
+                        </button>
+                    </div>
+                </div>
+                <div id="override-list" class="override-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <div>Loading overrides...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evidence Artifacts Section -->
+            <div class="dashboard-section">
+                <div class="section-header">
+                    <h2 class="section-title">📦 Evidence Artifacts</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-primary btn-sm" onclick="openEvidenceModal()">
+                            + Store Artifact
+                        </button>
+                    </div>
+                </div>
+                <div id="evidence-list" class="evidence-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <div>Loading artifacts...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Assessment Modal -->
+    <div id="risk-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Assess Risk for Decision</h3>
+                <button class="close-btn" onclick="closeModal('risk-modal')">&times;</button>
+            </div>
+            <form id="risk-form" onsubmit="submitRisk(event)">
+                <div class="form-group">
+                    <label class="form-label" for="risk-decision-id">Decision ID *</label>
+                    <input type="text" id="risk-decision-id" class="form-input" required
+                           placeholder="dec_example_123">
+                    <div class="form-help">Unique identifier for the decision being assessed</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Risk Dimensions (0-100)</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label class="form-label" for="risk-security">Security</label>
+                            <input type="number" id="risk-security" class="form-input"
+                                   min="0" max="100" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="form-label" for="risk-privacy">Privacy</label>
+                            <input type="number" id="risk-privacy" class="form-input"
+                                   min="0" max="100" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="form-label" for="risk-compliance">Compliance</label>
+                            <input type="number" id="risk-compliance" class="form-input"
+                                   min="0" max="100" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="form-label" for="risk-operational">Operational</label>
+                            <input type="number" id="risk-operational" class="form-input"
+                                   min="0" max="100" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="form-label" for="risk-reputational">Reputational</label>
+                            <input type="number" id="risk-reputational" class="form-input"
+                                   min="0" max="100" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="form-label" for="risk-financial">Financial</label>
+                            <input type="number" id="risk-financial" class="form-input"
+                                   min="0" max="100" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('risk-modal')">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Assess Risk
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span id="toast-message"></span>
+    </div>
+
+    <script>
+        const API_BASE = '';  // Same origin
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboardData();
+            // Auto-refresh every 30 seconds
+            setInterval(loadDashboardData, 30000);
+        });
+
+        async function loadDashboardData() {
+            await Promise.all([
+                loadStatistics(),
+                loadRisks(),
+                loadEscalations(),
+                loadOverrides(),
+                loadEvidence()
+            ]);
+        }
+
+        async function loadStatistics() {
+            try {
+                const evidenceStats = await fetch(`${API_BASE}/api/governance/evidence/statistics`).then(r => r.json());
+                document.getElementById('total-artifacts').textContent = evidenceStats.total_artifacts || 0;
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        async function loadRisks() {
+            const container = document.getElementById('risk-list');
+            try {
+                // Note: This endpoint doesn't exist yet, would need to be added to list all risks
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div>No risk assessments found</div>
+                        <div class="form-help">Click "+ Assess Risk" to create your first assessment</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading risks:', error);
+                container.innerHTML = `<div class="empty-state">Error loading risks</div>`;
+            }
+        }
+
+        async function loadEscalations() {
+            const container = document.getElementById('escalation-list');
+            try {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🚨</div>
+                        <div>No escalations found</div>
+                        <div class="form-help">Click "+ Create Escalation" to create one</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading escalations:', error);
+                container.innerHTML = `<div class="empty-state">Error loading escalations</div>`;
+            }
+        }
+
+        async function loadOverrides() {
+            const container = document.getElementById('override-list');
+            try {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔐</div>
+                        <div>No overrides found</div>
+                        <div class="form-help">Click "+ Create Override" to create one</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading overrides:', error);
+                container.innerHTML = `<div class="empty-state">Error loading overrides</div>`;
+            }
+        }
+
+        async function loadEvidence() {
+            const container = document.getElementById('evidence-list');
+            try {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <div>No evidence artifacts found</div>
+                        <div class="form-help">Click "+ Store Artifact" to create one</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading evidence:', error);
+                container.innerHTML = `<div class="empty-state">Error loading evidence</div>`;
+            }
+        }
+
+        function openRiskModal() {
+            document.getElementById('risk-modal').classList.add('active');
+        }
+
+        function openEscalationModal() {
+            showToast('Escalation modal coming soon', 'warning');
+        }
+
+        function openOverrideModal() {
+            showToast('Override modal coming soon', 'warning');
+        }
+
+        function openEvidenceModal() {
+            showToast('Evidence modal coming soon', 'warning');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        async function submitRisk(event) {
+            event.preventDefault();
+
+            const decisionId = document.getElementById('risk-decision-id').value;
+            const dimensions = {
+                security: parseInt(document.getElementById('risk-security').value) || null,
+                privacy: parseInt(document.getElementById('risk-privacy').value) || null,
+                compliance: parseInt(document.getElementById('risk-compliance').value) || null,
+                operational: parseInt(document.getElementById('risk-operational').value) || null,
+                reputational: parseInt(document.getElementById('risk-reputational').value) || null,
+                financial: parseInt(document.getElementById('risk-financial').value) || null
+            };
+
+            // Remove null dimensions
+            Object.keys(dimensions).forEach(key => {
+                if (dimensions[key] === null) delete dimensions[key];
+            });
+
+            try {
+                const response = await fetch(`${API_BASE}/api/governance/risk/assess`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        decision_id: decisionId,
+                        dimensions: dimensions
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to assess risk');
+                }
+
+                const result = await response.json();
+                showToast(`Risk assessed: ${result.risk_level} (score: ${result.overall_score})`, 'success');
+                closeModal('risk-modal');
+                document.getElementById('risk-form').reset();
+                await loadRisks();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        function refreshAll() {
+            showToast('Refreshing all data...', 'success');
+            loadDashboardData();
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+
+            toast.className = `toast ${type} active`;
+            toastMessage.textContent = message;
+
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 3000);
+        }
+
+        // Close modals on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+
+        // Close modals on background click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

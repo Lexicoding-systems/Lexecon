@@ -388,6 +388,22 @@ async def serve_dashboard():
     return FileResponse(dashboard_path)
 
 
+@app.get("/dashboard/governance", response_class=HTMLResponse)
+async def serve_governance_dashboard():
+    """Serve the governance dashboard UI (Phase 6)."""
+    # Governance dashboard is at project root
+    dashboard_path = os.path.join(
+        os.path.dirname(__file__),
+        "../../../governance_dashboard.html"
+    )
+    if not os.path.exists(dashboard_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Governance dashboard not found at {dashboard_path}"
+        )
+    return FileResponse(dashboard_path)
+
+
 @app.get("/policies")
 async def list_policies():
     """List loaded policies."""
@@ -2038,6 +2054,7 @@ async def root():
             "health": "/health",
             "status": "/status",
             "dashboard": "/dashboard",
+            "governance_dashboard": "/dashboard/governance",
             "policies": "/policies",
             "decide": "/decide",
             "verify": "/decide/verify",
