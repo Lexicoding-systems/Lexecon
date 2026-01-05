@@ -1057,3 +1057,142 @@ class TestCanonicalDecisionStorage:
         assert "actor_id" in canonical_dict
         assert "action_id" in canonical_dict
         assert "outcome" in canonical_dict
+
+
+class TestDecisionServiceHelpers:
+    """Tests for decision service helper functions."""
+
+    def test_generate_risk_id(self):
+        """Test risk ID generation from decision ID."""
+        from lexecon.decision.service import generate_risk_id
+
+        risk_id = generate_risk_id("dec_ABC123")
+        assert risk_id == "rsk_dec_ABC123"
+
+    def test_to_canonical_dict_without_canonical(self):
+        """Test to_canonical_dict returns None when no canonical decision."""
+        response = DecisionResponse(
+            request_id="req_123",
+            decision="allowed",
+            reasoning="Test decision",
+            policy_version_hash="abc123"
+        )
+        # Don't set _canonical_decision
+
+        canonical_dict = response.to_canonical_dict()
+        assert canonical_dict is None
+
+
+class TestDecisionServiceFiltering:
+    """Tests for decision service filtering capabilities."""
+
+    @pytest.fixture
+    def policy_engine(self):
+        """Create a policy engine."""
+        from lexecon.policy.engine import PolicyEngine, PolicyMode
+        return PolicyEngine(mode=PolicyMode.PERMISSIVE)
+
+    @pytest.fixture
+    def service(self, policy_engine):
+        """Create decision service."""
+        return DecisionService(policy_engine)
+
+    def test_list_canonical_decisions_with_outcome_filter(self, service):
+        """Test listing decisions filtered by outcome."""
+
+        # Make several decisions with different outcomes
+        request1 = DecisionRequest(
+            request_id="req_1",
+            actor="user",
+            proposed_action="read",
+            tool="database",
+            user_intent="Read data"
+        )
+        request2 = DecisionRequest(
+            request_id="req_2",
+            actor="user",
+            proposed_action="delete",
+            tool="database",
+            user_intent="Delete data"
+        )
+
+        response1 = service.evaluate_request(request1)
+        response2 = service.evaluate_request(request2)
+
+        # Get decisions filtered by outcome (if governance models available)
+        try:
+            from model_governance_pack.models import DecisionOutcome
+            approved_decisions = service.list_canonical_decisions(
+                limit=10, outcome=DecisionOutcome.APPROVED
+            )
+            # Should have decisions
+            assert isinstance(approved_decisions, list)
+        except ImportError:
+            # Skip if governance models not available
+            pass
+
+    def test_export_decisions_with_time_filters(self, service):
+        """Test exporting decisions with time range filtering."""
+        from datetime import datetime, timedelta, timezone
+
+        # Make a decision
+        request = DecisionRequest(
+            request_id="req_test",
+            actor="user",
+            proposed_action="read",
+            tool="database",
+            user_intent="Read data"
+        )
+        service.evaluate_request(request)
+
+        # Export with time filters
+        now = datetime.now(timezone.utc)
+        start_time = now - timedelta(hours=1)
+        end_time = now + timedelta(hours=1)
+
+        decisions = service.export_decisions_for_audit(
+            start_time=start_time,
+            end_time=end_time
+        )
+
+        # Should have the decision we just made
+        assert len(decisions) > 0
+        assert all(isinstance(d, dict) for d in decisions)
+
+    def test_export_decisions_with_start_time_only(self, service):
+        """Test exporting decisions with only start_time filter."""
+        from datetime import datetime, timedelta, timezone
+
+        request = DecisionRequest(
+            request_id="req_start",
+            actor="user",
+            proposed_action="read",
+            tool="database",
+            user_intent="Read data"
+        )
+        service.evaluate_request(request)
+
+        # Export with only start_time
+        start_time = datetime.now(timezone.utc) - timedelta(hours=1)
+        decisions = service.export_decisions_for_audit(start_time=start_time)
+
+        assert len(decisions) > 0
+
+    def test_export_decisions_with_end_time_only(self, service):
+        """Test exporting decisions with only end_time filter."""
+        from datetime import datetime, timedelta, timezone
+
+        request = DecisionRequest(
+            request_id="req_end",
+            actor="user",
+            proposed_action="read",
+            tool="database",
+            user_intent="Read data"
+        )
+        service.evaluate_request(request)
+
+        # Export with only end_time
+        end_time = datetime.now(timezone.utc) + timedelta(hours=1)
+        decisions = service.export_decisions_for_audit(end_time=end_time)
+
+        assert len(decisions) > 0
