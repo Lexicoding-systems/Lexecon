@@ -98,6 +98,78 @@ class TestPolicyRelation:
         assert data["relation_type"] == "permits"
         assert data["source"] == "actor:admin"
 
+    def test_requires(self):
+        """Test creating a requires relation."""
+        relation = PolicyRelation.requires("action:delete", "condition:approval")
+        assert relation.relation_type == RelationType.REQUIRES
+        assert relation.source == "action:delete"
+        assert relation.target == "condition:approval"
+        assert relation.conditions == []
+
+    def test_post_init_with_none_conditions(self):
+        """Test __post_init__ initializes empty conditions list."""
+        relation = PolicyRelation(
+            relation_id="test:rel",
+            relation_type=RelationType.PERMITS,
+            source="actor:user",
+            target="action:read",
+            conditions=None  # Explicitly None
+        )
+        assert relation.conditions == []
+        assert relation.metadata == {}
+
+    def test_from_dict_missing_relation_type(self):
+        """Test from_dict raises ValueError when relation_type is missing."""
+        data = {
+            "source": "actor:user",
+            "target": "action:read"
+        }
+        with pytest.raises(ValueError, match="Missing relation_type or type field"):
+            PolicyRelation.from_dict(data)
+
+    def test_from_dict_missing_source_and_target(self):
+        """Test from_dict raises ValueError when both source and target are missing."""
+        data = {
+            "relation_type": "permits"
+        }
+        with pytest.raises(ValueError, match="Missing source/target"):
+            PolicyRelation.from_dict(data)
+
+    def test_from_dict_only_source(self):
+        """Test from_dict uses source for target when target is missing."""
+        data = {
+            "relation_type": "permits",
+            "source": "actor:user"
+        }
+        relation = PolicyRelation.from_dict(data)
+        assert relation.source == "actor:user"
+        assert relation.target == "actor:user"  # Should copy source to target
+
+    def test_from_dict_only_target(self):
+        """Test from_dict uses target for source when source is missing."""
+        data = {
+            "relation_type": "permits",
+            "action": "action:read"  # Using 'action' as alias for 'target'
+        }
+        relation = PolicyRelation.from_dict(data)
+        assert relation.source == "action:read"  # Should copy target to source
+        assert relation.target == "action:read"
+
+    def test_from_dict_with_object_and_justification(self):
+        """Test from_dict stores object and justification in metadata."""
+        data = {
+            "relation_type": "permits",
+            "source": "actor:user",
+            "target": "action:read",
+            "object": "data:pii",
+            "justification": "User has clearance",
+            "condition": "during_business_hours"
+        }
+        relation = PolicyRelation.from_dict(data)
+        assert relation.metadata["object"] == "data:pii"
+        assert relation.metadata["justification"] == "User has clearance"
+        assert relation.metadata["condition"] == "during_business_hours"
+
 
 class TestPolicyEngine:
     """Tests for PolicyEngine."""

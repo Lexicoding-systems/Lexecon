@@ -147,3 +147,84 @@ class TestSignatureService:
         is_valid, message = signature_service.verify_packet_signature(enriched)
 
         assert is_valid is False
+
+    def test_sign_without_private_key(self, tmpdir):
+        """Test signing fails when private key is not loaded."""
+        from lexecon.security.signature_service import SignatureService
+
+        # Create service without keys
+        service = SignatureService(keys_dir=str(tmpdir))
+        service.private_key = None  # Explicitly remove private key
+
+        packet_data = {"request_id": "req_123", "data": {}}
+
+        with pytest.raises(RuntimeError, match="Private key not loaded"):
+            service.sign_packet(packet_data)
+
+    def test_verify_without_public_key(self, tmpdir):
+        """Test verification fails when public key is not loaded."""
+        from lexecon.security.signature_service import SignatureService
+
+        service = SignatureService(keys_dir=str(tmpdir))
+        service.public_key = None  # Explicitly remove public key
+
+        packet_data = {"request_id": "req_123"}
+        signature_hex = "abcd1234"
+
+        with pytest.raises(RuntimeError, match="Public key not loaded"):
+            service.verify_signature(packet_data, signature_hex)
+
+    def test_get_public_key_pem_without_key(self, tmpdir):
+        """Test get_public_key_pem fails when public key is not loaded."""
+        from lexecon.security.signature_service import SignatureService
+
+        service = SignatureService(keys_dir=str(tmpdir))
+        service.public_key = None
+
+        with pytest.raises(RuntimeError, match="Public key not loaded"):
+            service.get_public_key_pem()
+
+    def test_get_public_key_fingerprint_without_key(self, tmpdir):
+        """Test get_public_key_fingerprint fails when public key is not loaded."""
+        from lexecon.security.signature_service import SignatureService
+
+        service = SignatureService(keys_dir=str(tmpdir))
+        service.public_key = None
+
+        with pytest.raises(RuntimeError, match="Public key not loaded"):
+            service.get_public_key_fingerprint()
+
+    def test_verify_packet_without_signature_info(self, signature_service):
+        """Test verify_packet_signature returns False when signature_info is missing."""
+        packet_data = {"request_id": "req_123", "data": {}}
+
+        is_valid, message = signature_service.verify_packet_signature(packet_data)
+
+        assert is_valid is False
+        assert "No signature_info found" in message
+
+    def test_verify_packet_with_missing_signature(self, signature_service):
+        """Test verify_packet_signature returns False when signature is missing from signature_info."""
+        packet_data = {
+            "request_id": "req_123",
+            "data": {},
+            "signature_info": {
+                "algorithm": "RSA-PSS-SHA256"
+                # Missing "signature" field
+            }
+        }
+
+        is_valid, message = signature_service.verify_packet_signature(packet_data)
+
+        assert is_valid is False
+        assert "No signature found" in message
+
+    def test_verify_signature_exception_handling(self, signature_service):
+        """Test verify_signature handles exceptions gracefully."""
+        packet_data = {"request_id": "req_123"}
+        invalid_signature = "not_a_valid_hex_signature"
+
+        is_valid, message = signature_service.verify_signature(packet_data, invalid_signature)
+
+        assert is_valid is False
+        assert "error" in message.lower()
