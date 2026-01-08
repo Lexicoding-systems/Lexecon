@@ -6,7 +6,7 @@ Critical for audits, legal liability, and EU AI Act Article 14 compliance.
 """
 
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 
 class DecisionMaker(Enum):
     """Who made the decision."""
+
     AI_SYSTEM = "ai_system"  # Fully automated
     HUMAN_OPERATOR = "human_operator"  # Human with AI assistance
     HUMAN_SUPERVISOR = "human_supervisor"  # Supervisory override
@@ -24,6 +25,7 @@ class DecisionMaker(Enum):
 
 class ResponsibilityLevel(Enum):
     """Level of responsibility for the decision."""
+
     FULL = "full"  # Full legal responsibility
     SHARED = "shared"  # Shared between human and AI
     SUPERVISED = "supervised"  # AI decision with human oversight
@@ -37,6 +39,7 @@ class ResponsibilityRecord:
 
     Critical for legal liability and compliance audits.
     """
+
     record_id: str
     decision_id: str
     timestamp: str
@@ -71,7 +74,7 @@ class ResponsibilityRecord:
         return {
             **asdict(self),
             "decision_maker": self.decision_maker.value,
-            "responsibility_level": self.responsibility_level.value
+            "responsibility_level": self.responsibility_level.value,
         }
 
 
@@ -115,7 +118,7 @@ class ResponsibilityTracker:
         escalated_to: Optional[str] = None,
         review_required: bool = False,
         liability_accepted: bool = False,
-        liability_signature: Optional[str] = None
+        liability_signature: Optional[str] = None,
     ) -> ResponsibilityRecord:
         """
         Record who is responsible for a decision.
@@ -138,7 +141,7 @@ class ResponsibilityTracker:
             escalated_to=escalated_to,
             review_required=review_required,
             liability_accepted=liability_accepted,
-            liability_signature=liability_signature
+            liability_signature=liability_signature,
         )
 
         self.records.append(record)
@@ -149,12 +152,7 @@ class ResponsibilityTracker:
 
         return record
 
-    def mark_reviewed(
-        self,
-        record_id: str,
-        reviewed_by: str,
-        notes: Optional[str] = None
-    ) -> bool:
+    def mark_reviewed(self, record_id: str, reviewed_by: str, notes: Optional[str] = None) -> bool:
         """Mark a decision as reviewed."""
         for record in self.records:
             if record.record_id == record_id:
@@ -164,9 +162,7 @@ class ResponsibilityTracker:
                 # Auto-save update to storage if available
                 if self.storage:
                     self.storage.update_record(
-                        record_id,
-                        reviewed_by=reviewed_by,
-                        reviewed_at=record.reviewed_at
+                        record_id, reviewed_by=reviewed_by, reviewed_at=record.reviewed_at
                     )
 
                 return True
@@ -193,9 +189,7 @@ class ResponsibilityTracker:
         return [r for r in self.records if r.review_required and not r.reviewed_by]
 
     def generate_accountability_report(
-        self,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate accountability report.
@@ -242,17 +236,16 @@ class ResponsibilityTracker:
         # Identify most responsible parties
         party_counts = {}
         for record in records:
-            party_counts[record.responsible_party] = party_counts.get(record.responsible_party, 0) + 1
+            party_counts[record.responsible_party] = (
+                party_counts.get(record.responsible_party, 0) + 1
+            )
 
         top_parties = sorted(party_counts.items(), key=lambda x: x[1], reverse=True)[:10]
 
         return {
             "report_type": "ACCOUNTABILITY_REPORT",
             "generated_at": datetime.utcnow().isoformat(),
-            "period": {
-                "start": start_date or "inception",
-                "end": end_date or "present"
-            },
+            "period": {"start": start_date or "inception", "end": end_date or "present"},
             "summary": {
                 "total_decisions": total,
                 "by_decision_maker": by_maker,
@@ -261,20 +254,18 @@ class ResponsibilityTracker:
                 "override_rate": (overrides / total * 100) if total > 0 else 0,
                 "pending_reviews": pending_reviews,
                 "liability_accepted_count": liability_accepted,
-                "liability_acceptance_rate": (liability_accepted / total * 100) if total > 0 else 0
+                "liability_acceptance_rate": (liability_accepted / total * 100) if total > 0 else 0,
             },
             "top_responsible_parties": [
-                {"party": party, "decision_count": count}
-                for party, count in top_parties
+                {"party": party, "decision_count": count} for party, count in top_parties
             ],
             "compliance_indicators": {
-                "human_oversight_active": overrides > 0 or any(
-                    r.decision_maker != DecisionMaker.AI_SYSTEM for r in records
-                ),
+                "human_oversight_active": overrides > 0
+                or any(r.decision_maker != DecisionMaker.AI_SYSTEM for r in records),
                 "review_process_active": any(r.reviewed_by for r in records),
                 "liability_framework_active": liability_accepted > 0,
-                "delegation_chain_documented": any(r.delegated_from for r in records)
-            }
+                "delegation_chain_documented": any(r.delegated_from for r in records),
+            },
         }
 
     def export_for_legal(self, decision_id: str) -> Dict[str, Any]:
@@ -293,20 +284,16 @@ class ResponsibilityTracker:
             "responsibility_records": [r.to_dict() for r in chain],
             "final_responsible_party": chain[-1].responsible_party if chain else None,
             "human_in_loop": any(r.decision_maker != DecisionMaker.AI_SYSTEM for r in chain),
-            "signatures_present": [
-                r.record_id for r in chain if r.liability_signature
-            ],
+            "signatures_present": [r.record_id for r in chain if r.liability_signature],
             "legal_attestation": {
                 "accountability_established": len(chain) > 0,
                 "human_oversight_documented": any(
                     r.decision_maker != DecisionMaker.AI_SYSTEM for r in chain
                 ),
-                "liability_accepted": any(r.liability_accepted for r in chain)
-            }
+                "liability_accepted": any(r.liability_accepted for r in chain),
+            },
         }
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize all records."""
-        return {
-            "records": [r.to_dict() for r in self.records]
-        }
+        return {"records": [r.to_dict() for r in self.records]}

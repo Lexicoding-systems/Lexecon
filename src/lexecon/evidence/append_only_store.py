@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 
 class AppendOnlyViolationError(Exception):
     """Raised when attempting to modify or delete in append-only mode."""
+
     pass
 
 
@@ -92,9 +93,7 @@ class AppendOnlyStore:
             AppendOnlyViolationError: If append-only enabled
         """
         if self._enabled:
-            raise AppendOnlyViolationError(
-                f"Cannot delete artifact '{key}' in append-only mode"
-            )
+            raise AppendOnlyViolationError(f"Cannot delete artifact '{key}' in append-only mode")
         del self._store[key]
 
     def __contains__(self, key: str) -> bool:
@@ -170,10 +169,7 @@ class AppendOnlyEvidenceStore:
         # Wrap the internal storage if enabled
         if enabled:
             # Replace internal dict with append-only wrapper
-            self.service._artifacts = AppendOnlyStore(
-                self.service._artifacts,
-                enabled=True
-            )
+            self.service._artifacts = AppendOnlyStore(self.service._artifacts, enabled=True)
 
     @property
     def enabled(self) -> bool:
@@ -185,10 +181,7 @@ class AppendOnlyEvidenceStore:
         if not self._enabled:
             self._enabled = True
             if not isinstance(self.service._artifacts, AppendOnlyStore):
-                self.service._artifacts = AppendOnlyStore(
-                    self.service._artifacts,
-                    enabled=True
-                )
+                self.service._artifacts = AppendOnlyStore(self.service._artifacts, enabled=True)
             else:
                 self.service._artifacts.enable()
 
@@ -214,8 +207,9 @@ class AppendOnlyEvidenceStore:
 
         for artifact_id, artifact in artifacts.items():
             # Recompute hash
-            if hasattr(artifact, 'content') and hasattr(artifact, 'sha256_hash'):
+            if hasattr(artifact, "content") and hasattr(artifact, "sha256_hash"):
                 from .service import compute_sha256
+
                 actual_hash = compute_sha256(artifact.content)
                 if actual_hash != artifact.sha256_hash:
                     return False

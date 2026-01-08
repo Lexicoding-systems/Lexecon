@@ -1,23 +1,24 @@
 """Tests for risk assessment service."""
 
-import pytest
 from datetime import datetime
 
+import pytest
+
 from lexecon.risk.service import (
-    RiskService,
     RiskScoringEngine,
-    generate_risk_id,
+    RiskService,
     generate_evidence_id,
+    generate_risk_id,
 )
 
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
+        EvidenceArtifact,
         Risk,
         RiskDimensions,
         RiskFactor,
         RiskLevel,
-        EvidenceArtifact,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -313,9 +314,7 @@ class TestRiskService:
         # Create multiple risk assessments
         for i in range(5):
             dimensions = RiskDimensions(security=20 * i)
-            service.assess_risk(
-                decision_id=f"dec_01JQXYZ{i:022d}", dimensions=dimensions
-            )
+            service.assess_risk(decision_id=f"dec_01JQXYZ{i:022d}", dimensions=dimensions)
 
         risks = service.list_risks()
         assert len(risks) == 5
@@ -375,9 +374,7 @@ class TestRiskService:
     def test_evidence_artifact_immutability(self, service):
         """Test that evidence artifacts have SHA-256 hashes."""
         dimensions = RiskDimensions(security=70)
-        service.assess_risk(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions
-        )
+        service.assess_risk(decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions)
 
         artifacts = service.list_evidence_artifacts()
         artifact = artifacts[0]
@@ -422,9 +419,7 @@ class TestRiskService:
         service.assess_risk("dec_01JQXYZ2222222222222222222", RiskDimensions(security=70))
 
         # Filter by specific decision
-        artifacts = service.list_evidence_artifacts(
-            decision_id="dec_01JQXYZ1111111111111111111"
-        )
+        artifacts = service.list_evidence_artifacts(decision_id="dec_01JQXYZ1111111111111111111")
         assert len(artifacts) == 1
         assert "dec_01JQXYZ1111111111111111111" in artifacts[0].related_decision_ids
 
@@ -469,9 +464,7 @@ class TestRiskServiceIntegration:
         assert retrieved_risk.risk_id == risk.risk_id
 
         # 4. Verify evidence artifact
-        artifacts = service.list_evidence_artifacts(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH"
-        )
+        artifacts = service.list_evidence_artifacts(decision_id="dec_01JQXYZ1234567890ABCDEFGH")
         assert len(artifacts) == 1
         assert artifacts[0].is_immutable is True
 

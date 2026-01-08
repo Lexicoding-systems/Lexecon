@@ -76,8 +76,7 @@ class TestKeyManager:
 
             # Fingerprints should match
             assert (
-                km_loaded.get_public_key_fingerprint()
-                == km_original.get_public_key_fingerprint()
+                km_loaded.get_public_key_fingerprint() == km_original.get_public_key_fingerprint()
             )
 
     def test_load_public_key_from_disk(self):
@@ -341,6 +340,7 @@ class TestNodeIdentity:
 
         # Sign it manually through key manager
         import base64
+
         message = hash_string.encode()
         signature_bytes = node.key_manager.private_key.sign(message)
         signature = base64.b64encode(signature_bytes).decode()
@@ -359,6 +359,7 @@ class TestNodeIdentity:
 
         # Sign original
         import base64
+
         message = original_data.encode()
         signature_bytes = node.key_manager.private_key.sign(message)
         signature = base64.b64encode(signature_bytes).decode()
@@ -410,6 +411,7 @@ class TestNodeIdentity:
 
         # Convert dict to canonical JSON for verification
         import json
+
         canonical = json.dumps(data, sort_keys=True, separators=(",", ":"))
 
         # This should work with the node's verify_signature method

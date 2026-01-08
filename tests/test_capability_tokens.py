@@ -170,9 +170,7 @@ class TestCapabilityToken:
 
     def test_different_tokens_have_unique_ids(self):
         """Test that multiple tokens get unique IDs."""
-        tokens = [
-            CapabilityToken.create("action", "tool", "hash") for _ in range(100)
-        ]
+        tokens = [CapabilityToken.create("action", "tool", "hash") for _ in range(100)]
 
         token_ids = [t.token_id for t in tokens]
         assert len(token_ids) == len(set(token_ids))  # All unique

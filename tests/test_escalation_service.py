@@ -1,28 +1,29 @@
 """Tests for escalation service."""
 
-import pytest
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from lexecon.escalation.service import (
-    EscalationService,
     EscalationConfig,
-    generate_escalation_id,
+    EscalationService,
     NotificationEvent,
+    generate_escalation_id,
 )
 
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
         Escalation,
-        EscalationTrigger,
-        EscalationStatus,
         EscalationPriority,
+        EscalationStatus,
+        EscalationTrigger,
+        EvidenceArtifact,
         Resolution,
         ResolutionOutcome,
         Risk,
         RiskDimensions,
         RiskLevel,
-        EvidenceArtifact,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -214,13 +215,9 @@ class TestEscalationService:
             escalated_to=["act_human_user:reviewer1"],
         )
 
-        artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
-        )
+        artifacts = service.get_evidence_artifacts(escalation_id=escalation.escalation_id)
         assert len(artifacts) >= 1
-        assert any(
-            a.metadata.get("event_type") == "escalation_created" for a in artifacts
-        )
+        assert any(a.metadata.get("event_type") == "escalation_created" for a in artifacts)
 
     def test_auto_escalate_for_high_risk(self, service, high_risk):
         """Test auto-escalation for high-risk decision."""
@@ -602,9 +599,7 @@ class TestEvidenceArtifacts:
             escalated_to=["act_human_user:reviewer1"],
         )
 
-        artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
-        )
+        artifacts = service.get_evidence_artifacts(escalation_id=escalation.escalation_id)
 
         created_artifacts = [
             a for a in artifacts if a.metadata.get("event_type") == "escalation_created"
@@ -639,9 +634,7 @@ class TestEvidenceArtifacts:
         )
 
         # Check artifacts
-        artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
-        )
+        artifacts = service.get_evidence_artifacts(escalation_id=escalation.escalation_id)
 
         event_types = {a.metadata.get("event_type") for a in artifacts}
         assert "escalation_created" in event_types
@@ -660,9 +653,7 @@ class TestEvidenceArtifacts:
         artifacts = service.get_evidence_artifacts(decision_id=escalation.decision_id)
 
         # Should have artifacts for notifications
-        notification_artifacts = [
-            a for a in artifacts if a.metadata.get("notification_type")
-        ]
+        notification_artifacts = [a for a in artifacts if a.metadata.get("notification_type")]
         assert len(notification_artifacts) >= 1
 
     def test_evidence_disabled(self):
@@ -677,9 +668,7 @@ class TestEvidenceArtifacts:
 
         # Escalation should exist but no evidence
         assert escalation is not None
-        artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
-        )
+        artifacts = service.get_evidence_artifacts(escalation_id=escalation.escalation_id)
         assert len(artifacts) == 0
 
 
@@ -725,9 +714,7 @@ class TestIntegrationWorkflows:
         assert resolved.resolution.outcome == ResolutionOutcome.APPROVED
 
         # 4. Verify evidence trail
-        artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
-        )
+        artifacts = service.get_evidence_artifacts(escalation_id=escalation.escalation_id)
         assert len(artifacts) >= 3  # Created, acknowledged, resolved
 
     def test_auto_escalation_workflow(self):
@@ -760,7 +747,5 @@ class TestIntegrationWorkflows:
         assert escalation.metadata["auto_escalated"] is True
 
         # Verify notifications
-        notifications = service.get_notifications(
-            escalation_id=escalation.escalation_id
-        )
+        notifications = service.get_notifications(escalation_id=escalation.escalation_id)
         assert len(notifications) >= 1

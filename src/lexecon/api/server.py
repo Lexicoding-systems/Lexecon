@@ -6,70 +6,63 @@ and audit operations.
 """
 
 import json
+import os
+import secrets
 import time
 import uuid
-import secrets
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, status, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
-import os
 
-from lexecon.decision.service import DecisionRequest, DecisionService
-from lexecon.identity.signing import KeyManager
-from lexecon.ledger.chain import LedgerChain
-from lexecon.policy.engine import PolicyEngine, PolicyMode
-from lexecon.storage.persistence import LedgerStorage
-from lexecon.responsibility.tracker import (
-    ResponsibilityTracker,
-    DecisionMaker,
-    ResponsibilityLevel
-)
-from lexecon.responsibility.storage import ResponsibilityStorage
-
-# Security imports
-from lexecon.security.auth_service import AuthService, Role, Permission, User, Session
-from lexecon.security.audit_service import AuditService, ExportStatus
-from lexecon.security.signature_service import SignatureService
-
-# Governance service imports
-from lexecon.risk.service import RiskService, RiskScoringEngine
-from lexecon.escalation.service import EscalationService
-from lexecon.override.service import OverrideService
-from lexecon.evidence.service import EvidenceService
+from lexecon.audit_export.service import AuditExportService, ExportFormat, ExportScope
 from lexecon.compliance_mapping.service import (
     ComplianceMappingService,
-    RegulatoryFramework,
+    ControlStatus,
     GovernancePrimitive,
-    ControlStatus
+    RegulatoryFramework,
 )
-from lexecon.audit_export.service import (
-    AuditExportService,
-    ExportFormat,
-    ExportScope
-)
+from lexecon.decision.service import DecisionRequest, DecisionService
+from lexecon.escalation.service import EscalationService
+from lexecon.evidence.service import EvidenceService
+from lexecon.identity.signing import KeyManager
+from lexecon.ledger.chain import LedgerChain
+from lexecon.override.service import OverrideService
+from lexecon.policy.engine import PolicyEngine, PolicyMode
+from lexecon.responsibility.storage import ResponsibilityStorage
+from lexecon.responsibility.tracker import DecisionMaker, ResponsibilityLevel, ResponsibilityTracker
+
+# Governance service imports
+from lexecon.risk.service import RiskScoringEngine, RiskService
+from lexecon.security.audit_service import AuditService, ExportStatus
+
+# Security imports
+from lexecon.security.auth_service import AuthService, Permission, Role, Session, User
+from lexecon.security.signature_service import SignatureService
+from lexecon.storage.persistence import LedgerStorage
 
 # Import governance models for type hints
 try:
     from model_governance_pack.models import (
-        Risk,
-        RiskLevel,
-        RiskDimensions,
+        ArtifactType,
+        DigitalSignature,
         Escalation,
         EscalationPriority,
         EscalationStatus,
-        Override,
-        OverrideType,
-        OriginalOutcome,
-        NewOutcome,
-        OverrideScope,
         EvidenceArtifact,
-        ArtifactType,
-        DigitalSignature,
+        NewOutcome,
+        OriginalOutcome,
+        Override,
+        OverrideScope,
+        OverrideType,
+        Risk,
+        RiskDimensions,
+        RiskLevel,
     )
+
     GOVERNANCE_MODELS_AVAILABLE = True
 except ImportError:
     GOVERNANCE_MODELS_AVAILABLE = False
@@ -95,26 +88,36 @@ class PolicyLoadModel(BaseModel):
     """Model for loading policy - supports both wrapped and direct formats."""
 
     # Support wrapped format {"policy": {...}}
-    policy: Optional[Dict[str, Any]] = Field(default=None, description="Policy data (wrapped format)")
+    policy: Optional[Dict[str, Any]] = Field(
+        default=None, description="Policy data (wrapped format)"
+    )
     # Support direct format
     name: Optional[str] = Field(default=None, description="Policy name")
     version: Optional[str] = Field(default="1.0", description="Policy version")
     mode: Optional[str] = Field(default=None, description="Policy mode")
     terms: Optional[List[Dict[str, Any]]] = Field(default=None, description="Policy terms")
     relations: Optional[List[Dict[str, Any]]] = Field(default=None, description="Policy relations")
-    constraints: Optional[List[Dict[str, Any]]] = Field(default=None, description="Policy constraints")
+    constraints: Optional[List[Dict[str, Any]]] = Field(
+        default=None, description="Policy constraints"
+    )
 
 
 class InterventionModel(BaseModel):
     """Model for human intervention request."""
 
     intervention_type: str = Field(..., description="Type of intervention")
-    ai_recommendation: Dict[str, Any] = Field(..., description="AI's recommendation (must include 'confidence' key)")
+    ai_recommendation: Dict[str, Any] = Field(
+        ..., description="AI's recommendation (must include 'confidence' key)"
+    )
     human_decision: Dict[str, Any] = Field(..., description="Human's decision")
     human_role: str = Field(..., description="Human's role")
     reason: str = Field(..., description="Reason for intervention")
-    request_context: Optional[Dict[str, Any]] = Field(default=None, description="Additional request context")
-    response_time_ms: Optional[int] = Field(default=None, description="Response time in milliseconds")
+    request_context: Optional[Dict[str, Any]] = Field(
+        default=None, description="Additional request context"
+    )
+    response_time_ms: Optional[int] = Field(
+        default=None, description="Response time in milliseconds"
+    )
 
 
 class HealthResponse(BaseModel):
@@ -142,12 +145,14 @@ class StatusResponse(BaseModel):
 # Security models
 class LoginRequest(BaseModel):
     """Login request."""
+
     username: str
     password: str
 
 
 class LoginResponse(BaseModel):
     """Login response."""
+
     success: bool
     session_id: Optional[str] = None
     user: Optional[Dict[str, Any]] = None
@@ -156,6 +161,7 @@ class LoginResponse(BaseModel):
 
 class CreateUserRequest(BaseModel):
     """Create user request."""
+
     username: str
     email: str
     password: str
@@ -165,6 +171,7 @@ class CreateUserRequest(BaseModel):
 
 class ExportRequestModel(BaseModel):
     """Audit packet export request with attestation."""
+
     # Step 1: Metadata
     requester_name: str
     requester_email: str
@@ -187,9 +194,11 @@ class ExportRequestModel(BaseModel):
 
 # ========== Governance API Models (Phase 5) ==========
 
+
 # Risk Service Models
 class RiskDimensionsModel(BaseModel):
     """Risk dimensions for assessment."""
+
     security: Optional[int] = Field(None, ge=0, le=100, description="Security risk score")
     privacy: Optional[int] = Field(None, ge=0, le=100, description="Privacy risk score")
     compliance: Optional[int] = Field(None, ge=0, le=100, description="Compliance risk score")
@@ -200,6 +209,7 @@ class RiskDimensionsModel(BaseModel):
 
 class RiskAssessmentRequest(BaseModel):
     """Request to assess risk for a decision."""
+
     decision_id: str = Field(..., description="Decision ID to assess")
     dimensions: RiskDimensionsModel = Field(..., description="Risk dimensions")
     context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context")
@@ -208,16 +218,23 @@ class RiskAssessmentRequest(BaseModel):
 # Escalation Service Models
 class EscalationCreateRequest(BaseModel):
     """Request to create an escalation."""
+
     decision_id: str = Field(..., description="Decision ID being escalated")
-    trigger: str = Field(..., description="What triggered the escalation (risk_threshold/policy_conflict/explicit_rule/actor_request/anomaly_detected)")
+    trigger: str = Field(
+        ...,
+        description="What triggered the escalation (risk_threshold/policy_conflict/explicit_rule/actor_request/anomaly_detected)",
+    )
     escalated_to: List[str] = Field(..., description="List of actor IDs to escalate to")
-    priority: Optional[str] = Field(default=None, description="Escalation priority (critical/high/medium/low)")
+    priority: Optional[str] = Field(
+        default=None, description="Escalation priority (critical/high/medium/low)"
+    )
     context_summary: Optional[str] = Field(default=None, description="Summary for reviewers")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
 
 class EscalationResolveRequest(BaseModel):
     """Request to resolve an escalation."""
+
     resolved_by: str = Field(..., description="Actor ID resolving escalation")
     outcome: str = Field(..., description="Resolution outcome")
     notes: str = Field(..., description="Resolution notes")
@@ -226,6 +243,7 @@ class EscalationResolveRequest(BaseModel):
 # Override Service Models
 class OverrideCreateRequest(BaseModel):
     """Request to create an override."""
+
     decision_id: str = Field(..., description="Decision ID to override")
     override_type: str = Field(..., description="Type of override")
     authorized_by: str = Field(..., description="Actor ID authorizing override")
@@ -240,11 +258,16 @@ class OverrideCreateRequest(BaseModel):
 # Evidence Service Models
 class EvidenceStoreRequest(BaseModel):
     """Request to store an evidence artifact."""
+
     artifact_type: str = Field(..., description="Type of artifact")
     content: str = Field(..., description="Artifact content")
     source: str = Field(..., description="System/process that created artifact")
-    related_decision_ids: Optional[List[str]] = Field(default=None, description="Related decision IDs")
-    related_control_ids: Optional[List[str]] = Field(default=None, description="Related control IDs")
+    related_decision_ids: Optional[List[str]] = Field(
+        default=None, description="Related decision IDs"
+    )
+    related_control_ids: Optional[List[str]] = Field(
+        default=None, description="Related control IDs"
+    )
     content_type: Optional[str] = Field(default=None, description="MIME type")
     storage_uri: Optional[str] = Field(default=None, description="External storage location")
     retention_days: Optional[int] = Field(default=None, description="Custom retention period")
@@ -253,11 +276,13 @@ class EvidenceStoreRequest(BaseModel):
 
 class EvidenceVerifyRequest(BaseModel):
     """Request to verify artifact integrity."""
+
     content: str = Field(..., description="Content to verify against stored hash")
 
 
 class EvidenceSignRequest(BaseModel):
     """Request to sign an artifact."""
+
     signer_id: str = Field(..., description="Actor ID of signer")
     signature: str = Field(..., description="Signature value (base64 encoded)")
     algorithm: str = Field(default="RSA-SHA256", description="Signature algorithm")
@@ -265,8 +290,10 @@ class EvidenceSignRequest(BaseModel):
 
 # ========== Compliance Mapping API Models (Phase 7) ==========
 
+
 class ComplianceMappingRequest(BaseModel):
     """Request to map a primitive to compliance controls."""
+
     primitive_type: str = Field(..., description="Type of governance primitive")
     primitive_id: str = Field(..., description="ID of primitive instance")
     framework: str = Field(..., description="Regulatory framework")
@@ -275,21 +302,28 @@ class ComplianceMappingRequest(BaseModel):
 
 class ComplianceLinkEvidenceRequest(BaseModel):
     """Request to link evidence to a control."""
+
     evidence_artifact_id: str = Field(..., description="Evidence artifact ID")
 
 
 class ComplianceVerifyControlRequest(BaseModel):
     """Request to verify a control."""
+
     notes: Optional[str] = Field(default=None, description="Verification notes")
 
 
 # ========== Audit Export API Models (Phase 8) ==========
 
+
 class AuditExportCreateRequest(BaseModel):
     """Request to create an audit export."""
+
     requester: str = Field(..., min_length=1, description="User or system requesting export")
     purpose: str = Field(..., min_length=10, description="Purpose of the export (min 10 chars)")
-    scope: str = Field(default="all", description="Scope of data: all, risk_only, escalation_only, override_only, evidence_only, compliance_only, decision_log_only")
+    scope: str = Field(
+        default="all",
+        description="Scope of data: all, risk_only, escalation_only, override_only, evidence_only, compliance_only, decision_log_only",
+    )
     format: str = Field(default="json", description="Output format: json, csv, markdown, html")
     start_date: Optional[str] = Field(default=None, description="Start date filter (ISO 8601)")
     end_date: Optional[str] = Field(default=None, description="End date filter (ISO 8601)")
@@ -306,7 +340,10 @@ app = FastAPI(
 
 # Configure CORS
 import os
-allowed_origins = os.getenv("LEXECON_CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+
+allowed_origins = os.getenv(
+    "LEXECON_CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
+).split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins if allowed_origins != ["*"] else ["*"],
@@ -321,7 +358,9 @@ decision_service: Optional[DecisionService] = None
 storage: LedgerStorage = LedgerStorage("lexecon_ledger.db")
 ledger: LedgerChain = LedgerChain(storage=storage)
 responsibility_storage: ResponsibilityStorage = ResponsibilityStorage("lexecon_responsibility.db")
-responsibility_tracker: ResponsibilityTracker = ResponsibilityTracker(storage=responsibility_storage)
+responsibility_tracker: ResponsibilityTracker = ResponsibilityTracker(
+    storage=responsibility_storage
+)
 key_manager: Optional[KeyManager] = None
 oversight_system = None  # HumanOversightEvidence - initialized after key_manager
 intervention_storage = None  # InterventionStorage - initialized with oversight_system
@@ -364,14 +403,15 @@ def initialize_services():
     # Initialize intervention storage
     if intervention_storage is None:
         from lexecon.compliance.eu_ai_act.storage import InterventionStorage
+
         intervention_storage = InterventionStorage("lexecon_interventions.db")
 
     # Initialize oversight system after key_manager and storage are available
     if oversight_system is None:
         from lexecon.compliance.eu_ai_act.article_14_oversight import HumanOversightEvidence
+
         oversight_system = HumanOversightEvidence(
-            key_manager=key_manager,
-            storage=intervention_storage
+            key_manager=key_manager, storage=intervention_storage
         )
 
     # Initialize governance services (Phase 1-4)
@@ -436,15 +476,9 @@ async def get_status():
 async def serve_dashboard():
     """Serve the compliance dashboard UI."""
     # Dashboard is at project root, go up from src/lexecon/api/
-    dashboard_path = os.path.join(
-        os.path.dirname(__file__),
-        "../../../dashboard.html"
-    )
+    dashboard_path = os.path.join(os.path.dirname(__file__), "../../../dashboard.html")
     if not os.path.exists(dashboard_path):
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dashboard not found at {dashboard_path}"
-        )
+        raise HTTPException(status_code=404, detail=f"Dashboard not found at {dashboard_path}")
     return FileResponse(dashboard_path)
 
 
@@ -452,14 +486,10 @@ async def serve_dashboard():
 async def serve_governance_dashboard():
     """Serve the governance dashboard UI (Phase 6)."""
     # Governance dashboard is at project root
-    dashboard_path = os.path.join(
-        os.path.dirname(__file__),
-        "../../../governance_dashboard.html"
-    )
+    dashboard_path = os.path.join(os.path.dirname(__file__), "../../../governance_dashboard.html")
     if not os.path.exists(dashboard_path):
         raise HTTPException(
-            status_code=404,
-            detail=f"Governance dashboard not found at {dashboard_path}"
+            status_code=404, detail=f"Governance dashboard not found at {dashboard_path}"
         )
     return FileResponse(dashboard_path)
 
@@ -567,8 +597,8 @@ async def make_decision(request_model: DecisionRequestModel):
         responsible_party="system",
         role="AI Decision System",
         reasoning=response.reasoning,
-        confidence=response.confidence if hasattr(response, 'confidence') else 1.0,
-        responsibility_level=ResponsibilityLevel.AUTOMATED
+        confidence=response.confidence if hasattr(response, "confidence") else 1.0,
+        responsibility_level=ResponsibilityLevel.AUTOMATED,
     )
 
     return response.to_dict()
@@ -624,9 +654,7 @@ async def get_audit_report():
 
 @app.get("/ledger/entries")
 async def get_ledger_entries(
-    event_type: Optional[str] = None,
-    limit: Optional[int] = None,
-    offset: int = 0
+    event_type: Optional[str] = None, limit: Optional[int] = None, offset: int = 0
 ):
     """Get ledger entries with optional filtering."""
     entries = ledger.entries
@@ -638,7 +666,7 @@ async def get_ledger_entries(
     # Apply pagination
     total = len(entries)
     if limit:
-        entries = entries[offset:offset + limit]
+        entries = entries[offset : offset + limit]
     else:
         entries = entries[offset:]
 
@@ -657,36 +685,26 @@ async def get_storage_statistics():
         raise HTTPException(status_code=503, detail="Persistence not configured")
 
     stats = storage.get_statistics()
-    return {
-        "storage_enabled": True,
-        **stats
-    }
+    return {"storage_enabled": True, **stats}
 
 
 @app.get("/compliance/eu-ai-act/article-11")
 async def generate_article_11_documentation(format: str = "json"):
     """Generate EU AI Act Article 11 technical documentation."""
-    from lexecon.compliance.eu_ai_act.article_11_technical_docs import TechnicalDocumentationGenerator
+    from lexecon.compliance.eu_ai_act.article_11_technical_docs import (
+        TechnicalDocumentationGenerator,
+    )
 
     initialize_services()
 
-    generator = TechnicalDocumentationGenerator(
-        policy_engine=policy_engine,
-        ledger=ledger
-    )
+    generator = TechnicalDocumentationGenerator(policy_engine=policy_engine, ledger=ledger)
 
     doc = generator.generate()
 
     if format == "markdown" or format == "md":
-        return {
-            "format": "markdown",
-            "content": generator.export_markdown(doc)
-        }
+        return {"format": "markdown", "content": generator.export_markdown(doc)}
 
-    return {
-        "format": "json",
-        "content": json.loads(generator.export_json(doc))
-    }
+    return {"format": "json", "content": json.loads(generator.export_json(doc))}
 
 
 @app.get("/compliance/eu-ai-act/article-12/status")
@@ -700,9 +718,7 @@ async def get_retention_status():
 
 @app.get("/compliance/eu-ai-act/article-12/regulatory-package")
 async def generate_regulatory_package(
-    format: str = "json",
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
+    format: str = "json", start_date: Optional[str] = None, end_date: Optional[str] = None
 ):
     """Generate complete regulatory response package."""
     from lexecon.compliance.eu_ai_act.article_12_records import RecordKeepingSystem
@@ -713,9 +729,7 @@ async def generate_regulatory_package(
         raise HTTPException(status_code=400, detail=f"Unsupported format: {format}")
 
     content = record_system.export_for_regulator(
-        format=format,
-        start_date=start_date,
-        end_date=end_date
+        format=format, start_date=start_date, end_date=end_date
     )
 
     if format == "json":
@@ -726,20 +740,14 @@ async def generate_regulatory_package(
 
 @app.post("/compliance/eu-ai-act/article-12/legal-hold")
 async def apply_legal_hold(
-    hold_id: str,
-    reason: str,
-    requester: str = "system",
-    entry_ids: Optional[List[str]] = None
+    hold_id: str, reason: str, requester: str = "system", entry_ids: Optional[List[str]] = None
 ):
     """Apply legal hold to records."""
     from lexecon.compliance.eu_ai_act.article_12_records import RecordKeepingSystem
 
     record_system = RecordKeepingSystem(ledger=ledger)
     return record_system.apply_legal_hold(
-        hold_id=hold_id,
-        reason=reason,
-        entry_ids=entry_ids,
-        requester=requester
+        hold_id=hold_id, reason=reason, entry_ids=entry_ids, requester=requester
     )
 
 
@@ -762,14 +770,14 @@ async def log_human_intervention(request: InterventionModel):
             human_role=role_enum,
             reason=request.reason,
             request_context=request.request_context,
-            response_time_ms=request.response_time_ms
+            response_time_ms=request.response_time_ms,
         )
 
         return {
             "status": "success",
             "intervention_id": intervention.intervention_id,
             "timestamp": intervention.timestamp,
-            "signature": intervention.signature
+            "signature": intervention.signature,
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
@@ -778,9 +786,7 @@ async def log_human_intervention(request: InterventionModel):
 
 
 @app.get("/compliance/eu-ai-act/article-14/effectiveness")
-async def get_oversight_effectiveness(
-    time_period_days: int = 30
-):
+async def get_oversight_effectiveness(time_period_days: int = 30):
     """Get Article 14 human oversight effectiveness report."""
     initialize_services()
 
@@ -792,11 +798,13 @@ async def get_oversight_effectiveness(
 
 
 @app.post("/compliance/eu-ai-act/article-14/verify")
-async def verify_intervention(
-    intervention_data: Dict[str, Any]
-):
+async def verify_intervention(intervention_data: Dict[str, Any]):
     """Verify a human intervention's cryptographic signature."""
-    from lexecon.compliance.eu_ai_act.article_14_oversight import HumanIntervention, InterventionType, OversightRole
+    from lexecon.compliance.eu_ai_act.article_14_oversight import (
+        HumanIntervention,
+        InterventionType,
+        OversightRole,
+    )
 
     initialize_services()
 
@@ -811,7 +819,7 @@ async def verify_intervention(
             human_role=OversightRole(intervention_data["human_role"]),
             reason=intervention_data["reason"],
             signature=intervention_data.get("signature"),
-            response_time_ms=intervention_data.get("response_time_ms")
+            response_time_ms=intervention_data.get("response_time_ms"),
         )
 
         is_valid = oversight_system.verify_intervention(intervention)
@@ -819,7 +827,7 @@ async def verify_intervention(
         return {
             "verified": is_valid,
             "intervention_id": intervention.intervention_id,
-            "timestamp": intervention.timestamp
+            "timestamp": intervention.timestamp,
         }
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Missing field: {str(e)}")
@@ -829,20 +837,17 @@ async def verify_intervention(
 
 @app.get("/compliance/eu-ai-act/article-14/evidence-package")
 async def get_evidence_package(
-    format: str = "json",
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
+    format: str = "json", start_date: Optional[str] = None, end_date: Optional[str] = None
 ):
     """Generate Article 14 evidence package for regulatory submission."""
     initialize_services()
 
     if format not in ["json", "markdown"]:
-        raise HTTPException(status_code=400, detail=f"Unsupported format: {format}. Use 'json' or 'markdown'")
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported format: {format}. Use 'json' or 'markdown'"
+        )
 
-    package = oversight_system.export_evidence_package(
-        start_date=start_date,
-        end_date=end_date
-    )
+    package = oversight_system.export_evidence_package(start_date=start_date, end_date=end_date)
 
     if format == "markdown":
         content = oversight_system.export_markdown(package)
@@ -852,10 +857,7 @@ async def get_evidence_package(
 
 
 @app.post("/compliance/eu-ai-act/article-14/escalation")
-async def simulate_escalation(
-    decision_class: str,
-    current_role: str
-):
+async def simulate_escalation(decision_class: str, current_role: str):
     """Simulate escalation path for a decision."""
     from lexecon.compliance.eu_ai_act.article_14_oversight import OversightRole
 
@@ -865,8 +867,7 @@ async def simulate_escalation(
         current_role_enum = OversightRole(current_role)
 
         escalation = oversight_system.simulate_escalation(
-            decision_class=decision_class,
-            current_role=current_role_enum
+            decision_class=decision_class, current_role=current_role_enum
         )
 
         return escalation
@@ -885,17 +886,11 @@ async def get_intervention_storage_stats():
         raise HTTPException(status_code=503, detail="Intervention persistence not configured")
 
     stats = intervention_storage.get_statistics()
-    return {
-        "storage_enabled": True,
-        **stats
-    }
+    return {"storage_enabled": True, **stats}
 
 
 @app.get("/compliance/eu-ai-act/audit-packet")
-async def generate_audit_packet(
-    time_window: Optional[str] = "all",
-    format: Optional[str] = "json"
-):
+async def generate_audit_packet(time_window: Optional[str] = "all", format: Optional[str] = "json"):
     """
     Generate comprehensive audit packet for EU AI Act compliance.
 
@@ -923,7 +918,7 @@ async def generate_audit_packet(
         "24h": timedelta(hours=24),
         "7d": timedelta(days=7),
         "30d": timedelta(days=30),
-        "all": None
+        "all": None,
     }
 
     cutoff = None
@@ -931,13 +926,13 @@ async def generate_audit_packet(
         cutoff = now - window_map[time_window]
 
     # Filter helper
-    def filter_by_time(items, timestamp_key='timestamp'):
+    def filter_by_time(items, timestamp_key="timestamp"):
         if not cutoff:
             return items
         filtered = []
         for item in items:
             try:
-                ts_str = item[timestamp_key].replace('Z', '+00:00')
+                ts_str = item[timestamp_key].replace("Z", "+00:00")
                 ts = datetime.fromisoformat(ts_str)
                 # Make timezone-aware if naive
                 if ts.tzinfo is None:
@@ -957,7 +952,7 @@ async def generate_audit_packet(
         "system_info": {
             "node_id": node_id,
             "system": "Lexecon Governance System",
-            "version": "0.1.0"
+            "version": "0.1.0",
         },
         "compliance_status": {
             "overall": "COMPLIANT",
@@ -965,84 +960,98 @@ async def generate_audit_packet(
                 "article_11_technical_docs": {
                     "status": "COMPLIANT",
                     "description": "Technical documentation for high-risk AI systems",
-                    "evidence": "Documentation generator active"
+                    "evidence": "Documentation generator active",
                 },
                 "article_12_record_keeping": {
                     "status": "COMPLIANT",
                     "description": "Automatic logging enabled for high-risk AI systems",
-                    "evidence": f"{len(ledger.entries)} cryptographically chained ledger entries"
+                    "evidence": f"{len(ledger.entries)} cryptographically chained ledger entries",
                 },
                 "article_14_human_oversight": {
                     "status": "COMPLIANT",
                     "description": "Human oversight and intervention capabilities",
-                    "evidence": f"{intervention_storage.get_statistics()['total_interventions'] if intervention_storage else 0} human interventions logged"
-                }
-            }
-        }
+                    "evidence": f"{intervention_storage.get_statistics()['total_interventions'] if intervention_storage else 0} human interventions logged",
+                },
+            },
+        },
     }
 
     # 2. DECISION LOG
     decision_entries = [e for e in ledger.entries if e.event_type == "decision"]
-    filtered_decisions = filter_by_time([
-        {
-            "entry_id": e.entry_id,
-            "timestamp": e.timestamp,
-            "event_type": e.event_type,
-            "data": e.data,
-            "entry_hash": e.entry_hash,
-            "previous_hash": e.previous_hash
-        }
-        for e in decision_entries
-    ])
+    filtered_decisions = filter_by_time(
+        [
+            {
+                "entry_id": e.entry_id,
+                "timestamp": e.timestamp,
+                "event_type": e.event_type,
+                "data": e.data,
+                "entry_hash": e.entry_hash,
+                "previous_hash": e.previous_hash,
+            }
+            for e in decision_entries
+        ]
+    )
 
     decision_log = {
         "total_decisions": len(filtered_decisions),
         "time_window": time_window,
-        "decisions": filtered_decisions[-100:]  # Last 100 decisions
+        "decisions": filtered_decisions[-100:],  # Last 100 decisions
     }
 
     # 3. HUMAN OVERSIGHT LOG (Article 14)
     oversight_log = {
         "article": "Article 14 - Human Oversight",
         "total_interventions": 0,
-        "interventions": []
+        "interventions": [],
     }
 
     if oversight_system:
         all_interventions = oversight_system.interventions
-        filtered_interventions = filter_by_time([
-            {
-                "intervention_id": i.intervention_id,
-                "timestamp": i.timestamp,
-                "intervention_type": i.intervention_type.value,
-                "ai_recommendation": i.ai_recommendation,
-                "ai_confidence": i.ai_confidence,
-                "human_decision": i.human_decision,
-                "human_role": i.human_role.value,
-                "reason": i.reason,
-                "request_context": i.request_context,
-                "signature": i.signature,
-                "response_time_ms": i.response_time_ms
-            }
-            for i in all_interventions
-        ])
+        filtered_interventions = filter_by_time(
+            [
+                {
+                    "intervention_id": i.intervention_id,
+                    "timestamp": i.timestamp,
+                    "intervention_type": i.intervention_type.value,
+                    "ai_recommendation": i.ai_recommendation,
+                    "ai_confidence": i.ai_confidence,
+                    "human_decision": i.human_decision,
+                    "human_role": i.human_role.value,
+                    "reason": i.reason,
+                    "request_context": i.request_context,
+                    "signature": i.signature,
+                    "response_time_ms": i.response_time_ms,
+                }
+                for i in all_interventions
+            ]
+        )
 
         oversight_log["total_interventions"] = len(filtered_interventions)
         oversight_log["interventions"] = filtered_interventions
 
         # Calculate oversight metrics
         if filtered_interventions:
-            override_count = sum(1 for i in filtered_interventions if i["intervention_type"] == "override")
+            override_count = sum(
+                1 for i in filtered_interventions if i["intervention_type"] == "override"
+            )
             # Calculate average response time, handling None values
             response_times = [i.get("response_time_ms", 0) or 0 for i in filtered_interventions]
             avg_response_time = sum(response_times) / len(response_times) if response_times else 0
 
             oversight_log["metrics"] = {
                 "override_count": override_count,
-                "override_rate": (override_count / len(filtered_interventions) * 100) if filtered_interventions else 0,
-                "approval_count": sum(1 for i in filtered_interventions if i["intervention_type"] == "approval"),
-                "escalation_count": sum(1 for i in filtered_interventions if i["intervention_type"] == "escalation"),
-                "average_response_time_ms": avg_response_time
+                "override_rate": (
+                    (override_count / len(filtered_interventions) * 100)
+                    if filtered_interventions
+                    else 0
+                ),
+                "approval_count": sum(
+                    1 for i in filtered_interventions if i["intervention_type"] == "approval"
+                ),
+                "escalation_count": sum(
+                    1 for i in filtered_interventions if i["intervention_type"] == "escalation"
+                ),
+                "average_response_time_ms": avg_response_time,
             }
 
     # 4. CRYPTOGRAPHIC VERIFICATION REPORT
@@ -1055,8 +1064,10 @@ async def generate_audit_packet(
         "storage_stats": {
             "ledger": storage.get_statistics() if storage else {},
             "interventions": intervention_storage.get_statistics() if intervention_storage else {},
-            "responsibility": responsibility_storage.get_statistics() if responsibility_storage else {}
-        }
+            "responsibility": (
+                responsibility_storage.get_statistics() if responsibility_storage else {}
+            ),
+        },
     }
 
     # Verify chain integrity
@@ -1064,7 +1075,9 @@ async def generate_audit_packet(
         integrity_result = ledger.verify_integrity()
         is_valid = integrity_result.get("valid", False)
         verification_report["chain_integrity"] = "VALID" if is_valid else "INVALID"
-        verification_report["verification_details"] = integrity_result.get("message", "Chain verification completed")
+        verification_report["verification_details"] = integrity_result.get(
+            "message", "Chain verification completed"
+        )
     except Exception as e:
         verification_report["chain_integrity"] = "ERROR"
         verification_report["verification_details"] = str(e)
@@ -1083,8 +1096,8 @@ async def generate_audit_packet(
         "signature_info": {
             "packet_generated_at": now.isoformat(),
             "packet_generator": "Lexecon Compliance System",
-            "regulatory_framework": "EU AI Act (Regulation 2024/1689)"
-        }
+            "regulatory_framework": "EU AI Act (Regulation 2024/1689)",
+        },
     }
 
     # Return as JSON or formatted text
@@ -1178,13 +1191,11 @@ Framework: EU AI Act (Regulation 2024/1689)
 
 @app.get("/responsibility/report")
 async def get_accountability_report(
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
+    start_date: Optional[str] = None, end_date: Optional[str] = None
 ):
     """Generate accountability report showing who made decisions."""
     return responsibility_tracker.generate_accountability_report(
-        start_date=start_date,
-        end_date=end_date
+        start_date=start_date, end_date=end_date
     )
 
 
@@ -1199,7 +1210,7 @@ async def get_responsibility_chain(decision_id: str):
     return {
         "decision_id": decision_id,
         "chain_length": len(chain),
-        "records": [r.to_dict() for r in chain]
+        "records": [r.to_dict() for r in chain],
     }
 
 
@@ -1211,7 +1222,7 @@ async def get_by_party(party: str):
     return {
         "responsible_party": party,
         "decision_count": len(records),
-        "records": [r.to_dict() for r in records]
+        "records": [r.to_dict() for r in records],
     }
 
 
@@ -1220,10 +1231,7 @@ async def get_ai_overrides():
     """Get all decisions where humans overrode AI recommendations."""
     overrides = responsibility_tracker.get_ai_overrides()
 
-    return {
-        "override_count": len(overrides),
-        "records": [r.to_dict() for r in overrides]
-    }
+    return {"override_count": len(overrides), "records": [r.to_dict() for r in overrides]}
 
 
 @app.get("/responsibility/pending-reviews")
@@ -1231,10 +1239,7 @@ async def get_pending_reviews():
     """Get decisions awaiting human review."""
     pending = responsibility_tracker.get_pending_reviews()
 
-    return {
-        "pending_count": len(pending),
-        "records": [r.to_dict() for r in pending]
-    }
+    return {"pending_count": len(pending), "records": [r.to_dict() for r in pending]}
 
 
 @app.get("/responsibility/legal/{decision_id}")
@@ -1250,10 +1255,7 @@ async def get_responsibility_storage_stats():
         raise HTTPException(status_code=503, detail="Responsibility persistence not configured")
 
     stats = responsibility_storage.get_statistics()
-    return {
-        "storage_enabled": True,
-        **stats
-    }
+    return {"storage_enabled": True, **stats}
 
 
 # ============================================================================
@@ -1266,11 +1268,7 @@ async def login(request: Request, login_req: LoginRequest):
     """Authenticate user and create session."""
     ip_address = request.client.host if request.client else None
 
-    user, error = auth_service.authenticate(
-        login_req.username,
-        login_req.password,
-        ip_address
-    )
+    user, error = auth_service.authenticate(login_req.username, login_req.password, ip_address)
 
     if not user:
         return LoginResponse(success=False, error=error)
@@ -1285,7 +1283,7 @@ async def login(request: Request, login_req: LoginRequest):
         status_code=200,
         user_id=user.user_id,
         username=user.username,
-        ip_address=ip_address
+        ip_address=ip_address,
     )
 
     return LoginResponse(
@@ -1296,8 +1294,8 @@ async def login(request: Request, login_req: LoginRequest):
             "username": user.username,
             "email": user.email,
             "role": user.role.value,
-            "full_name": user.full_name
-        }
+            "full_name": user.full_name,
+        },
     )
 
 
@@ -1338,14 +1336,16 @@ async def get_current_user_info(request: Request):
         "email": user.email,
         "role": user.role.value,
         "full_name": user.full_name,
-        "last_login": user.last_login
+        "last_login": user.last_login,
     }
 
 
 @app.post("/auth/users")
 async def create_user(request: Request, user_req: CreateUserRequest):
     """Create a new user (admin only)."""
-    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    session_id = request.cookies.get("session_id") or request.headers.get(
+        "Authorization", ""
+    ).replace("Bearer ", "")
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -1362,7 +1362,7 @@ async def create_user(request: Request, user_req: CreateUserRequest):
             email=user_req.email,
             password=user_req.password,
             role=Role(user_req.role),
-            full_name=user_req.full_name
+            full_name=user_req.full_name,
         )
 
         return {
@@ -1372,8 +1372,8 @@ async def create_user(request: Request, user_req: CreateUserRequest):
                 "username": user.username,
                 "email": user.email,
                 "role": user.role.value,
-                "full_name": user.full_name
-            }
+                "full_name": user.full_name,
+            },
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1382,7 +1382,9 @@ async def create_user(request: Request, user_req: CreateUserRequest):
 @app.get("/auth/users")
 async def list_users(request: Request):
     """List all users (admin only)."""
-    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    session_id = request.cookies.get("session_id") or request.headers.get(
+        "Authorization", ""
+    ).replace("Bearer ", "")
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -1404,7 +1406,7 @@ async def list_users(request: Request):
                 "role": u.role.value,
                 "full_name": u.full_name,
                 "last_login": u.last_login,
-                "is_active": u.is_active
+                "is_active": u.is_active,
             }
             for u in users
         ]
@@ -1424,7 +1426,7 @@ async def verify_signature(packet: Dict[str, Any]):
     return {
         "valid": is_valid,
         "message": message,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -1435,7 +1437,7 @@ async def get_public_key():
         "public_key_pem": signature_service.get_public_key_pem(),
         "fingerprint": signature_service.get_public_key_fingerprint(),
         "algorithm": "RSA-PSS-SHA256",
-        "key_size": 4096
+        "key_size": 4096,
     }
 
 
@@ -1447,7 +1449,9 @@ async def get_public_key():
 @app.get("/compliance/export-requests")
 async def list_export_requests(request: Request, limit: int = 100):
     """List export requests (compliance officer+ only)."""
-    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    session_id = request.cookies.get("session_id") or request.headers.get(
+        "Authorization", ""
+    ).replace("Bearer ", "")
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -1470,7 +1474,7 @@ async def list_export_requests(request: Request, limit: int = 100):
                 "requested_at": r.requested_at,
                 "export_status": r.export_status.value,
                 "approval_status": r.approval_status.value,
-                "completed_at": r.completed_at
+                "completed_at": r.completed_at,
             }
             for r in requests
         ]
@@ -1480,7 +1484,9 @@ async def list_export_requests(request: Request, limit: int = 100):
 @app.get("/compliance/audit-chain-verification")
 async def verify_audit_chain(request: Request):
     """Verify integrity of export audit chain."""
-    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    session_id = request.cookies.get("session_id") or request.headers.get(
+        "Authorization", ""
+    ).replace("Bearer ", "")
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -1499,6 +1505,7 @@ async def verify_audit_chain(request: Request):
 
 # ---------- Risk Service Endpoints ----------
 
+
 @app.post("/api/governance/risk/assess")
 async def assess_risk(request: RiskAssessmentRequest):
     """Assess risk for a decision."""
@@ -1514,9 +1521,7 @@ async def assess_risk(request: RiskAssessmentRequest):
 
         # Assess risk
         risk = risk_service.assess_risk(
-            decision_id=request.decision_id,
-            dimensions=dimensions,
-            metadata=request.context
+            decision_id=request.decision_id, dimensions=dimensions, metadata=request.context
         )
 
         # Convert to dict for response
@@ -1604,6 +1609,7 @@ async def get_risk_for_decision(decision_id: str):
 
 # ---------- Escalation Service Endpoints ----------
 
+
 @app.post("/api/governance/escalation")
 async def create_escalation(request: EscalationCreateRequest):
     """Create an escalation."""
@@ -1626,7 +1632,7 @@ async def create_escalation(request: EscalationCreateRequest):
             escalated_to=request.escalated_to,
             priority=priority,
             context_summary=request.context_summary,
-            metadata=request.metadata
+            metadata=request.metadata,
         )
 
         return {
@@ -1638,7 +1644,9 @@ async def create_escalation(request: EscalationCreateRequest):
             "escalated_to": escalation.escalated_to,
             "context_summary": escalation.context_summary,
             "created_at": escalation.created_at.isoformat(),
-            "sla_deadline": escalation.sla_deadline.isoformat() if escalation.sla_deadline else None,
+            "sla_deadline": (
+                escalation.sla_deadline.isoformat() if escalation.sla_deadline else None
+            ),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -1665,13 +1673,13 @@ async def resolve_escalation(escalation_id: str, request: EscalationResolveReque
             escalation_id=escalation_id,
             resolved_by=request.resolved_by,
             outcome=outcome_enum,
-            notes=request.notes
+            notes=request.notes,
         )
 
         # Extract outcome value - handle both enum and string
         outcome_value = None
         if escalation.resolution and escalation.resolution.outcome:
-            if hasattr(escalation.resolution.outcome, 'value'):
+            if hasattr(escalation.resolution.outcome, "value"):
                 outcome_value = escalation.resolution.outcome.value
             else:
                 outcome_value = escalation.resolution.outcome
@@ -1755,15 +1763,10 @@ async def get_sla_violations():
     # We need to list pending escalations that are past their SLA deadline
     from datetime import datetime, timezone
 
-    pending_escalations = escalation_service.list_escalations(
-        status=EscalationStatus.PENDING
-    )
+    pending_escalations = escalation_service.list_escalations(status=EscalationStatus.PENDING)
 
     now = datetime.now(timezone.utc)
-    violations = [
-        e for e in pending_escalations
-        if e.sla_deadline and now > e.sla_deadline
-    ]
+    violations = [e for e in pending_escalations if e.sla_deadline and now > e.sla_deadline]
 
     return {
         "count": len(violations),
@@ -1782,6 +1785,7 @@ async def get_sla_violations():
 
 # ---------- Override Service Endpoints ----------
 
+
 @app.post("/api/governance/override")
 async def create_override(request: OverrideCreateRequest):
     """Create an override."""
@@ -1793,14 +1797,17 @@ async def create_override(request: OverrideCreateRequest):
     try:
         # Convert string enums to proper types (values are lowercase)
         override_type = OverrideType(request.override_type.lower())
-        original_outcome = OriginalOutcome(request.original_outcome.lower()) if request.original_outcome else None
+        original_outcome = (
+            OriginalOutcome(request.original_outcome.lower()) if request.original_outcome else None
+        )
         new_outcome = NewOutcome(request.new_outcome.lower()) if request.new_outcome else None
 
         # Parse expires_at if provided
         expires_at = None
         if request.expires_at:
             from datetime import datetime
-            expires_at = datetime.fromisoformat(request.expires_at.replace('Z', '+00:00'))
+
+            expires_at = datetime.fromisoformat(request.expires_at.replace("Z", "+00:00"))
 
         # Create scope if provided
         scope = None
@@ -1816,7 +1823,7 @@ async def create_override(request: OverrideCreateRequest):
             new_outcome=new_outcome,
             expires_at=expires_at,
             scope=scope,
-            metadata=request.metadata
+            metadata=request.metadata,
         )
 
         return {
@@ -1909,7 +1916,9 @@ async def check_active_override(decision_id: str):
             "override_type": active_override.override_type.value,
             "authorized_by": active_override.authorized_by,
             "timestamp": active_override.timestamp.isoformat(),
-            "expires_at": active_override.expires_at.isoformat() if active_override.expires_at else None,
+            "expires_at": (
+                active_override.expires_at.isoformat() if active_override.expires_at else None
+            ),
         }
 
     return result
@@ -1935,6 +1944,7 @@ async def get_decision_with_override_status(decision_id: str):
 
 # ---------- Evidence Service Endpoints ----------
 
+
 @app.post("/api/governance/evidence")
 async def store_evidence_artifact(request: EvidenceStoreRequest):
     """Store an evidence artifact."""
@@ -1956,7 +1966,7 @@ async def store_evidence_artifact(request: EvidenceStoreRequest):
             content_type=request.content_type,
             storage_uri=request.storage_uri,
             retention_days=request.retention_days,
-            metadata=request.metadata
+            metadata=request.metadata,
         )
 
         return {
@@ -1966,7 +1976,9 @@ async def store_evidence_artifact(request: EvidenceStoreRequest):
             "created_at": artifact.created_at.isoformat(),
             "source": artifact.source,
             "size_bytes": artifact.size_bytes,
-            "retention_until": artifact.retention_until.isoformat() if artifact.retention_until else None,
+            "retention_until": (
+                artifact.retention_until.isoformat() if artifact.retention_until else None
+            ),
             "is_immutable": artifact.is_immutable,
         }
     except ValueError as e:
@@ -2011,7 +2023,9 @@ async def get_evidence_artifact(artifact_id: str):
         "storage_uri": artifact.storage_uri,
         "related_decision_ids": artifact.related_decision_ids,
         "related_control_ids": artifact.related_control_ids,
-        "retention_until": artifact.retention_until.isoformat() if artifact.retention_until else None,
+        "retention_until": (
+            artifact.retention_until.isoformat() if artifact.retention_until else None
+        ),
         "is_immutable": artifact.is_immutable,
         "has_signature": artifact.digital_signature is not None,
     }
@@ -2094,15 +2108,23 @@ async def sign_evidence_artifact(artifact_id: str, request: EvidenceSignRequest)
             artifact_id=artifact_id,
             signer_id=request.signer_id,
             signature=request.signature,
-            algorithm=request.algorithm
+            algorithm=request.algorithm,
         )
 
         return {
             "artifact_id": artifact.artifact_id,
             "signed": True,
-            "signer_id": artifact.digital_signature.signer_id if artifact.digital_signature else None,
-            "signed_at": artifact.digital_signature.signed_at.isoformat() if artifact.digital_signature else None,
-            "algorithm": artifact.digital_signature.algorithm if artifact.digital_signature else None,
+            "signer_id": (
+                artifact.digital_signature.signer_id if artifact.digital_signature else None
+            ),
+            "signed_at": (
+                artifact.digital_signature.signed_at.isoformat()
+                if artifact.digital_signature
+                else None
+            ),
+            "algorithm": (
+                artifact.digital_signature.algorithm if artifact.digital_signature else None
+            ),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -2111,6 +2133,7 @@ async def sign_evidence_artifact(artifact_id: str, request: EvidenceSignRequest)
 
 
 # ---------- Compliance Mapping Service Endpoints (Phase 7) ----------
+
 
 @app.post("/api/governance/compliance/map")
 async def map_primitive_to_controls(request: ComplianceMappingRequest):
@@ -2129,7 +2152,7 @@ async def map_primitive_to_controls(request: ComplianceMappingRequest):
             primitive_type=primitive_type,
             primitive_id=request.primitive_id,
             framework=framework,
-            metadata=request.metadata
+            metadata=request.metadata,
         )
 
         return {
@@ -2150,9 +2173,7 @@ async def map_primitive_to_controls(request: ComplianceMappingRequest):
 
 @app.get("/api/governance/compliance/{framework}/controls")
 async def list_compliance_controls(
-    framework: str,
-    status: Optional[str] = None,
-    category: Optional[str] = None
+    framework: str, status: Optional[str] = None, category: Optional[str] = None
 ):
     """List compliance controls for a framework with optional filtering."""
     initialize_services()
@@ -2165,9 +2186,7 @@ async def list_compliance_controls(
         status_enum = ControlStatus(status.lower()) if status else None
 
         controls = compliance_mapping_service.list_controls(
-            framework=framework_enum,
-            status=status_enum,
-            category=category
+            framework=framework_enum, status=status_enum, category=category
         )
 
         return {
@@ -2211,8 +2230,7 @@ async def get_control_status(framework: str, control_id: str):
 
         if not control:
             raise HTTPException(
-                status_code=404,
-                detail=f"Control {control_id} not found in framework {framework}"
+                status_code=404, detail=f"Control {control_id} not found in framework {framework}"
             )
 
         return {
@@ -2246,15 +2264,12 @@ async def verify_control(framework: str, control_id: str, request: ComplianceVer
         framework_enum = RegulatoryFramework(framework.lower())
 
         success = compliance_mapping_service.verify_control(
-            control_id=control_id,
-            framework=framework_enum,
-            notes=request.notes
+            control_id=control_id, framework=framework_enum, notes=request.notes
         )
 
         if not success:
             raise HTTPException(
-                status_code=404,
-                detail=f"Control {control_id} not found in framework {framework}"
+                status_code=404, detail=f"Control {control_id} not found in framework {framework}"
             )
 
         # Get updated control
@@ -2276,9 +2291,7 @@ async def verify_control(framework: str, control_id: str, request: ComplianceVer
 
 @app.post("/api/governance/compliance/{framework}/{control_id}/link-evidence")
 async def link_evidence_to_control(
-    framework: str,
-    control_id: str,
-    request: ComplianceLinkEvidenceRequest
+    framework: str, control_id: str, request: ComplianceLinkEvidenceRequest
 ):
     """Link an evidence artifact to a compliance control."""
     initialize_services()
@@ -2292,13 +2305,12 @@ async def link_evidence_to_control(
         success = compliance_mapping_service.link_evidence_to_control(
             control_id=control_id,
             framework=framework_enum,
-            evidence_artifact_id=request.evidence_artifact_id
+            evidence_artifact_id=request.evidence_artifact_id,
         )
 
         if not success:
             raise HTTPException(
-                status_code=404,
-                detail=f"Control {control_id} not found in framework {framework}"
+                status_code=404, detail=f"Control {control_id} not found in framework {framework}"
             )
 
         # Get updated control
@@ -2441,6 +2453,7 @@ async def get_compliance_statistics():
 
 # ---------- Audit Export Service Endpoints (Phase 8) ----------
 
+
 @app.post("/api/governance/audit-export/request")
 async def create_audit_export_request(request: AuditExportCreateRequest, http_request: Request):
     """Create a new audit export request."""
@@ -2450,11 +2463,15 @@ async def create_audit_export_request(request: AuditExportCreateRequest, http_re
         raise HTTPException(status_code=500, detail="Audit export service not initialized")
 
     # Authentication check
-    session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+    session_id = http_request.cookies.get("session_id") or http_request.headers.get(
+        "Authorization", ""
+    ).replace("Bearer ", "")
     if session_id:
         session, error = auth_service.validate_session(session_id)
         if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
-            raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+            raise HTTPException(
+                status_code=403, detail="Insufficient permissions for audit exports"
+            )
 
     try:
         # Convert string enums to service enums
@@ -2464,13 +2481,13 @@ async def create_audit_export_request(request: AuditExportCreateRequest, http_re
         # Parse date strings if provided
         start_date = None
         if request.start_date:
-            start_date = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+            start_date = datetime.fromisoformat(request.start_date.replace("Z", "+00:00"))
             if start_date.tzinfo is None:
                 start_date = start_date.replace(tzinfo=timezone.utc)
 
         end_date = None
         if request.end_date:
-            end_date = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+            end_date = datetime.fromisoformat(request.end_date.replace("Z", "+00:00"))
             if end_date.tzinfo is None:
                 end_date = end_date.replace(tzinfo=timezone.utc)
 
@@ -2483,7 +2500,7 @@ async def create_audit_export_request(request: AuditExportCreateRequest, http_re
             start_date=start_date,
             end_date=end_date,
             include_deleted=request.include_deleted,
-            metadata=request.metadata
+            metadata=request.metadata,
         )
 
         return {
@@ -2492,7 +2509,9 @@ async def create_audit_export_request(request: AuditExportCreateRequest, http_re
             "purpose": export_request.purpose,
             "scope": export_request.scope.value,
             "format": export_request.format.value,
-            "start_date": export_request.start_date.isoformat() if export_request.start_date else None,
+            "start_date": (
+                export_request.start_date.isoformat() if export_request.start_date else None
+            ),
             "end_date": export_request.end_date.isoformat() if export_request.end_date else None,
             "include_deleted": export_request.include_deleted,
             "requested_at": export_request.requested_at.isoformat(),
@@ -2514,11 +2533,15 @@ async def generate_audit_export(export_id: str, http_request: Request):
         raise HTTPException(status_code=500, detail="Audit export service not initialized")
 
     # Authentication check
-    session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+    session_id = http_request.cookies.get("session_id") or http_request.headers.get(
+        "Authorization", ""
+    ).replace("Bearer ", "")
     if session_id:
         session, error = auth_service.validate_session(session_id)
         if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
-            raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+            raise HTTPException(
+                status_code=403, detail="Insufficient permissions for audit exports"
+            )
 
     try:
         # Get export request
@@ -2539,7 +2562,7 @@ async def generate_audit_export(export_id: str, http_request: Request):
             override_service=override_service,
             evidence_service=evidence_service,
             compliance_service=compliance_mapping_service,
-            ledger=ledger
+            ledger=ledger,
         )
 
         # Log audit event
@@ -2548,7 +2571,7 @@ async def generate_audit_export(export_id: str, http_request: Request):
             method="POST",
             status_code=200,
             user_id=session.user_id if session_id and session else None,
-            ip_address=http_request.client.host if http_request.client else None
+            ip_address=http_request.client.host if http_request.client else None,
         )
 
         return {
@@ -2574,7 +2597,9 @@ async def generate_audit_export(export_id: str, http_request: Request):
 
 
 @app.get("/api/governance/audit-export/{export_id}")
-async def get_audit_export(export_id: str, include_content: bool = False, http_request: Request = None):
+async def get_audit_export(
+    export_id: str, include_content: bool = False, http_request: Request = None
+):
     """Retrieve a completed export by ID."""
     initialize_services()
 
@@ -2583,11 +2608,17 @@ async def get_audit_export(export_id: str, include_content: bool = False, http_r
 
     # Authentication check
     if http_request:
-        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get(
+            "Authorization", ""
+        ).replace("Bearer ", "")
         if session_id:
             session, error = auth_service.validate_session(session_id)
-            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
-                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+            if session and not auth_service.has_permission(
+                session.role, Permission.VIEW_AUDIT_LOGS
+            ):
+                raise HTTPException(
+                    status_code=403, detail="Insufficient permissions for audit exports"
+                )
 
     try:
         package = audit_export_service.get_export(export_id)
@@ -2619,7 +2650,9 @@ async def get_audit_export(export_id: str, include_content: bool = False, http_r
             response["content"] = package.content
         else:
             # Include preview (first 500 chars)
-            response["content_preview"] = package.content[:500] if len(package.content) > 500 else package.content
+            response["content_preview"] = (
+                package.content[:500] if len(package.content) > 500 else package.content
+            )
 
         return response
     except HTTPException:
@@ -2637,11 +2670,15 @@ async def download_audit_export(export_id: str, http_request: Request):
         raise HTTPException(status_code=500, detail="Audit export service not initialized")
 
     # Authentication check
-    session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+    session_id = http_request.cookies.get("session_id") or http_request.headers.get(
+        "Authorization", ""
+    ).replace("Bearer ", "")
     if session_id:
         session, error = auth_service.validate_session(session_id)
         if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
-            raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+            raise HTTPException(
+                status_code=403, detail="Insufficient permissions for audit exports"
+            )
 
     try:
         package = audit_export_service.get_export(export_id)
@@ -2654,7 +2691,7 @@ async def download_audit_export(export_id: str, http_request: Request):
             method="GET",
             status_code=200,
             user_id=session.user_id if session_id and session else None,
-            ip_address=http_request.client.host if http_request.client else None
+            ip_address=http_request.client.host if http_request.client else None,
         )
 
         # Determine Content-Type and filename based on format
@@ -2680,7 +2717,7 @@ async def download_audit_export(export_id: str, http_request: Request):
         return PlainTextResponse(
             content=package.content,
             media_type=content_type,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
     except HTTPException:
         raise
@@ -2695,7 +2732,7 @@ async def list_audit_exports(
     format: Optional[str] = None,
     status: Optional[str] = None,
     limit: int = 100,
-    http_request: Request = None
+    http_request: Request = None,
 ):
     """List export packages with filtering."""
     initialize_services()
@@ -2705,11 +2742,17 @@ async def list_audit_exports(
 
     # Authentication check
     if http_request:
-        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get(
+            "Authorization", ""
+        ).replace("Bearer ", "")
         if session_id:
             session, error = auth_service.validate_session(session_id)
-            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
-                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+            if session and not auth_service.has_permission(
+                session.role, Permission.VIEW_AUDIT_LOGS
+            ):
+                raise HTTPException(
+                    status_code=403, detail="Insufficient permissions for audit exports"
+                )
 
     try:
         # Validate limit
@@ -2736,6 +2779,7 @@ async def list_audit_exports(
 
         if status:
             from lexecon.audit_export.service import ExportStatus
+
             try:
                 status_enum = ExportStatus(status.upper())
                 exports = [e for e in exports if e.request.status == status_enum]
@@ -2775,9 +2819,7 @@ async def list_audit_exports(
 
 @app.get("/api/governance/audit-export/requests")
 async def list_audit_export_requests(
-    status: Optional[str] = None,
-    limit: int = 100,
-    http_request: Request = None
+    status: Optional[str] = None, limit: int = 100, http_request: Request = None
 ):
     """List export requests (including pending ones)."""
     initialize_services()
@@ -2787,11 +2829,17 @@ async def list_audit_export_requests(
 
     # Authentication check
     if http_request:
-        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get(
+            "Authorization", ""
+        ).replace("Bearer ", "")
         if session_id:
             session, error = auth_service.validate_session(session_id)
-            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
-                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+            if session and not auth_service.has_permission(
+                session.role, Permission.VIEW_AUDIT_LOGS
+            ):
+                raise HTTPException(
+                    status_code=403, detail="Insufficient permissions for audit exports"
+                )
 
     try:
         # Validate limit
@@ -2804,6 +2852,7 @@ async def list_audit_export_requests(
         # Filter by status if provided
         if status:
             from lexecon.audit_export.service import ExportStatus
+
             try:
                 status_enum = ExportStatus(status.upper())
                 requests = [r for r in requests if r.status == status_enum]
@@ -2849,11 +2898,17 @@ async def get_audit_export_statistics(http_request: Request = None):
 
     # Authentication check
     if http_request:
-        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get(
+            "Authorization", ""
+        ).replace("Bearer ", "")
         if session_id:
             session, error = auth_service.validate_session(session_id)
-            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
-                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+            if session and not auth_service.has_permission(
+                session.role, Permission.VIEW_AUDIT_LOGS
+            ):
+                raise HTTPException(
+                    status_code=403, detail="Insufficient permissions for audit exports"
+                )
 
     try:
         stats = audit_export_service.get_export_statistics()

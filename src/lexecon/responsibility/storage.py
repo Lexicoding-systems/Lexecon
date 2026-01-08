@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from .tracker import ResponsibilityRecord, DecisionMaker, ResponsibilityLevel
+from .tracker import DecisionMaker, ResponsibilityLevel, ResponsibilityRecord
 
 
 class ResponsibilityStorage:
@@ -38,7 +38,8 @@ class ResponsibilityStorage:
         cursor = conn.cursor()
 
         # Create responsibility_records table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS responsibility_records (
                 record_id TEXT PRIMARY KEY,
                 decision_id TEXT NOT NULL,
@@ -60,38 +61,51 @@ class ResponsibilityStorage:
                 liability_signature TEXT,
                 created_at TEXT NOT NULL
             )
-        """)
+        """
+        )
 
         # Create indexes for efficient querying
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_decision_id
             ON responsibility_records(decision_id)
-        """)
+        """
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_responsible_party
             ON responsibility_records(responsible_party)
-        """)
+        """
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_decision_maker
             ON responsibility_records(decision_maker)
-        """)
+        """
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_timestamp
             ON responsibility_records(timestamp)
-        """)
+        """
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_override_ai
             ON responsibility_records(override_ai)
-        """)
+        """
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_review_required
             ON responsibility_records(review_required, reviewed_by)
-        """)
+        """
+        )
 
         conn.commit()
         conn.close()
@@ -106,7 +120,8 @@ class ResponsibilityStorage:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR REPLACE INTO responsibility_records (
                 record_id, decision_id, timestamp, decision_maker,
                 responsible_party, role, reasoning, confidence,
@@ -115,27 +130,29 @@ class ResponsibilityStorage:
                 reviewed_by, reviewed_at, liability_accepted,
                 liability_signature, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            record.record_id,
-            record.decision_id,
-            record.timestamp,
-            record.decision_maker.value,
-            record.responsible_party,
-            record.role,
-            record.reasoning,
-            record.confidence,
-            record.responsibility_level.value,
-            record.delegated_from,
-            record.escalated_to,
-            1 if record.override_ai else 0,
-            record.ai_recommendation,
-            1 if record.review_required else 0,
-            record.reviewed_by,
-            record.reviewed_at,
-            1 if record.liability_accepted else 0,
-            record.liability_signature,
-            datetime.utcnow().isoformat()
-        ))
+        """,
+            (
+                record.record_id,
+                record.decision_id,
+                record.timestamp,
+                record.decision_maker.value,
+                record.responsible_party,
+                record.role,
+                record.reasoning,
+                record.confidence,
+                record.responsibility_level.value,
+                record.delegated_from,
+                record.escalated_to,
+                1 if record.override_ai else 0,
+                record.ai_recommendation,
+                1 if record.review_required else 0,
+                record.reviewed_by,
+                record.reviewed_at,
+                1 if record.liability_accepted else 0,
+                record.liability_signature,
+                datetime.utcnow().isoformat(),
+            ),
+        )
 
         conn.commit()
         conn.close()
@@ -150,7 +167,8 @@ class ResponsibilityStorage:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 record_id, decision_id, timestamp, decision_maker,
                 responsible_party, role, reasoning, confidence,
@@ -160,7 +178,8 @@ class ResponsibilityStorage:
                 liability_signature
             FROM responsibility_records
             ORDER BY timestamp ASC
-        """)
+        """
+        )
 
         records = []
         for row in cursor.fetchall():
@@ -182,7 +201,7 @@ class ResponsibilityStorage:
                 reviewed_by=row[14],
                 reviewed_at=row[15],
                 liability_accepted=bool(row[16]),
-                liability_signature=row[17]
+                liability_signature=row[17],
             )
             records.append(record)
 
@@ -208,7 +227,7 @@ class ResponsibilityStorage:
         values = []
 
         for key, value in updates.items():
-            if key in ['reviewed_by', 'reviewed_at']:
+            if key in ["reviewed_by", "reviewed_at"]:
                 update_fields.append(f"{key} = ?")
                 values.append(value)
 
@@ -249,29 +268,37 @@ class ResponsibilityStorage:
         db_size = Path(self.db_path).stat().st_size if Path(self.db_path).exists() else 0
 
         # Oldest record
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT MIN(timestamp) FROM responsibility_records
-        """)
+        """
+        )
         oldest = cursor.fetchone()[0]
 
         # Newest record
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT MAX(timestamp) FROM responsibility_records
-        """)
+        """
+        )
         newest = cursor.fetchone()[0]
 
         # By decision maker
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT decision_maker, COUNT(*)
             FROM responsibility_records
             GROUP BY decision_maker
-        """)
+        """
+        )
         by_maker = {row[0]: row[1] for row in cursor.fetchall()}
 
         # Override count
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*) FROM responsibility_records WHERE override_ai = 1
-        """)
+        """
+        )
         overrides = cursor.fetchone()[0]
 
         conn.close()
@@ -283,7 +310,7 @@ class ResponsibilityStorage:
             "oldest_record": oldest,
             "newest_record": newest,
             "by_decision_maker": by_maker,
-            "override_count": overrides
+            "override_count": overrides,
         }
 
     def get_by_decision_id(self, decision_id: str) -> List[ResponsibilityRecord]:
@@ -299,7 +326,8 @@ class ResponsibilityStorage:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 record_id, decision_id, timestamp, decision_maker,
                 responsible_party, role, reasoning, confidence,
@@ -310,7 +338,9 @@ class ResponsibilityStorage:
             FROM responsibility_records
             WHERE decision_id = ?
             ORDER BY timestamp ASC
-        """, (decision_id,))
+        """,
+            (decision_id,),
+        )
 
         records = []
         for row in cursor.fetchall():
@@ -332,7 +362,7 @@ class ResponsibilityStorage:
                 reviewed_by=row[14],
                 reviewed_at=row[15],
                 liability_accepted=bool(row[16]),
-                liability_signature=row[17]
+                liability_signature=row[17],
             )
             records.append(record)
 

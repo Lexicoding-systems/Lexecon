@@ -282,9 +282,7 @@ class TestRecordKeepingSystem:
 
     def test_anonymize_record(self, record_system, ledger):
         """Test anonymizing record with personal data."""
-        entry = ledger.append(
-            "decision", {"user_email": "test@example.com", "action": "search"}
-        )
+        entry = ledger.append("decision", {"user_email": "test@example.com", "action": "search"})
 
         result = record_system.anonymize_record(entry.entry_id)
 

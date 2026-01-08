@@ -18,9 +18,9 @@ from typing import Any, Dict, List, Optional, Union
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        EvidenceArtifact,
         ArtifactType,
         DigitalSignature,
+        EvidenceArtifact,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -100,9 +100,7 @@ class EvidenceService:
             enable_signatures: Whether to support digital signatures
         """
         if not GOVERNANCE_MODELS_AVAILABLE:
-            raise RuntimeError(
-                "Governance models not available. Install model_governance_pack."
-            )
+            raise RuntimeError("Governance models not available. Install model_governance_pack.")
 
         self.config = config or EvidenceConfig()
         self.enable_signatures = enable_signatures
@@ -430,9 +428,7 @@ class EvidenceService:
         )
 
         # Create new artifact with signature (immutability preserved)
-        signed_artifact = artifact.model_copy(
-            update={"digital_signature": digital_signature}
-        )
+        signed_artifact = artifact.model_copy(update={"digital_signature": digital_signature})
 
         # Replace in storage (allowed because it's adding signature)
         self._artifacts[artifact_id] = signed_artifact
@@ -455,9 +451,7 @@ class EvidenceService:
             if count > 0:
                 type_counts[artifact_type.value] = count
 
-        signed_count = sum(
-            1 for a in self._artifacts.values() if a.digital_signature is not None
-        )
+        signed_count = sum(1 for a in self._artifacts.values() if a.digital_signature is not None)
 
         return {
             "total_artifacts": total_artifacts,

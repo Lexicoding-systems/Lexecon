@@ -11,14 +11,15 @@ Provides:
 import hashlib
 import json
 import sqlite3
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ExportStatus(str, Enum):
     """Export request status."""
+
     PENDING = "pending"  # Awaiting approval
     APPROVED = "approved"  # Approved, generation in progress
     COMPLETED = "completed"  # Successfully generated and downloaded
@@ -28,6 +29,7 @@ class ExportStatus(str, Enum):
 
 class ApprovalStatus(str, Enum):
     """Approval status for multi-party authorization."""
+
     NOT_REQUIRED = "not_required"  # Auto-approved
     PENDING = "pending"  # Awaiting approval
     APPROVED = "approved"  # Approved by authorized user
@@ -37,6 +39,7 @@ class ApprovalStatus(str, Enum):
 @dataclass
 class ExportRequest:
     """Export request audit record."""
+
     request_id: str
     user_id: str
     username: str
@@ -99,7 +102,8 @@ class AuditService:
         cursor = conn.cursor()
 
         # Export requests audit log
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS export_requests (
                 request_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
@@ -141,10 +145,12 @@ class AuditService:
                 ip_address TEXT,
                 user_agent TEXT
             )
-        """)
+        """
+        )
 
         # Approval workflow table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS approval_workflow (
                 approval_id TEXT PRIMARY KEY,
                 request_id TEXT NOT NULL,
@@ -155,10 +161,12 @@ class AuditService:
                 timestamp TEXT NOT NULL,
                 FOREIGN KEY (request_id) REFERENCES export_requests(request_id)
             )
-        """)
+        """
+        )
 
         # Access attempts log (all API calls)
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS access_log (
                 log_id TEXT PRIMARY KEY,
                 user_id TEXT,
@@ -170,7 +178,8 @@ class AuditService:
                 user_agent TEXT,
                 timestamp TEXT NOT NULL
             )
-        """)
+        """
+        )
 
         conn.commit()
         conn.close()
@@ -185,12 +194,14 @@ class AuditService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT entry_hash
             FROM export_requests
             ORDER BY requested_at DESC
             LIMIT 1
-        """)
+        """
+        )
 
         row = cursor.fetchone()
         conn.close()
@@ -221,7 +232,7 @@ class AuditService:
         attestation_ip_address: Optional[str],
         approval_required: bool,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ) -> ExportRequest:
         """
         Log an export request to the audit trail.
@@ -241,14 +252,15 @@ class AuditService:
             "time_window": time_window,
             "formats": sorted(formats),
             "attestation_accepted": attestation_accepted,
-            "previous_hash": previous_hash
+            "previous_hash": previous_hash,
         }
         entry_hash = self._compute_hash(hash_data)
 
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO export_requests (
                 request_id, user_id, username, user_email, user_role,
                 purpose, case_id, notes, requested_at,
@@ -262,19 +274,46 @@ class AuditService:
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
-        """, (
-            request_id, user_id, username, user_email, user_role,
-            purpose, case_id, notes, now,
-            time_window, json.dumps(formats),
-            int(include_decisions), int(include_interventions),
-            int(include_ledger), int(include_responsibility),
-            int(attestation_accepted), now, attestation_ip_address,
-            ApprovalStatus.PENDING.value if approval_required else ApprovalStatus.NOT_REQUIRED.value,
-            int(approval_required), None, None, None, None,
-            ExportStatus.PENDING.value if approval_required else ExportStatus.APPROVED.value,
-            None, None, None,
-            previous_hash, entry_hash, ip_address, user_agent
-        ))
+        """,
+            (
+                request_id,
+                user_id,
+                username,
+                user_email,
+                user_role,
+                purpose,
+                case_id,
+                notes,
+                now,
+                time_window,
+                json.dumps(formats),
+                int(include_decisions),
+                int(include_interventions),
+                int(include_ledger),
+                int(include_responsibility),
+                int(attestation_accepted),
+                now,
+                attestation_ip_address,
+                (
+                    ApprovalStatus.PENDING.value
+                    if approval_required
+                    else ApprovalStatus.NOT_REQUIRED.value
+                ),
+                int(approval_required),
+                None,
+                None,
+                None,
+                None,
+                ExportStatus.PENDING.value if approval_required else ExportStatus.APPROVED.value,
+                None,
+                None,
+                None,
+                previous_hash,
+                entry_hash,
+                ip_address,
+                user_agent,
+            ),
+        )
 
         conn.commit()
         conn.close()
@@ -298,7 +337,9 @@ class AuditService:
             attestation_accepted=attestation_accepted,
             attestation_timestamp=now,
             attestation_ip_address=attestation_ip_address,
-            approval_status=ApprovalStatus.PENDING if approval_required else ApprovalStatus.NOT_REQUIRED,
+            approval_status=(
+                ApprovalStatus.PENDING if approval_required else ApprovalStatus.NOT_REQUIRED
+            ),
             approval_required=approval_required,
             approved_by_user_id=None,
             approved_by_username=None,
@@ -311,7 +352,7 @@ class AuditService:
             previous_hash=previous_hash,
             entry_hash=entry_hash,
             ip_address=ip_address,
-            user_agent=user_agent
+            user_agent=user_agent,
         )
 
     def approve_export(
@@ -319,7 +360,7 @@ class AuditService:
         request_id: str,
         approver_user_id: str,
         approver_username: str,
-        reason: Optional[str] = None
+        reason: Optional[str] = None,
     ):
         """Approve an export request."""
         now = datetime.now(timezone.utc).isoformat()
@@ -327,7 +368,8 @@ class AuditService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE export_requests
             SET approval_status = ?,
                 approved_by_user_id = ?,
@@ -335,29 +377,36 @@ class AuditService:
                 approved_at = ?,
                 export_status = ?
             WHERE request_id = ?
-        """, (ApprovalStatus.APPROVED.value, approver_user_id, approver_username,
-              now, ExportStatus.APPROVED.value, request_id))
+        """,
+            (
+                ApprovalStatus.APPROVED.value,
+                approver_user_id,
+                approver_username,
+                now,
+                ExportStatus.APPROVED.value,
+                request_id,
+            ),
+        )
 
         # Log approval action
         import secrets
+
         approval_id = f"approval_{secrets.token_hex(16)}"
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO approval_workflow (
                 approval_id, request_id, reviewer_user_id, reviewer_username,
                 action, reason, timestamp
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (approval_id, request_id, approver_user_id, approver_username,
-              "approved", reason, now))
+        """,
+            (approval_id, request_id, approver_user_id, approver_username, "approved", reason, now),
+        )
 
         conn.commit()
         conn.close()
 
     def reject_export(
-        self,
-        request_id: str,
-        reviewer_user_id: str,
-        reviewer_username: str,
-        reason: str
+        self, request_id: str, reviewer_user_id: str, reviewer_username: str, reason: str
     ):
         """Reject an export request."""
         now = datetime.now(timezone.utc).isoformat()
@@ -365,33 +414,36 @@ class AuditService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE export_requests
             SET approval_status = ?,
                 rejection_reason = ?,
                 export_status = ?
             WHERE request_id = ?
-        """, (ApprovalStatus.REJECTED.value, reason, ExportStatus.REJECTED.value, request_id))
+        """,
+            (ApprovalStatus.REJECTED.value, reason, ExportStatus.REJECTED.value, request_id),
+        )
 
         # Log rejection action
         import secrets
+
         approval_id = f"approval_{secrets.token_hex(16)}"
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO approval_workflow (
                 approval_id, request_id, reviewer_user_id, reviewer_username,
                 action, reason, timestamp
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (approval_id, request_id, reviewer_user_id, reviewer_username,
-              "rejected", reason, now))
+        """,
+            (approval_id, request_id, reviewer_user_id, reviewer_username, "rejected", reason, now),
+        )
 
         conn.commit()
         conn.close()
 
     def complete_export(
-        self,
-        request_id: str,
-        packet_hashes: Dict[str, str],
-        packet_size_bytes: int
+        self, request_id: str, packet_hashes: Dict[str, str], packet_size_bytes: int
     ):
         """Mark export as completed."""
         now = datetime.now(timezone.utc).isoformat()
@@ -399,15 +451,23 @@ class AuditService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE export_requests
             SET export_status = ?,
                 completed_at = ?,
                 packet_hashes = ?,
                 packet_size_bytes = ?
             WHERE request_id = ?
-        """, (ExportStatus.COMPLETED.value, now, json.dumps(packet_hashes),
-              packet_size_bytes, request_id))
+        """,
+            (
+                ExportStatus.COMPLETED.value,
+                now,
+                json.dumps(packet_hashes),
+                packet_size_bytes,
+                request_id,
+            ),
+        )
 
         conn.commit()
         conn.close()
@@ -419,12 +479,15 @@ class AuditService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE export_requests
             SET export_status = ?,
                 rejection_reason = ?
             WHERE request_id = ?
-        """, (ExportStatus.FAILED.value, error_message, request_id))
+        """,
+            (ExportStatus.FAILED.value, error_message, request_id),
+        )
 
         conn.commit()
         conn.close()
@@ -434,10 +497,13 @@ class AuditService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT * FROM export_requests
             WHERE request_id = ?
-        """, (request_id,))
+        """,
+            (request_id,),
+        )
 
         row = cursor.fetchone()
         conn.close()
@@ -448,10 +514,7 @@ class AuditService:
         return self._row_to_export_request(row)
 
     def list_export_requests(
-        self,
-        user_id: Optional[str] = None,
-        status: Optional[ExportStatus] = None,
-        limit: int = 100
+        self, user_id: Optional[str] = None, status: Optional[ExportStatus] = None, limit: int = 100
     ) -> List[ExportRequest]:
         """List export requests with optional filters."""
         conn = sqlite3.connect(self.db_path)
@@ -516,7 +579,7 @@ class AuditService:
             previous_hash=row[29],
             entry_hash=row[30],
             ip_address=row[31],
-            user_agent=row[32]
+            user_agent=row[32],
         )
 
     def log_access(
@@ -527,23 +590,36 @@ class AuditService:
         user_id: Optional[str] = None,
         username: Optional[str] = None,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ):
         """Log API access for security monitoring."""
         import secrets
+
         log_id = f"log_{secrets.token_hex(16)}"
         timestamp = datetime.now(timezone.utc).isoformat()
 
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO access_log (
                 log_id, user_id, username, endpoint, method,
                 status_code, ip_address, user_agent, timestamp
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (log_id, user_id, username, endpoint, method,
-              status_code, ip_address, user_agent, timestamp))
+        """,
+            (
+                log_id,
+                user_id,
+                username,
+                endpoint,
+                method,
+                status_code,
+                ip_address,
+                user_agent,
+                timestamp,
+            ),
+        )
 
         conn.commit()
         conn.close()
@@ -553,13 +629,15 @@ class AuditService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT request_id, user_id, purpose, case_id, requested_at,
                    time_window, formats, attestation_accepted,
                    previous_hash, entry_hash
             FROM export_requests
             ORDER BY requested_at ASC
-        """)
+        """
+        )
 
         valid = True
         invalid_entries = []
@@ -573,12 +651,14 @@ class AuditService:
             # Verify previous hash links correctly
             if stored_prev_hash != prev_hash:
                 valid = False
-                invalid_entries.append({
-                    "request_id": request_id,
-                    "reason": "broken_chain",
-                    "expected_prev_hash": prev_hash,
-                    "actual_prev_hash": stored_prev_hash
-                })
+                invalid_entries.append(
+                    {
+                        "request_id": request_id,
+                        "reason": "broken_chain",
+                        "expected_prev_hash": prev_hash,
+                        "actual_prev_hash": stored_prev_hash,
+                    }
+                )
 
             # Verify entry hash is correct
             hash_data = {
@@ -590,18 +670,20 @@ class AuditService:
                 "time_window": row[5],
                 "formats": sorted(json.loads(row[6])),
                 "attestation_accepted": bool(row[7]),
-                "previous_hash": row[8]
+                "previous_hash": row[8],
             }
             computed_hash = self._compute_hash(hash_data)
 
             if computed_hash != stored_entry_hash:
                 valid = False
-                invalid_entries.append({
-                    "request_id": request_id,
-                    "reason": "hash_mismatch",
-                    "expected_hash": computed_hash,
-                    "actual_hash": stored_entry_hash
-                })
+                invalid_entries.append(
+                    {
+                        "request_id": request_id,
+                        "reason": "hash_mismatch",
+                        "expected_hash": computed_hash,
+                        "actual_hash": stored_entry_hash,
+                    }
+                )
 
             prev_hash = stored_entry_hash
 
@@ -610,5 +692,7 @@ class AuditService:
         return {
             "valid": valid,
             "invalid_entries": invalid_entries,
-            "message": "Audit chain is valid" if valid else f"Found {len(invalid_entries)} invalid entries"
+            "message": (
+                "Audit chain is valid" if valid else f"Found {len(invalid_entries)} invalid entries"
+            ),
         }

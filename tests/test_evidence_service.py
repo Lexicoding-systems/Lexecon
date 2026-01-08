@@ -1,22 +1,23 @@
 """Tests for evidence service."""
 
-import pytest
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from lexecon.evidence.service import (
-    EvidenceService,
-    EvidenceConfig,
     ArtifactBuilder,
-    generate_artifact_id,
+    EvidenceConfig,
+    EvidenceService,
     compute_sha256,
+    generate_artifact_id,
 )
 
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        EvidenceArtifact,
         ArtifactType,
         DigitalSignature,
+        EvidenceArtifact,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -600,9 +601,7 @@ class TestEvidenceServiceBytesContent:
         # Store with bytes content (not string)
         content_bytes = b"Binary content data"
         artifact = service.store_artifact(
-            artifact_type=ArtifactType.SCREENSHOT,
-            content=content_bytes,
-            source="screenshot_tool"
+            artifact_type=ArtifactType.SCREENSHOT, content=content_bytes, source="screenshot_tool"
         )
 
         assert artifact.artifact_id.startswith("evd_screenshot_")
@@ -736,5 +735,6 @@ class TestAppendOnlyEvidenceStore:
 
         # Verify append-only enforcement works
         from lexecon.evidence.append_only_store import AppendOnlyViolationError
+
         with pytest.raises(AppendOnlyViolationError):
             service._artifacts[artifact.artifact_id] = artifact  # Try to update

@@ -1,11 +1,12 @@
 """Tests for authentication middleware."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 from fastapi import Request
 
+from lexecon.security.auth_service import Permission, Role, Session
 from lexecon.security.middleware import get_current_user, require_permission
-from lexecon.security.auth_service import Role, Permission, Session
 
 
 class TestGetCurrentUser:

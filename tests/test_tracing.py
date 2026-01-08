@@ -33,8 +33,8 @@ class TestTracingManager:
         manager = TracingManager()
 
         assert manager is not None
-        assert hasattr(manager, 'enabled')
-        assert hasattr(manager, 'tracer')
+        assert hasattr(manager, "enabled")
+        assert hasattr(manager, "tracer")
 
     def test_enabled_status(self):
         """Test that enabled status matches availability."""
@@ -62,8 +62,8 @@ class TestTracingManager:
 
         assert span is not None
         # Span should be context manager
-        assert hasattr(span, '__enter__')
-        assert hasattr(span, '__exit__')
+        assert hasattr(span, "__enter__")
+        assert hasattr(span, "__exit__")
 
     def test_start_span_when_disabled(self):
         """Test starting a span when tracing is disabled."""
@@ -78,12 +78,7 @@ class TestTracingManager:
         """Test creating span with multiple attributes."""
         manager = TracingManager()
 
-        span = manager.start_span(
-            "attributed_span",
-            attr1="value1",
-            attr2=42,
-            attr3=True
-        )
+        span = manager.start_span("attributed_span", attr1="value1", attr2=42, attr3=True)
 
         assert span is not None
 
@@ -104,6 +99,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_without_name(self):
         """Test decorator without explicit name."""
+
         @trace_function()
         def test_func():
             return "result"
@@ -113,6 +109,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_with_name(self):
         """Test decorator with explicit span name."""
+
         @trace_function(name="custom_span_name")
         def test_func():
             return "result"
@@ -122,6 +119,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_preserves_function_behavior(self):
         """Test that decorator doesn't change function behavior."""
+
         @trace_function()
         def add(a, b):
             return a + b
@@ -131,24 +129,21 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_with_arguments(self):
         """Test decorating function with various arguments."""
+
         @trace_function()
         def complex_func(x, y, *args, **kwargs):
-            return {
-                'x': x,
-                'y': y,
-                'args': args,
-                'kwargs': kwargs
-            }
+            return {"x": x, "y": y, "args": args, "kwargs": kwargs}
 
         result = complex_func(1, 2, 3, 4, key="value")
 
-        assert result['x'] == 1
-        assert result['y'] == 2
-        assert result['args'] == (3, 4)
-        assert result['kwargs'] == {'key': 'value'}
+        assert result["x"] == 1
+        assert result["y"] == 2
+        assert result["args"] == (3, 4)
+        assert result["kwargs"] == {"key": "value"}
 
     def test_decorator_with_exception(self):
         """Test decorator handles exceptions properly."""
+
         @trace_function()
         def failing_func():
             raise ValueError("Test error")
@@ -158,6 +153,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_exception_still_raises(self):
         """Test that exceptions are still raised after tracing."""
+
         @trace_function()
         def error_func(should_error):
             if should_error:
@@ -173,6 +169,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_on_class_method(self):
         """Test decorator on class methods."""
+
         class TestClass:
             @trace_function()
             def method(self, value):
@@ -183,6 +180,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_on_static_method(self):
         """Test decorator on static methods."""
+
         class TestClass:
             @staticmethod
             @trace_function()
@@ -193,6 +191,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_preserves_docstring(self):
         """Test that decorator preserves function docstring."""
+
         @trace_function()
         def documented_func():
             """This is a docstring."""
@@ -202,6 +201,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_preserves_function_name(self):
         """Test that decorator preserves function name."""
+
         @trace_function()
         def named_function():
             return "result"
@@ -211,6 +211,7 @@ class TestTraceFunctionDecorator:
     @pytest.mark.skipif(not TRACING_AVAILABLE, reason="OpenTelemetry not installed")
     def test_decorator_records_duration(self):
         """Test that decorator records execution duration."""
+
         @trace_function()
         def slow_func():
             time.sleep(0.1)
@@ -225,6 +226,7 @@ class TestTraceFunctionDecorator:
 
     def test_decorator_when_tracing_disabled(self):
         """Test decorator works even when tracing is disabled."""
+
         # This should work regardless of TRACING_AVAILABLE
         @trace_function()
         def normal_func():
@@ -262,6 +264,7 @@ class TestTracingIntegration:
 
     def test_decorated_functions_call_chain(self):
         """Test call chain of decorated functions."""
+
         @trace_function()
         def func_a():
             return func_b()
@@ -279,6 +282,7 @@ class TestTracingIntegration:
 
     def test_decorator_with_multiple_returns(self):
         """Test decorator on function with multiple return paths."""
+
         @trace_function()
         def multi_return(value):
             if value > 0:
@@ -320,6 +324,7 @@ class TestTracingFallback:
 
     def test_disabled_tracing_no_errors(self):
         """Test that disabled tracing doesn't cause errors."""
+
         @trace_function()
         def test_func():
             return "result"
@@ -330,6 +335,7 @@ class TestTracingFallback:
 
     def test_decorator_overhead_minimal_when_disabled(self):
         """Test that decorator has minimal overhead when disabled."""
+
         @trace_function()
         def fast_func():
             return 42
@@ -350,6 +356,7 @@ class TestEdgeCases:
 
     def test_decorator_on_generator(self):
         """Test decorator on generator function."""
+
         @trace_function()
         def gen_func():
             yield 1
@@ -361,15 +368,17 @@ class TestEdgeCases:
 
     def test_decorator_on_async_function(self):
         """Test decorator on async function (should still work)."""
+
         @trace_function()
         async def async_func():
             return "async_result"
 
         # We can't easily await this in sync tests, but decorator should apply
-        assert hasattr(async_func, '__name__')
+        assert hasattr(async_func, "__name__")
 
     def test_decorator_with_none_return(self):
         """Test decorator on function returning None."""
+
         @trace_function()
         def none_func():
             return None
@@ -379,6 +388,7 @@ class TestEdgeCases:
 
     def test_decorator_with_no_return(self):
         """Test decorator on function with no explicit return."""
+
         @trace_function()
         def no_return_func():
             pass
@@ -410,6 +420,7 @@ class TestEdgeCases:
 
     def test_multiple_decorators(self):
         """Test function with multiple decorators."""
+
         @trace_function(name="outer")
         @trace_function(name="inner")
         def double_traced():
@@ -420,6 +431,7 @@ class TestEdgeCases:
 
     def test_decorator_with_recursive_function(self):
         """Test decorator on recursive function."""
+
         @trace_function()
         def factorial(n):
             if n <= 1:
@@ -436,11 +448,7 @@ class TestEdgeCases:
 
         # Different attribute types
         span = manager.start_span(
-            "complex_attrs",
-            string_attr="value",
-            int_attr=42,
-            float_attr=3.14,
-            bool_attr=True
+            "complex_attrs", string_attr="value", int_attr=42, float_attr=3.14, bool_attr=True
         )
 
         assert span is not None
@@ -451,6 +459,7 @@ class TestTracingPerformance:
 
     def test_decorator_minimal_overhead(self):
         """Test that decorator has minimal overhead."""
+
         # Baseline function
         def baseline():
             return 42
@@ -489,6 +498,7 @@ class TestTracingPerformance:
 
     def test_concurrent_tracing(self):
         """Test that concurrent tracing works."""
+
         @trace_function()
         def concurrent_func(n):
             time.sleep(0.001)
@@ -515,7 +525,7 @@ class TestTracingConfiguration:
         manager = TracingManager()
 
         # Should have setup method called
-        assert hasattr(manager, '_setup_tracing')
+        assert hasattr(manager, "_setup_tracing")
 
     def test_graceful_degradation(self):
         """Test graceful degradation when tracing unavailable."""

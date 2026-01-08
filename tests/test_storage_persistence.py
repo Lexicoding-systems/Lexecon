@@ -36,7 +36,7 @@ def sample_entry():
         event_type="test_event",
         data={"key": "value"},
         previous_hash="prev_hash_abc",
-        timestamp=datetime.now(timezone.utc).isoformat()
+        timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
 
@@ -52,6 +52,7 @@ class TestLedgerStorage:
 
         # Tables should be created
         import sqlite3
+
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
 
@@ -70,6 +71,7 @@ class TestLedgerStorage:
 
         # Entry should be saved
         import sqlite3
+
         conn = sqlite3.connect(storage.db_path)
         cursor = conn.cursor()
 
@@ -91,7 +93,7 @@ class TestLedgerStorage:
                 event_type="test",
                 data={"index": i},
                 previous_hash=f"prev_{i}",
-                timestamp=datetime.now(timezone.utc).isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
             storage.save_entry(entry)
 
@@ -103,27 +105,33 @@ class TestLedgerStorage:
     def test_get_entries_by_type(self, storage):
         """Test filtering entries by event type."""
         # Create entries with different types
-        storage.save_entry(LedgerEntry(
-            entry_id="e1",
-            event_type="decision",
-            data={},
-            previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
-        ))
-        storage.save_entry(LedgerEntry(
-            entry_id="e2",
-            event_type="policy",
-            data={},
-            previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
-        ))
-        storage.save_entry(LedgerEntry(
-            entry_id="e3",
-            event_type="decision",
-            data={},
-            previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
-        ))
+        storage.save_entry(
+            LedgerEntry(
+                entry_id="e1",
+                event_type="decision",
+                data={},
+                previous_hash="prev",
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+        )
+        storage.save_entry(
+            LedgerEntry(
+                entry_id="e2",
+                event_type="policy",
+                data={},
+                previous_hash="prev",
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+        )
+        storage.save_entry(
+            LedgerEntry(
+                entry_id="e3",
+                event_type="decision",
+                data={},
+                previous_hash="prev",
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+        )
 
         decisions = storage.get_entries_by_type("decision")
 
@@ -136,13 +144,15 @@ class TestLedgerStorage:
 
         # Add some entries
         for i in range(5):
-            storage.save_entry(LedgerEntry(
-                entry_id=f"e{i}",
-                event_type="test",
-                data={},
-                previous_hash="prev",
-                timestamp=datetime.now(timezone.utc).isoformat()
-            ))
+            storage.save_entry(
+                LedgerEntry(
+                    entry_id=f"e{i}",
+                    event_type="test",
+                    data={},
+                    previous_hash="prev",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                )
+            )
 
         assert storage.get_entry_count() == 5
 
@@ -167,13 +177,15 @@ class TestLedgerStorage:
         """Test getting storage statistics."""
         # Add some entries
         for i in range(5):
-            storage.save_entry(LedgerEntry(
-                entry_id=f"e{i}",
-                event_type="test" if i % 2 == 0 else "other",
-                data={},
-                previous_hash="prev",
-                timestamp=datetime.now(timezone.utc).isoformat()
-            ))
+            storage.save_entry(
+                LedgerEntry(
+                    entry_id=f"e{i}",
+                    event_type="test" if i % 2 == 0 else "other",
+                    data={},
+                    previous_hash="prev",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                )
+            )
 
         stats = storage.get_statistics()
 
@@ -216,7 +228,7 @@ class TestLedgerStorage:
             event_type="test",
             data={"test": "data"},
             previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
         # Save entry normally
@@ -225,11 +237,14 @@ class TestLedgerStorage:
         # Tamper with the stored hash directly in database
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE ledger_entries
             SET entry_hash = 'tampered_hash'
             WHERE entry_id = ?
-        """, (entry.entry_id,))
+        """,
+            (entry.entry_id,),
+        )
         conn.commit()
         conn.close()
 
@@ -247,7 +262,7 @@ class TestLedgerStorage:
             event_type="testtype",
             data={"test": "data"},
             previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
         # Save entry normally
@@ -256,11 +271,14 @@ class TestLedgerStorage:
         # Tamper with the stored hash
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE ledger_entries
             SET entry_hash = 'bad_hash'
             WHERE entry_id = ?
-        """, (entry.entry_id,))
+        """,
+            (entry.entry_id,),
+        )
         conn.commit()
         conn.close()
 
@@ -279,18 +297,20 @@ class TestLedgerStorage:
                 event_type="test",
                 data={"index": i},
                 previous_hash=f"prev_{i}",
-                timestamp=datetime.now(timezone.utc).isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
             storage.save_entry(entry)
 
         # Corrupt one entry's hash
         conn = sqlite3.connect(temp_db)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE ledger_entries
             SET entry_hash = 'corrupted'
             WHERE entry_id = 'entry_1'
-        """)
+        """
+        )
         conn.commit()
         conn.close()
 
@@ -310,7 +330,7 @@ class TestLedgerStorage:
                 event_type="test",
                 data={"index": i},
                 previous_hash=f"prev_{i}",
-                timestamp=datetime.now(timezone.utc).isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
             storage.save_entry(entry)
 
@@ -321,7 +341,7 @@ class TestLedgerStorage:
         # Verify export file exists and has correct structure
         assert os.path.exists(output_path)
 
-        with open(output_path, 'r') as f:
+        with open(output_path, "r") as f:
             data = json.load(f)
 
         assert "exported_at" in data
