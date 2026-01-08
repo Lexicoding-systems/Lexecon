@@ -10,61 +10,49 @@ from datetime import datetime, timezone
 import pytest
 from pydantic import ValidationError
 
-from model_governance_pack.models import (
-    # Action
+from model_governance_pack.models import (  # Action; Actor; Compliance Control; Context; Decision; Escalation; Evidence Artifact; Override; Policy; Resource; Risk
     Action,
     ActionCategory,
-    # Actor
     Actor,
     ActorType,
-    # Compliance Control
+    ArtifactType,
+    Behavioral,
     ComplianceControl,
     ComplianceFramework,
-    # Context
-    Behavioral,
+    Constraint,
     Context,
-    DeploymentEnvironment,
-    Environment,
-    Temporal,
-    # Decision
     Decision,
     DecisionOutcome,
-    # Escalation
+    DeploymentEnvironment,
+    DigitalSignature,
+    Environment,
     Escalation,
     EscalationPriority,
     EscalationStatus,
     EscalationTrigger,
-    Resolution,
-    ResolutionOutcome,
-    # Evidence Artifact
-    ArtifactType,
-    DigitalSignature,
     EvidenceArtifact,
-    # Override
     NewOutcome,
     OriginalOutcome,
     Override,
     OverrideScope,
     OverrideType,
-    # Policy
-    Constraint,
     Policy,
     PolicyMode,
     Relation,
     RelationType,
-    Term,
-    TermType,
-    # Resource
+    Resolution,
+    ResolutionOutcome,
     Resource,
     ResourceClassification,
     ResourceType,
-    # Risk
     Risk,
     RiskDimensions,
     RiskFactor,
     RiskLevel,
+    Temporal,
+    Term,
+    TermType,
 )
-
 
 # =============================================================================
 # Decision Model Tests

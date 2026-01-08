@@ -16,14 +16,14 @@ from typing import Any, Dict, List, Optional
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
+        ArtifactType,
         Escalation,
-        EscalationTrigger,
-        EscalationStatus,
         EscalationPriority,
+        EscalationStatus,
+        EscalationTrigger,
+        EvidenceArtifact,
         Resolution,
         ResolutionOutcome,
-        EvidenceArtifact,
-        ArtifactType,
         Risk,
         RiskLevel,
     )
@@ -131,9 +131,7 @@ class EscalationService:
             store_evidence: Whether to generate evidence artifacts
         """
         if not GOVERNANCE_MODELS_AVAILABLE:
-            raise RuntimeError(
-                "Governance models not available. Install model_governance_pack."
-            )
+            raise RuntimeError("Governance models not available. Install model_governance_pack.")
 
         self.config = config or EscalationConfig()
         self.emit_notifications = emit_notifications
@@ -162,10 +160,7 @@ class EscalationService:
             return True
 
         # Check risk level threshold
-        if (
-            risk.risk_level
-            and risk.risk_level == self.config.AUTO_ESCALATE_RISK_LEVEL
-        ):
+        if risk.risk_level and risk.risk_level == self.config.AUTO_ESCALATE_RISK_LEVEL:
             return True
 
         return False
@@ -327,9 +322,7 @@ class EscalationService:
             raise ValueError(f"Escalation {escalation_id} not found")
 
         if escalation.status in [EscalationStatus.RESOLVED, EscalationStatus.EXPIRED]:
-            raise ValueError(
-                f"Cannot acknowledge escalation in {escalation.status.value} state"
-            )
+            raise ValueError(f"Cannot acknowledge escalation in {escalation.status.value} state")
 
         # Create updated escalation (immutable pattern)
         updated = escalation.model_copy(
@@ -394,9 +387,7 @@ class EscalationService:
         if resolved_by not in escalation.escalated_to:
             # Allow if resolver acknowledged it
             if resolved_by != escalation.acknowledged_by:
-                raise ValueError(
-                    f"Resolver {resolved_by} not authorized for this escalation"
-                )
+                raise ValueError(f"Resolver {resolved_by} not authorized for this escalation")
 
         # Create resolution
         resolution = Resolution(
@@ -537,9 +528,7 @@ class EscalationService:
 
         return notifications
 
-    def _infer_priority_from_trigger(
-        self, trigger: "EscalationTrigger"
-    ) -> "EscalationPriority":
+    def _infer_priority_from_trigger(self, trigger: "EscalationTrigger") -> "EscalationPriority":
         """Infer escalation priority from trigger type."""
         priority_map = {
             EscalationTrigger.RISK_THRESHOLD: EscalationPriority.CRITICAL,
@@ -635,9 +624,7 @@ class EscalationService:
 
         return artifact
 
-    def _create_notification_artifact(
-        self, notification: NotificationEvent
-    ) -> "EvidenceArtifact":
+    def _create_notification_artifact(self, notification: NotificationEvent) -> "EvidenceArtifact":
         """Create evidence artifact for notification."""
         # Serialize notification
         notification_data = {

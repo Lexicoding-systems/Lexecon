@@ -331,11 +331,12 @@ class TestVerifyLedgerCommand:
 
         # Mock verify_integrity to return failure
         original_verify = LedgerChain.verify_integrity
+
         def mock_verify(self):
             return {
                 "valid": False,
                 "error": "Simulated verification failure",
-                "entries_verified": 0
+                "entries_verified": 0,
             }
 
         monkeypatch.setattr(LedgerChain, "verify_integrity", mock_verify)

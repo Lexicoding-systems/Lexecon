@@ -710,8 +710,10 @@ class TestCanonicalGovernanceModels:
         # Format: dec_<26 uppercase alphanumeric>
         assert decision_id.startswith("dec_")
         assert len(decision_id) == 30  # dec_ (4) + 26 chars
-        assert decision_id[4:].isupper() or decision_id[4:].isdigit() or all(
-            c in "0123456789ABCDEFGHJKMNPQRSTVWXYZ" for c in decision_id[4:]
+        assert (
+            decision_id[4:].isupper()
+            or decision_id[4:].isdigit()
+            or all(c in "0123456789ABCDEFGHJKMNPQRSTVWXYZ" for c in decision_id[4:])
         )
 
     def test_response_has_decision_id(self, service_with_canonical):
@@ -744,17 +746,13 @@ class TestCanonicalGovernanceModels:
     def test_canonical_actor_id_ai_agent(self):
         """Test AI agent actor conversion."""
         for actor in ["model", "ai", "assistant"]:
-            request = DecisionRequest(
-                actor=actor, proposed_action="x", tool="t", user_intent="u"
-            )
+            request = DecisionRequest(actor=actor, proposed_action="x", tool="t", user_intent="u")
             assert request.to_canonical_actor_id().startswith("act_ai_agent:")
 
     def test_canonical_actor_id_human(self):
         """Test human actor conversion."""
         for actor in ["user", "human"]:
-            request = DecisionRequest(
-                actor=actor, proposed_action="x", tool="t", user_intent="u"
-            )
+            request = DecisionRequest(actor=actor, proposed_action="x", tool="t", user_intent="u")
             assert request.to_canonical_actor_id().startswith("act_human_user:")
 
     def test_canonical_actor_id_already_formatted(self):
@@ -863,6 +861,7 @@ class TestCanonicalGovernanceModels:
     def test_ulid_sortability(self):
         """Test that generated ULIDs are chronologically sortable."""
         import time
+
         from lexecon.decision.service import generate_decision_id
 
         ids = []
@@ -1075,7 +1074,7 @@ class TestDecisionServiceHelpers:
             request_id="req_123",
             decision="allowed",
             reasoning="Test decision",
-            policy_version_hash="abc123"
+            policy_version_hash="abc123",
         )
         # Don't set _canonical_decision
 
@@ -1090,6 +1089,7 @@ class TestDecisionServiceFiltering:
     def policy_engine(self):
         """Create a policy engine."""
         from lexecon.policy.engine import PolicyEngine, PolicyMode
+
         return PolicyEngine(mode=PolicyMode.PERMISSIVE)
 
     @pytest.fixture
@@ -1106,14 +1106,14 @@ class TestDecisionServiceFiltering:
             actor="user",
             proposed_action="read",
             tool="database",
-            user_intent="Read data"
+            user_intent="Read data",
         )
         request2 = DecisionRequest(
             request_id="req_2",
             actor="user",
             proposed_action="delete",
             tool="database",
-            user_intent="Delete data"
+            user_intent="Delete data",
         )
 
         response1 = service.evaluate_request(request1)
@@ -1122,6 +1122,7 @@ class TestDecisionServiceFiltering:
         # Get decisions filtered by outcome (if governance models available)
         try:
             from model_governance_pack.models import DecisionOutcome
+
             approved_decisions = service.list_canonical_decisions(
                 limit=10, outcome=DecisionOutcome.APPROVED
             )
@@ -1141,7 +1142,7 @@ class TestDecisionServiceFiltering:
             actor="user",
             proposed_action="read",
             tool="database",
-            user_intent="Read data"
+            user_intent="Read data",
         )
         service.evaluate_request(request)
 
@@ -1150,10 +1151,7 @@ class TestDecisionServiceFiltering:
         start_time = now - timedelta(hours=1)
         end_time = now + timedelta(hours=1)
 
-        decisions = service.export_decisions_for_audit(
-            start_time=start_time,
-            end_time=end_time
-        )
+        decisions = service.export_decisions_for_audit(start_time=start_time, end_time=end_time)
 
         # Should have the decision we just made
         assert len(decisions) > 0
@@ -1168,7 +1166,7 @@ class TestDecisionServiceFiltering:
             actor="user",
             proposed_action="read",
             tool="database",
-            user_intent="Read data"
+            user_intent="Read data",
         )
         service.evaluate_request(request)
 
@@ -1187,7 +1185,7 @@ class TestDecisionServiceFiltering:
             actor="user",
             proposed_action="read",
             tool="database",
-            user_intent="Read data"
+            user_intent="Read data",
         )
         service.evaluate_request(request)
 

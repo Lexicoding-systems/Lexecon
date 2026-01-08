@@ -3,10 +3,11 @@ Tests for append-only storage adapter.
 """
 
 import pytest
+
 from src.lexecon.evidence.append_only_store import (
+    AppendOnlyEvidenceStore,
     AppendOnlyStore,
     AppendOnlyViolationError,
-    AppendOnlyEvidenceStore,
 )
 
 
@@ -157,6 +158,7 @@ class TestAppendOnlyEvidenceStore:
 
     def test_wrap_evidence_service(self):
         """Can wrap an EvidenceService."""
+
         # Mock a simple service
         class MockEvidenceService:
             def __init__(self):
@@ -170,6 +172,7 @@ class TestAppendOnlyEvidenceStore:
 
     def test_enabled_wraps_storage(self):
         """When enabled, wraps service's internal storage."""
+
         class MockEvidenceService:
             def __init__(self):
                 self._artifacts = {}
@@ -182,6 +185,7 @@ class TestAppendOnlyEvidenceStore:
 
     def test_enable_after_init(self):
         """Can enable append-only mode after initialization."""
+
         class MockEvidenceService:
             def __init__(self):
                 self._artifacts = {"existing": "artifact"}
@@ -203,6 +207,7 @@ class TestAppendOnlyEvidenceStore:
 
     def test_disable_after_enable(self):
         """Can disable append-only mode after enabling."""
+
         class MockEvidenceService:
             def __init__(self):
                 self._artifacts = {}
@@ -247,8 +252,7 @@ class TestAppendOnlyEvidenceStore:
 
         # Add artifact with incorrect hash
         service._artifacts._store["artifact2"] = MockArtifact(
-            "different content",
-            "0" * 64  # Wrong hash
+            "different content", "0" * 64  # Wrong hash
         )
 
         # Integrity should fail

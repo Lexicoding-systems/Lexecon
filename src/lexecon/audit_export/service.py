@@ -11,19 +11,20 @@ Provides regulatory-ready audit packages that integrate:
 - Cryptographic verification
 """
 
+import csv
+import hashlib
+import io
+import json
+import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
-import json
-import csv
-import io
-import uuid
-import hashlib
 
 
 class ExportFormat(Enum):
     """Supported export formats."""
+
     JSON = "json"
     CSV = "csv"
     MARKDOWN = "markdown"
@@ -32,6 +33,7 @@ class ExportFormat(Enum):
 
 class ExportScope(Enum):
     """Scope of data to export."""
+
     ALL = "all"
     RISK_ONLY = "risk_only"
     ESCALATION_ONLY = "escalation_only"
@@ -43,6 +45,7 @@ class ExportScope(Enum):
 
 class ExportStatus(Enum):
     """Status of export operation."""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -52,6 +55,7 @@ class ExportStatus(Enum):
 @dataclass
 class ExportRequest:
     """Request for audit export."""
+
     export_id: str
     requester: str
     purpose: str
@@ -69,6 +73,7 @@ class ExportRequest:
 @dataclass
 class ExportPackage:
     """Complete audit export package."""
+
     export_id: str
     request: ExportRequest
     generated_at: datetime
@@ -85,6 +90,7 @@ class ExportPackage:
 @dataclass
 class ExportStatistics:
     """Statistics about exported data."""
+
     total_risks: int = 0
     total_escalations: int = 0
     total_overrides: int = 0
@@ -119,7 +125,7 @@ class AuditExportService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         include_deleted: bool = False,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ExportRequest:
         """
         Create a new export request.
@@ -148,7 +154,7 @@ class AuditExportService:
             start_date=start_date,
             end_date=end_date,
             include_deleted=include_deleted,
-            metadata=metadata
+            metadata=metadata,
         )
 
         self._requests[export_id] = request
@@ -162,7 +168,7 @@ class AuditExportService:
         override_service=None,
         evidence_service=None,
         compliance_service=None,
-        ledger=None
+        ledger=None,
     ) -> ExportPackage:
         """
         Generate audit export package from governance services.
@@ -193,7 +199,7 @@ class AuditExportService:
                 "date_range": {
                     "start": request.start_date.isoformat() if request.start_date else None,
                     "end": request.end_date.isoformat() if request.end_date else None,
-                }
+                },
             }
         }
 
@@ -204,17 +210,23 @@ class AuditExportService:
 
         # Collect escalations
         if request.scope in [ExportScope.ALL, ExportScope.ESCALATION_ONLY] and escalation_service:
-            escalations = self._collect_escalations(escalation_service, request.start_date, request.end_date)
+            escalations = self._collect_escalations(
+                escalation_service, request.start_date, request.end_date
+            )
             data["escalations"] = escalations
 
         # Collect overrides
         if request.scope in [ExportScope.ALL, ExportScope.OVERRIDE_ONLY] and override_service:
-            overrides = self._collect_overrides(override_service, request.start_date, request.end_date)
+            overrides = self._collect_overrides(
+                override_service, request.start_date, request.end_date
+            )
             data["overrides"] = overrides
 
         # Collect evidence artifacts
         if request.scope in [ExportScope.ALL, ExportScope.EVIDENCE_ONLY] and evidence_service:
-            evidence = self._collect_evidence(evidence_service, request.start_date, request.end_date)
+            evidence = self._collect_evidence(
+                evidence_service, request.start_date, request.end_date
+            )
             data["evidence"] = evidence
 
         # Collect compliance mappings
@@ -248,7 +260,7 @@ class AuditExportService:
             checksum=checksum,
             size_bytes=len(content.encode()),
             record_count=self._count_records(data),
-            metadata=request.metadata
+            metadata=request.metadata,
         )
 
         request.status = ExportStatus.COMPLETED
@@ -257,16 +269,13 @@ class AuditExportService:
         return package
 
     def _collect_risks(
-        self,
-        risk_service,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        self, risk_service, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> List[Dict[str, Any]]:
         """Collect risk assessments from service."""
         risks = []
 
         # Get all risks from service
-        all_risks = risk_service.list_risks() if hasattr(risk_service, 'list_risks') else []
+        all_risks = risk_service.list_risks() if hasattr(risk_service, "list_risks") else []
 
         for risk in all_risks:
             # Filter by date if specified
@@ -275,36 +284,39 @@ class AuditExportService:
             if end_date and risk.timestamp > end_date:
                 continue
 
-            risks.append({
-                "risk_id": risk.risk_id,
-                "decision_id": risk.decision_id,
-                "overall_score": risk.overall_score,
-                "risk_level": risk.risk_level.value,
-                "dimensions": {
-                    "security": risk.dimensions.security,
-                    "privacy": risk.dimensions.privacy,
-                    "compliance": risk.dimensions.compliance,
-                    "operational": risk.dimensions.operational,
-                    "reputational": risk.dimensions.reputational,
-                    "financial": risk.dimensions.financial,
-                },
-                "timestamp": risk.timestamp.isoformat(),
-                "factors": risk.factors,
-            })
+            risks.append(
+                {
+                    "risk_id": risk.risk_id,
+                    "decision_id": risk.decision_id,
+                    "overall_score": risk.overall_score,
+                    "risk_level": risk.risk_level.value,
+                    "dimensions": {
+                        "security": risk.dimensions.security,
+                        "privacy": risk.dimensions.privacy,
+                        "compliance": risk.dimensions.compliance,
+                        "operational": risk.dimensions.operational,
+                        "reputational": risk.dimensions.reputational,
+                        "financial": risk.dimensions.financial,
+                    },
+                    "timestamp": risk.timestamp.isoformat(),
+                    "factors": risk.factors,
+                }
+            )
 
         return risks
 
     def _collect_escalations(
-        self,
-        escalation_service,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        self, escalation_service, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> List[Dict[str, Any]]:
         """Collect escalations from service."""
         escalations = []
 
         # Get all escalations
-        all_escalations = escalation_service.list_escalations() if hasattr(escalation_service, 'list_escalations') else []
+        all_escalations = (
+            escalation_service.list_escalations()
+            if hasattr(escalation_service, "list_escalations")
+            else []
+        )
 
         for esc in all_escalations:
             # Filter by date
@@ -324,13 +336,13 @@ class AuditExportService:
             }
 
             # Add optional fields if they exist
-            if hasattr(esc, 'sla_deadline') and esc.sla_deadline:
+            if hasattr(esc, "sla_deadline") and esc.sla_deadline:
                 esc_data["sla_deadline"] = esc.sla_deadline.isoformat()
-            if hasattr(esc, 'resolved_at') and esc.resolved_at:
+            if hasattr(esc, "resolved_at") and esc.resolved_at:
                 esc_data["resolved_at"] = esc.resolved_at.isoformat()
-            if hasattr(esc, 'resolved_by'):
+            if hasattr(esc, "resolved_by"):
                 esc_data["resolved_by"] = esc.resolved_by
-            if hasattr(esc, 'outcome'):
+            if hasattr(esc, "outcome"):
                 esc_data["outcome"] = esc.outcome
 
             escalations.append(esc_data)
@@ -338,16 +350,15 @@ class AuditExportService:
         return escalations
 
     def _collect_overrides(
-        self,
-        override_service,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        self, override_service, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> List[Dict[str, Any]]:
         """Collect overrides from service."""
         overrides = []
 
         # Get all overrides
-        all_overrides = override_service.list_overrides() if hasattr(override_service, 'list_overrides') else []
+        all_overrides = (
+            override_service.list_overrides() if hasattr(override_service, "list_overrides") else []
+        )
 
         for ovr in all_overrides:
             # Filter by date
@@ -356,32 +367,35 @@ class AuditExportService:
             if end_date and ovr.timestamp > end_date:
                 continue
 
-            overrides.append({
-                "override_id": ovr.override_id,
-                "decision_id": ovr.decision_id,
-                "override_type": ovr.override_type.value,
-                "authorized_by": ovr.authorized_by,
-                "justification": ovr.justification,
-                "timestamp": ovr.timestamp.isoformat(),
-                "original_outcome": ovr.original_outcome.value if ovr.original_outcome else None,
-                "new_outcome": ovr.new_outcome.value if ovr.new_outcome else None,
-                "expires_at": ovr.expires_at.isoformat() if ovr.expires_at else None,
-                "evidence_ids": ovr.evidence_ids,
-            })
+            overrides.append(
+                {
+                    "override_id": ovr.override_id,
+                    "decision_id": ovr.decision_id,
+                    "override_type": ovr.override_type.value,
+                    "authorized_by": ovr.authorized_by,
+                    "justification": ovr.justification,
+                    "timestamp": ovr.timestamp.isoformat(),
+                    "original_outcome": (
+                        ovr.original_outcome.value if ovr.original_outcome else None
+                    ),
+                    "new_outcome": ovr.new_outcome.value if ovr.new_outcome else None,
+                    "expires_at": ovr.expires_at.isoformat() if ovr.expires_at else None,
+                    "evidence_ids": ovr.evidence_ids,
+                }
+            )
 
         return overrides
 
     def _collect_evidence(
-        self,
-        evidence_service,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        self, evidence_service, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> List[Dict[str, Any]]:
         """Collect evidence artifacts from service."""
         evidence = []
 
         # Get all artifacts
-        all_artifacts = evidence_service.list_artifacts() if hasattr(evidence_service, 'list_artifacts') else []
+        all_artifacts = (
+            evidence_service.list_artifacts() if hasattr(evidence_service, "list_artifacts") else []
+        )
 
         for artifact in all_artifacts:
             # Filter by date
@@ -390,34 +404,39 @@ class AuditExportService:
             if end_date and artifact.created_at > end_date:
                 continue
 
-            evidence.append({
-                "artifact_id": artifact.artifact_id,
-                "artifact_type": artifact.artifact_type.value,
-                "sha256_hash": artifact.sha256_hash,
-                "created_at": artifact.created_at.isoformat(),
-                "source": artifact.source,
-                "content_type": artifact.content_type,
-                "size_bytes": artifact.size_bytes,
-                "related_decision_ids": artifact.related_decision_ids,
-                "related_control_ids": artifact.related_control_ids,
-                "retention_until": artifact.retention_until.isoformat() if artifact.retention_until else None,
-                "is_immutable": artifact.is_immutable,
-                "has_signature": artifact.digital_signature is not None,
-            })
+            evidence.append(
+                {
+                    "artifact_id": artifact.artifact_id,
+                    "artifact_type": artifact.artifact_type.value,
+                    "sha256_hash": artifact.sha256_hash,
+                    "created_at": artifact.created_at.isoformat(),
+                    "source": artifact.source,
+                    "content_type": artifact.content_type,
+                    "size_bytes": artifact.size_bytes,
+                    "related_decision_ids": artifact.related_decision_ids,
+                    "related_control_ids": artifact.related_control_ids,
+                    "retention_until": (
+                        artifact.retention_until.isoformat() if artifact.retention_until else None
+                    ),
+                    "is_immutable": artifact.is_immutable,
+                    "has_signature": artifact.digital_signature is not None,
+                }
+            )
 
         return evidence
 
     def _collect_compliance(self, compliance_service) -> Dict[str, Any]:
         """Collect compliance mappings from service."""
-        compliance_data = {
-            "statistics": compliance_service.get_statistics(),
-            "frameworks": {}
-        }
+        compliance_data = {"statistics": compliance_service.get_statistics(), "frameworks": {}}
 
         # Get data for each framework
         from lexecon.compliance_mapping.service import RegulatoryFramework
 
-        for framework in [RegulatoryFramework.SOC2, RegulatoryFramework.ISO27001, RegulatoryFramework.GDPR]:
+        for framework in [
+            RegulatoryFramework.SOC2,
+            RegulatoryFramework.ISO27001,
+            RegulatoryFramework.GDPR,
+        ]:
             controls = compliance_service.list_controls(framework)
             coverage = compliance_service.get_framework_coverage(framework)
             gaps = compliance_service.analyze_gaps(framework)
@@ -441,10 +460,7 @@ class AuditExportService:
         return compliance_data
 
     def _collect_decisions(
-        self,
-        ledger,
-        start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        self, ledger, start_date: Optional[datetime], end_date: Optional[datetime]
     ) -> List[Dict[str, Any]]:
         """Collect decision log from ledger."""
         decisions = []
@@ -456,7 +472,7 @@ class AuditExportService:
 
             # Parse timestamp
             try:
-                entry_time = datetime.fromisoformat(entry.timestamp.replace('Z', '+00:00'))
+                entry_time = datetime.fromisoformat(entry.timestamp.replace("Z", "+00:00"))
                 if entry_time.tzinfo is None:
                     entry_time = entry_time.replace(tzinfo=timezone.utc)
             except:
@@ -468,13 +484,15 @@ class AuditExportService:
             if end_date and entry_time > end_date:
                 continue
 
-            decisions.append({
-                "entry_id": entry.entry_id,
-                "timestamp": entry.timestamp,
-                "entry_hash": entry.entry_hash,
-                "previous_hash": entry.previous_hash,
-                "data": entry.data,
-            })
+            decisions.append(
+                {
+                    "entry_id": entry.entry_id,
+                    "timestamp": entry.timestamp,
+                    "entry_hash": entry.entry_hash,
+                    "previous_hash": entry.previous_hash,
+                    "data": entry.data,
+                }
+            )
 
         return decisions
 
@@ -533,17 +551,19 @@ class AuditExportService:
             output.write("=== RISK ASSESSMENTS ===\n")
             writer = csv.DictWriter(
                 output,
-                fieldnames=["risk_id", "decision_id", "overall_score", "risk_level", "timestamp"]
+                fieldnames=["risk_id", "decision_id", "overall_score", "risk_level", "timestamp"],
             )
             writer.writeheader()
             for risk in data["risks"]:
-                writer.writerow({
-                    "risk_id": risk["risk_id"],
-                    "decision_id": risk["decision_id"],
-                    "overall_score": risk["overall_score"],
-                    "risk_level": risk["risk_level"],
-                    "timestamp": risk["timestamp"],
-                })
+                writer.writerow(
+                    {
+                        "risk_id": risk["risk_id"],
+                        "decision_id": risk["decision_id"],
+                        "overall_score": risk["overall_score"],
+                        "risk_level": risk["risk_level"],
+                        "timestamp": risk["timestamp"],
+                    }
+                )
             output.write("\n")
 
         # Escalations section
@@ -551,17 +571,19 @@ class AuditExportService:
             output.write("=== ESCALATIONS ===\n")
             writer = csv.DictWriter(
                 output,
-                fieldnames=["escalation_id", "decision_id", "status", "priority", "created_at"]
+                fieldnames=["escalation_id", "decision_id", "status", "priority", "created_at"],
             )
             writer.writeheader()
             for esc in data["escalations"]:
-                writer.writerow({
-                    "escalation_id": esc["escalation_id"],
-                    "decision_id": esc["decision_id"],
-                    "status": esc["status"],
-                    "priority": esc["priority"],
-                    "created_at": esc["created_at"],
-                })
+                writer.writerow(
+                    {
+                        "escalation_id": esc["escalation_id"],
+                        "decision_id": esc["decision_id"],
+                        "status": esc["status"],
+                        "priority": esc["priority"],
+                        "created_at": esc["created_at"],
+                    }
+                )
             output.write("\n")
 
         # Overrides section
@@ -569,17 +591,25 @@ class AuditExportService:
             output.write("=== OVERRIDES ===\n")
             writer = csv.DictWriter(
                 output,
-                fieldnames=["override_id", "decision_id", "override_type", "authorized_by", "timestamp"]
+                fieldnames=[
+                    "override_id",
+                    "decision_id",
+                    "override_type",
+                    "authorized_by",
+                    "timestamp",
+                ],
             )
             writer.writeheader()
             for ovr in data["overrides"]:
-                writer.writerow({
-                    "override_id": ovr["override_id"],
-                    "decision_id": ovr["decision_id"],
-                    "override_type": ovr["override_type"],
-                    "authorized_by": ovr["authorized_by"],
-                    "timestamp": ovr["timestamp"],
-                })
+                writer.writerow(
+                    {
+                        "override_id": ovr["override_id"],
+                        "decision_id": ovr["decision_id"],
+                        "override_type": ovr["override_type"],
+                        "authorized_by": ovr["authorized_by"],
+                        "timestamp": ovr["timestamp"],
+                    }
+                )
             output.write("\n")
 
         return output.getvalue()
@@ -674,9 +704,13 @@ class AuditExportService:
             html.append("<tr><th>Metric</th><th>Count</th></tr>")
             stats = data["statistics"]
             html.append(f"<tr><td>Risk Assessments</td><td>{stats.get('total_risks', 0)}</td></tr>")
-            html.append(f"<tr><td>Escalations</td><td>{stats.get('total_escalations', 0)}</td></tr>")
+            html.append(
+                f"<tr><td>Escalations</td><td>{stats.get('total_escalations', 0)}</td></tr>"
+            )
             html.append(f"<tr><td>Overrides</td><td>{stats.get('total_overrides', 0)}</td></tr>")
-            html.append(f"<tr><td>Evidence Artifacts</td><td>{stats.get('total_evidence', 0)}</td></tr>")
+            html.append(
+                f"<tr><td>Evidence Artifacts</td><td>{stats.get('total_evidence', 0)}</td></tr>"
+            )
             html.append("</table>")
 
         html.append("</body>")
@@ -688,9 +722,7 @@ class AuditExportService:
         return self._exports.get(export_id)
 
     def list_exports(
-        self,
-        requester: Optional[str] = None,
-        limit: int = 100
+        self, requester: Optional[str] = None, limit: int = 100
     ) -> List[ExportPackage]:
         """List export packages with optional filtering."""
         exports = list(self._exports.values())

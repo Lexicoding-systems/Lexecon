@@ -24,30 +24,22 @@ def valid_audit_packet_file(temp_dir):
             "packet_version": "1.0",
             "export_id": "exp_test_123",
             "generated_at": "2024-01-01T00:00:00Z",
-            "generator": {
-                "name": "lexecon",
-                "version": "0.1.0"
-            },
-            "scope": {
-                "start_time": "2024-01-01T00:00:00Z",
-                "end_time": "2024-01-02T00:00:00Z"
-            },
+            "generator": {"name": "lexecon", "version": "0.1.0"},
+            "scope": {"start_time": "2024-01-01T00:00:00Z", "end_time": "2024-01-02T00:00:00Z"},
             "contents": {
                 "decision_count": 1,
                 "evidence_count": 0,
                 "risk_count": 0,
                 "escalation_count": 0,
-                "override_count": 0
+                "override_count": 0,
             },
             "integrity": {
                 "algorithm": "SHA-256",
                 "root_checksum": "abc123def456",
-                "artifact_checksums": {}
-            }
+                "artifact_checksums": {},
+            },
         },
-        "decisions": [
-            {"decision_id": "dec_1", "actor": "model", "action": "read"}
-        ]
+        "decisions": [{"decision_id": "dec_1", "actor": "model", "action": "read"}],
     }
 
     packet_file = Path(temp_dir) / "audit_packet.json"
@@ -66,23 +58,14 @@ def valid_audit_packet_dir(temp_dir):
         "packet_version": "1.0",
         "export_id": "exp_dir_123",
         "generated_at": "2024-01-01T00:00:00Z",
-        "generator": {
-            "name": "lexecon",
-            "version": "0.1.0"
-        },
-        "scope": {
-            "start_time": "2024-01-01T00:00:00Z",
-            "end_time": "2024-01-02T00:00:00Z"
-        },
-        "contents": {
-            "decision_count": 3,
-            "evidence_count": 0
-        },
+        "generator": {"name": "lexecon", "version": "0.1.0"},
+        "scope": {"start_time": "2024-01-01T00:00:00Z", "end_time": "2024-01-02T00:00:00Z"},
+        "contents": {"decision_count": 3, "evidence_count": 0},
         "integrity": {
             "algorithm": "SHA-256",
             "root_checksum": "dir_checksum",
-            "artifact_checksums": {}
-        }
+            "artifact_checksums": {},
+        },
     }
 
     manifest_file = packet_dir / "manifest.json"
@@ -90,11 +73,7 @@ def valid_audit_packet_dir(temp_dir):
 
     # Create decisions file
     decisions_file = packet_dir / "decisions.json"
-    decisions = [
-        {"decision_id": "dec_1"},
-        {"decision_id": "dec_2"},
-        {"decision_id": "dec_3"}
-    ]
+    decisions = [{"decision_id": "dec_1"}, {"decision_id": "dec_2"}, {"decision_id": "dec_3"}]
     decisions_file.write_text(json.dumps(decisions, indent=2))
 
     return str(packet_dir)
@@ -220,10 +199,7 @@ class TestAuditVerifier:
                     "generator": {"name": "test", "version": "1.0"},
                     "scope": {},
                     "contents": {"decision_count": 0},
-                    "integrity": {
-                        "algorithm": "SHA-256",
-                        "root_checksum": "test"
-                    }
+                    "integrity": {"algorithm": "SHA-256", "root_checksum": "test"},
                 }
             }
 

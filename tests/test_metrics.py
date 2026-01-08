@@ -176,7 +176,7 @@ class TestMetricsCollector:
         assert len(output) > 0
 
         # Should contain Prometheus format markers
-        decoded = output.decode('utf-8')
+        decoded = output.decode("utf-8")
         assert "# HELP" in decoded or "# TYPE" in decoded
 
 
@@ -190,15 +190,11 @@ class TestGlobalMetricsInstance:
 
     def test_global_metrics_record_decision(self):
         """Test using global metrics instance."""
-        initial = decisions_total.labels(
-            allowed="False", actor="user", risk_level="3"
-        )._value.get()
+        initial = decisions_total.labels(allowed="False", actor="user", risk_level="3")._value.get()
 
         metrics.record_decision(allowed=False, actor="user", risk_level=3, duration=0.2)
 
-        final = decisions_total.labels(
-            allowed="False", actor="user", risk_level="3"
-        )._value.get()
+        final = decisions_total.labels(allowed="False", actor="user", risk_level="3")._value.get()
 
         assert final > initial
 
@@ -208,15 +204,11 @@ class TestConvenienceFunctions:
 
     def test_record_decision_function(self):
         """Test record_decision convenience function."""
-        initial = decisions_total.labels(
-            allowed="True", actor="bot", risk_level="2"
-        )._value.get()
+        initial = decisions_total.labels(allowed="True", actor="bot", risk_level="2")._value.get()
 
         record_decision(allowed=True, actor="bot", risk_level=2, duration=0.15)
 
-        final = decisions_total.labels(
-            allowed="True", actor="bot", risk_level="2"
-        )._value.get()
+        final = decisions_total.labels(allowed="True", actor="bot", risk_level="2")._value.get()
 
         assert final > initial
 
@@ -244,9 +236,7 @@ class TestMetricTypes:
         for _ in range(5):
             metrics.record_request("GET", "/test", 200, 0.1)
 
-        final = http_requests_total.labels(
-            method="GET", endpoint="/test", status=200
-        )._value.get()
+        final = http_requests_total.labels(method="GET", endpoint="/test", status=200)._value.get()
 
         # Should have incremented by 5
         assert final >= initial + 5
@@ -384,15 +374,15 @@ class TestPrometheusExport:
     def test_export_format(self):
         """Test Prometheus export format."""
         output = metrics.export_metrics()
-        decoded = output.decode('utf-8')
+        decoded = output.decode("utf-8")
 
         # Should contain metric definitions
         assert "lexecon_" in decoded
 
         # Should contain HELP and TYPE comments
-        lines = decoded.split('\n')
-        help_lines = [l for l in lines if l.startswith('# HELP')]
-        type_lines = [l for l in lines if l.startswith('# TYPE')]
+        lines = decoded.split("\n")
+        help_lines = [l for l in lines if l.startswith("# HELP")]
+        type_lines = [l for l in lines if l.startswith("# TYPE")]
 
         assert len(help_lines) > 0
         assert len(type_lines) > 0
@@ -404,7 +394,7 @@ class TestPrometheusExport:
         metrics.record_ledger_entry()
 
         output = metrics.export_metrics()
-        decoded = output.decode('utf-8')
+        decoded = output.decode("utf-8")
 
         # Should contain metric values (numbers)
         assert any(char.isdigit() for char in decoded)
@@ -412,19 +402,19 @@ class TestPrometheusExport:
     def test_export_is_valid_prometheus_format(self):
         """Test that export is valid Prometheus format."""
         output = metrics.export_metrics()
-        decoded = output.decode('utf-8')
+        decoded = output.decode("utf-8")
 
-        lines = decoded.split('\n')
+        lines = decoded.split("\n")
 
         # Each metric line should have format: metric_name{labels} value
-        metric_lines = [l for l in lines if l and not l.startswith('#')]
+        metric_lines = [l for l in lines if l and not l.startswith("#")]
 
         for line in metric_lines[:10]:  # Check first 10
-            if '{' in line:
+            if "{" in line:
                 # Has labels
-                assert '}' in line
-                assert ' ' in line  # Space before value
-            elif ' ' in line and line.strip():
+                assert "}" in line
+                assert " " in line  # Space before value
+            elif " " in line and line.strip():
                 # No labels, just name and value
                 parts = line.split()
                 assert len(parts) >= 2

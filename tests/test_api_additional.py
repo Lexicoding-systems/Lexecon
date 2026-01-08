@@ -64,8 +64,8 @@ class TestComplianceMappingEndpoints:
             json={
                 "framework": "EU_AI_ACT",
                 "primitive_id": "dec_test_123",
-                "primitive_type": "decision"
-            }
+                "primitive_type": "decision",
+            },
         )
         assert response.status_code in [200, 201, 400, 404, 422, 500]
 
@@ -83,7 +83,7 @@ class TestComplianceMappingEndpoints:
         """Test verifying control compliance."""
         response = client.post(
             "/api/governance/compliance/EU_AI_ACT/article_12/verify",
-            json={"decision_id": "dec_test"}
+            json={"decision_id": "dec_test"},
         )
         assert response.status_code in [200, 400, 404, 422, 500]
 
@@ -91,10 +91,7 @@ class TestComplianceMappingEndpoints:
         """Test linking evidence to control."""
         response = client.post(
             "/api/governance/compliance/EU_AI_ACT/article_12/link-evidence",
-            json={
-                "evidence_id": "evd_test_123",
-                "decision_id": "dec_test"
-            }
+            json={"evidence_id": "evd_test_123", "decision_id": "dec_test"},
         )
         assert response.status_code in [200, 201, 400, 404, 422, 500]
 
@@ -132,22 +129,16 @@ class TestAuditExportEndpoints:
         response = client.post(
             "/api/governance/audit-export/request",
             json={
-                "scope": {
-                    "start_date": "2024-01-01",
-                    "end_date": "2024-12-31"
-                },
+                "scope": {"start_date": "2024-01-01", "end_date": "2024-12-31"},
                 "requestor": "test_user",
-                "purpose": "regulatory_audit"
-            }
+                "purpose": "regulatory_audit",
+            },
         )
         assert response.status_code in [200, 201, 400, 404, 422, 500]
 
     def test_generate_audit_export(self, client):
         """Test generating audit export."""
-        response = client.post(
-            "/api/governance/audit-export/exp_test_123/generate",
-            json={}
-        )
+        response = client.post("/api/governance/audit-export/exp_test_123/generate", json={})
         # Export may not exist
         assert response.status_code in [200, 400, 404, 422, 500]
 
@@ -203,10 +194,7 @@ class TestEUAIActEndpoints:
         """Test Article 12 legal hold."""
         response = client.post(
             "/compliance/eu-ai-act/article-12/legal-hold",
-            json={
-                "decision_id": "dec_test",
-                "reason": "regulatory_investigation"
-            }
+            json={"decision_id": "dec_test", "reason": "regulatory_investigation"},
         )
         assert response.status_code in [200, 201, 400, 404, 422, 500]
 
@@ -218,8 +206,8 @@ class TestEUAIActEndpoints:
                 "decision_id": "dec_test",
                 "intervention_type": "override",
                 "human_role": "auditor",
-                "reason": "safety_concern"
-            }
+                "reason": "safety_concern",
+            },
         )
         assert response.status_code in [200, 201, 400, 404, 422, 500]
 
@@ -231,8 +219,7 @@ class TestEUAIActEndpoints:
     def test_article_14_verify(self, client):
         """Test Article 14 intervention verification."""
         response = client.post(
-            "/compliance/eu-ai-act/article-14/verify",
-            json={"intervention_id": "int_test_123"}
+            "/compliance/eu-ai-act/article-14/verify", json={"intervention_id": "int_test_123"}
         )
         assert response.status_code in [200, 400, 404, 422, 500]
 
@@ -245,10 +232,7 @@ class TestEUAIActEndpoints:
         """Test Article 14 escalation."""
         response = client.post(
             "/compliance/eu-ai-act/article-14/escalation",
-            json={
-                "intervention_id": "int_test",
-                "reason": "policy_violation"
-            }
+            json={"intervention_id": "int_test", "reason": "policy_violation"},
         )
         assert response.status_code in [200, 201, 400, 404, 422, 500]
 
@@ -270,10 +254,7 @@ class TestComplianceVerificationEndpoints:
         """Test packet signature verification."""
         response = client.post(
             "/compliance/verify-signature",
-            json={
-                "packet": {"data": "test"},
-                "signature": "test_signature"
-            }
+            json={"packet": {"data": "test"}, "signature": "test_signature"},
         )
         assert response.status_code in [200, 422, 500]
 

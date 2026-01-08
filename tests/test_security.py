@@ -6,8 +6,9 @@ digital signatures, and audit logging.
 """
 
 import os
-import tempfile
 import shutil
+import tempfile
+
 import pytest
 
 from lexecon.security.auth_service import AuthService, Role
@@ -117,10 +118,7 @@ class TestAuthService:
             full_name="Session User",
         )
 
-        session = auth_service.create_session(
-            user=user,
-            ip_address="192.168.1.1"
-        )
+        session = auth_service.create_session(user=user, ip_address="192.168.1.1")
 
         assert session is not None
         assert session.username == "sessionuser"
@@ -363,7 +361,7 @@ class TestSignatureService:
             "signature_info": {
                 "algorithm": "RSA-PSS-SHA256"
                 # Missing "signature" field
-            }
+            },
         }
 
         is_valid, message = signature_service.verify_packet_signature(packet_data)

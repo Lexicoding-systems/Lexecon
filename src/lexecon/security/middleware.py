@@ -2,10 +2,11 @@
 FastAPI middleware for authentication and authorization.
 """
 
-from fastapi import Request, HTTPException, status
-from fastapi.responses import JSONResponse
-from typing import Optional, Callable
 from functools import wraps
+from typing import Callable, Optional
+
+from fastapi import HTTPException, Request, status
+from fastapi.responses import JSONResponse
 
 from lexecon.security.auth_service import AuthService, Permission, Session
 
@@ -19,13 +20,7 @@ class AuthMiddleware:
     async def __call__(self, request: Request, call_next):
         """Middleware to validate session on protected endpoints."""
         # Skip authentication for public endpoints
-        public_endpoints = [
-            "/health",
-            "/login",
-            "/docs",
-            "/openapi.json",
-            "/redoc"
-        ]
+        public_endpoints = ["/health", "/login", "/docs", "/openapi.json", "/redoc"]
 
         if any(request.url.path.startswith(endpoint) for endpoint in public_endpoints):
             return await call_next(request)
@@ -38,7 +33,7 @@ class AuthMiddleware:
         if not session_id:
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"error": "Not authenticated", "message": "No session token provided"}
+                content={"error": "Not authenticated", "message": "No session token provided"},
             )
 
         # Validate session
@@ -46,7 +41,7 @@ class AuthMiddleware:
         if not session:
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"error": "Invalid session", "message": error}
+                content={"error": "Invalid session", "message": error},
             )
 
         # Attach session to request state
@@ -67,13 +62,13 @@ def require_permission(permission: Permission):
         async def some_endpoint(request: Request):
             ...
     """
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(request: Request, *args, **kwargs):
             if not hasattr(request.state, "session"):
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Not authenticated"
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
                 )
 
             session: Session = request.state.session
@@ -82,11 +77,13 @@ def require_permission(permission: Permission):
             if not auth_service.has_permission(session.role, permission):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Insufficient permissions. Required: {permission.value}"
+                    detail=f"Insufficient permissions. Required: {permission.value}",
                 )
 
             return await func(request, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -98,5 +95,9 @@ def get_current_user(request: Request) -> Optional[dict]:
     return {
         "user_id": request.state.user_id,
         "username": request.state.username,
-        "role": request.state.role.value if hasattr(request.state.role, 'value') else str(request.state.role)
+        "role": (
+            request.state.role.value
+            if hasattr(request.state.role, "value")
+            else str(request.state.role)
+        ),
     }

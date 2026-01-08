@@ -411,9 +411,7 @@ class TestLoggerAdapter:
             base_logger = logging.getLogger("test")
             adapter = LoggerAdapter(base_logger, {})
 
-            msg, kwargs = adapter.process(
-                "Test message", {"extra": {"custom": "field"}}
-            )
+            msg, kwargs = adapter.process("Test message", {"extra": {"custom": "field"}})
 
             assert kwargs["extra"]["custom"] == "field"
             assert kwargs["extra"]["request_id"] == "req_777"

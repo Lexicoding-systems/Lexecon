@@ -16,8 +16,8 @@ from typing import Any, Dict, List, Optional
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        EvidenceArtifact,
         ArtifactType,
+        EvidenceArtifact,
         Risk,
         RiskDimensions,
         RiskFactor,
@@ -141,9 +141,7 @@ class RiskScoringEngine:
 
         # Calculate weighted average using only populated dimensions
         total_weight = sum(self.weights[k] for k in populated_dims.keys())
-        weighted_sum = sum(
-            populated_dims[k] * self.weights[k] for k in populated_dims.keys()
-        )
+        weighted_sum = sum(populated_dims[k] * self.weights[k] for k in populated_dims.keys())
 
         overall_score = int(weighted_sum / total_weight)
 
@@ -172,9 +170,7 @@ class RiskScoringEngine:
         else:
             return RiskLevel.LOW
 
-    def calculate_risk_factors(
-        self, dimensions: "RiskDimensions"
-    ) -> List["RiskFactor"]:
+    def calculate_risk_factors(self, dimensions: "RiskDimensions") -> List["RiskFactor"]:
         """
         Generate explainable risk factors from dimensions.
 
@@ -233,9 +229,7 @@ class RiskService:
             store_evidence: Whether to generate evidence artifacts
         """
         if not GOVERNANCE_MODELS_AVAILABLE:
-            raise RuntimeError(
-                "Governance models not available. Install model_governance_pack."
-            )
+            raise RuntimeError("Governance models not available. Install model_governance_pack.")
 
         self.scoring_engine = scoring_engine or RiskScoringEngine()
         self.store_evidence = store_evidence

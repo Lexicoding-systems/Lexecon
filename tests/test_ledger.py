@@ -154,6 +154,7 @@ class TestLedgerChain:
 
     def test_storage_with_empty_entries(self):
         """Test ledger initialization with storage that returns empty list."""
+
         # Mock storage that returns empty list
         class MockEmptyStorage:
             def __init__(self):
@@ -236,6 +237,7 @@ class TestLedgerChain:
 
     def test_storage_saves_on_append(self):
         """Test that storage saves entry when appending."""
+
         class MockStorage:
             def __init__(self):
                 self.saved_entries = []
@@ -270,5 +272,6 @@ class TestLedgerChain:
 
         # Should raise ValueError
         import pytest
+
         with pytest.raises(ValueError, match="Hash mismatch"):
             LedgerChain.from_dict(data)

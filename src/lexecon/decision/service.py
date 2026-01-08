@@ -18,12 +18,13 @@ from lexecon.policy.engine import PolicyEngine
 
 # Import canonical governance models
 try:
+    from model_governance_pack.models import Decision as CanonicalDecision
     from model_governance_pack.models import (
-        Decision as CanonicalDecision,
         DecisionOutcome,
         Risk,
         RiskLevel,
     )
+
     GOVERNANCE_MODELS_AVAILABLE = True
 except ImportError:
     GOVERNANCE_MODELS_AVAILABLE = False
@@ -40,9 +41,9 @@ def generate_ulid() -> str:
     Format: 26 uppercase alphanumeric characters.
     Uses timestamp + random component for sortability and uniqueness.
     """
-    import time
     import random
     import string
+    import time
 
     # ULID encoding alphabet (Crockford's Base32)
     alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"

@@ -38,7 +38,8 @@ class InterventionStorage:
         cursor = conn.cursor()
 
         # Create interventions table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS interventions (
                 intervention_id TEXT PRIMARY KEY,
                 timestamp TEXT NOT NULL,
@@ -53,23 +54,30 @@ class InterventionStorage:
                 response_time_ms INTEGER,
                 created_at TEXT NOT NULL
             )
-        """)
+        """
+        )
 
         # Create indexes for efficient querying
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_timestamp
             ON interventions(timestamp)
-        """)
+        """
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_intervention_type
             ON interventions(intervention_type)
-        """)
+        """
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_human_role
             ON interventions(human_role)
-        """)
+        """
+        )
 
         conn.commit()
         conn.close()
@@ -84,27 +92,30 @@ class InterventionStorage:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR REPLACE INTO interventions (
                 intervention_id, timestamp, intervention_type,
                 ai_recommendation, ai_confidence, human_decision,
                 human_role, reason, request_context, signature,
                 response_time_ms, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            intervention.intervention_id,
-            intervention.timestamp,
-            intervention.intervention_type.value,
-            json.dumps(intervention.ai_recommendation),
-            intervention.ai_confidence,
-            json.dumps(intervention.human_decision),
-            intervention.human_role.value,
-            intervention.reason,
-            json.dumps(intervention.request_context),
-            intervention.signature,
-            intervention.response_time_ms,
-            datetime.utcnow().isoformat()
-        ))
+        """,
+            (
+                intervention.intervention_id,
+                intervention.timestamp,
+                intervention.intervention_type.value,
+                json.dumps(intervention.ai_recommendation),
+                intervention.ai_confidence,
+                json.dumps(intervention.human_decision),
+                intervention.human_role.value,
+                intervention.reason,
+                json.dumps(intervention.request_context),
+                intervention.signature,
+                intervention.response_time_ms,
+                datetime.utcnow().isoformat(),
+            ),
+        )
 
         conn.commit()
         conn.close()
@@ -119,7 +130,8 @@ class InterventionStorage:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 intervention_id, timestamp, intervention_type,
                 ai_recommendation, ai_confidence, human_decision,
@@ -127,7 +139,8 @@ class InterventionStorage:
                 response_time_ms
             FROM interventions
             ORDER BY timestamp ASC
-        """)
+        """
+        )
 
         interventions = []
         for row in cursor.fetchall():
@@ -142,7 +155,7 @@ class InterventionStorage:
                 reason=row[7],
                 request_context=json.loads(row[8]),
                 signature=row[9],
-                response_time_ms=row[10]
+                response_time_ms=row[10],
             )
             interventions.append(intervention)
 
@@ -150,9 +163,7 @@ class InterventionStorage:
         return interventions
 
     def get_by_timerange(
-        self,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
     ) -> List[HumanIntervention]:
         """
         Get interventions within a time range.
@@ -203,7 +214,7 @@ class InterventionStorage:
                 reason=row[7],
                 request_context=json.loads(row[8]),
                 signature=row[9],
-                response_time_ms=row[10]
+                response_time_ms=row[10],
             )
             interventions.append(intervention)
 
@@ -236,26 +247,32 @@ class InterventionStorage:
         newest = cursor.fetchone()[0]
 
         # By intervention type
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT intervention_type, COUNT(*)
             FROM interventions
             GROUP BY intervention_type
-        """)
+        """
+        )
         by_type = {row[0]: row[1] for row in cursor.fetchall()}
 
         # By human role
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT human_role, COUNT(*)
             FROM interventions
             GROUP BY human_role
-        """)
+        """
+        )
         by_role = {row[0]: row[1] for row in cursor.fetchall()}
 
         # Override count
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*) FROM interventions
             WHERE intervention_type = 'override'
-        """)
+        """
+        )
         overrides = cursor.fetchone()[0]
 
         conn.close()
@@ -269,7 +286,7 @@ class InterventionStorage:
             "by_intervention_type": by_type,
             "by_human_role": by_role,
             "override_count": overrides,
-            "override_rate": (overrides / total * 100) if total > 0 else 0
+            "override_rate": (overrides / total * 100) if total > 0 else 0,
         }
 
     def count_interventions(self) -> int:

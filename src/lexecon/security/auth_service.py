@@ -13,14 +13,15 @@ import hashlib
 import secrets
 import sqlite3
 import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Optional, Dict, List, Tuple
-from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
 
 class Role(str, Enum):
     """User roles with hierarchical permissions."""
+
     VIEWER = "viewer"  # Can view dashboard only
     AUDITOR = "auditor"  # Can generate audit packets (needs approval)
     COMPLIANCE_OFFICER = "compliance_officer"  # Can approve audit requests
@@ -29,6 +30,7 @@ class Role(str, Enum):
 
 class Permission(str, Enum):
     """Granular permissions."""
+
     VIEW_DASHBOARD = "view_dashboard"
     REQUEST_AUDIT_PACKET = "request_audit_packet"
     APPROVE_AUDIT_PACKET = "approve_audit_packet"
@@ -68,6 +70,7 @@ ROLE_PERMISSIONS = {
 @dataclass
 class User:
     """User entity."""
+
     user_id: str
     username: str
     email: str
@@ -83,6 +86,7 @@ class User:
 @dataclass
 class Session:
     """User session."""
+
     session_id: str
     user_id: str
     username: str
@@ -110,7 +114,8 @@ class AuthService:
         cursor = conn.cursor()
 
         # Users table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 user_id TEXT PRIMARY KEY,
                 username TEXT UNIQUE NOT NULL,
@@ -125,10 +130,12 @@ class AuthService:
                 failed_login_attempts INTEGER DEFAULT 0,
                 locked_until TEXT
             )
-        """)
+        """
+        )
 
         # Sessions table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
@@ -139,10 +146,12 @@ class AuthService:
                 revoked INTEGER DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             )
-        """)
+        """
+        )
 
         # Login attempts log (for security monitoring)
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS login_attempts (
                 attempt_id TEXT PRIMARY KEY,
                 username TEXT NOT NULL,
@@ -152,7 +161,8 @@ class AuthService:
                 timestamp TEXT NOT NULL,
                 failure_reason TEXT
             )
-        """)
+        """
+        )
 
         conn.commit()
         conn.close()
@@ -160,19 +170,11 @@ class AuthService:
     def _hash_password(self, password: str, salt: str) -> str:
         """Hash password with salt using PBKDF2."""
         return hashlib.pbkdf2_hmac(
-            'sha256',
-            password.encode('utf-8'),
-            salt.encode('utf-8'),
-            100000  # iterations
+            "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000  # iterations
         ).hex()
 
     def create_user(
-        self,
-        username: str,
-        email: str,
-        password: str,
-        role: Role,
-        full_name: str
+        self, username: str, email: str, password: str, role: Role, full_name: str
     ) -> User:
         """Create a new user."""
         user_id = f"user_{secrets.token_hex(16)}"
@@ -184,13 +186,15 @@ class AuthService:
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO users (
                     user_id, username, email, password_hash, salt,
                     role, full_name, created_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (user_id, username, email, password_hash, salt,
-                  role.value, full_name, created_at))
+            """,
+                (user_id, username, email, password_hash, salt, role.value, full_name, created_at),
+            )
             conn.commit()
         except sqlite3.IntegrityError as e:
             conn.close()
@@ -204,14 +208,11 @@ class AuthService:
             email=email,
             role=role,
             full_name=full_name,
-            created_at=created_at
+            created_at=created_at,
         )
 
     def authenticate(
-        self,
-        username: str,
-        password: str,
-        ip_address: Optional[str] = None
+        self, username: str, password: str, ip_address: Optional[str] = None
     ) -> Tuple[Optional[User], Optional[str]]:
         """
         Authenticate user and return (User, error_message).
@@ -227,60 +228,86 @@ class AuthService:
         cursor = conn.cursor()
 
         # Get user
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT user_id, username, email, password_hash, salt, role,
                    full_name, created_at, last_login, is_active,
                    failed_login_attempts, locked_until
             FROM users
             WHERE username = ?
-        """, (username,))
+        """,
+            (username,),
+        )
 
         row = cursor.fetchone()
 
         if not row:
             # Log failed attempt
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO login_attempts (
                     attempt_id, username, success, ip_address, timestamp, failure_reason
                 ) VALUES (?, ?, 0, ?, ?, ?)
-            """, (attempt_id, username, ip_address, timestamp, "user_not_found"))
+            """,
+                (attempt_id, username, ip_address, timestamp, "user_not_found"),
+            )
             conn.commit()
             conn.close()
             return None, "Invalid username or password"
 
-        (user_id, username, email, password_hash, salt, role_str,
-         full_name, created_at, last_login, is_active,
-         failed_attempts, locked_until) = row
+        (
+            user_id,
+            username,
+            email,
+            password_hash,
+            salt,
+            role_str,
+            full_name,
+            created_at,
+            last_login,
+            is_active,
+            failed_attempts,
+            locked_until,
+        ) = row
 
         # Check if account is locked
         if locked_until:
-            lock_time = datetime.fromisoformat(locked_until.replace('Z', '+00:00'))
+            lock_time = datetime.fromisoformat(locked_until.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) < lock_time:
                 remaining = (lock_time - datetime.now(timezone.utc)).seconds // 60
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO login_attempts (
                         attempt_id, username, success, ip_address, timestamp, failure_reason
                     ) VALUES (?, ?, 0, ?, ?, ?)
-                """, (attempt_id, username, ip_address, timestamp, f"account_locked_{remaining}min"))
+                """,
+                    (attempt_id, username, ip_address, timestamp, f"account_locked_{remaining}min"),
+                )
                 conn.commit()
                 conn.close()
                 return None, f"Account locked. Try again in {remaining} minutes."
             else:
                 # Unlock account
-                cursor.execute("""
+                cursor.execute(
+                    """
                     UPDATE users
                     SET locked_until = NULL, failed_login_attempts = 0
                     WHERE user_id = ?
-                """, (user_id,))
+                """,
+                    (user_id,),
+                )
                 conn.commit()
 
         # Check if account is active
         if not is_active:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO login_attempts (
                     attempt_id, username, success, ip_address, timestamp, failure_reason
                 ) VALUES (?, ?, 0, ?, ?, ?)
-            """, (attempt_id, username, ip_address, timestamp, "account_disabled"))
+            """,
+                (attempt_id, username, ip_address, timestamp, "account_disabled"),
+            )
             conn.commit()
             conn.close()
             return None, "Account is disabled"
@@ -290,30 +317,40 @@ class AuthService:
         if computed_hash != password_hash:
             # Increment failed attempts
             new_failed_attempts = failed_attempts + 1
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE users
                 SET failed_login_attempts = ?
                 WHERE user_id = ?
-            """, (new_failed_attempts, user_id))
+            """,
+                (new_failed_attempts, user_id),
+            )
 
             # Lock account if too many failed attempts
             if new_failed_attempts >= self.max_failed_attempts:
-                lock_until = (datetime.now(timezone.utc) +
-                             timedelta(minutes=self.lockout_duration_minutes)).isoformat()
-                cursor.execute("""
+                lock_until = (
+                    datetime.now(timezone.utc) + timedelta(minutes=self.lockout_duration_minutes)
+                ).isoformat()
+                cursor.execute(
+                    """
                     UPDATE users
                     SET locked_until = ?
                     WHERE user_id = ?
-                """, (lock_until, user_id))
+                """,
+                    (lock_until, user_id),
+                )
                 failure_reason = "invalid_password_account_locked"
             else:
                 failure_reason = "invalid_password"
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO login_attempts (
                     attempt_id, username, success, ip_address, timestamp, failure_reason
                 ) VALUES (?, ?, 0, ?, ?, ?)
-            """, (attempt_id, username, ip_address, timestamp, failure_reason))
+            """,
+                (attempt_id, username, ip_address, timestamp, failure_reason),
+            )
             conn.commit()
             conn.close()
 
@@ -321,22 +358,31 @@ class AuthService:
             if remaining_attempts > 0:
                 return None, f"Invalid password. {remaining_attempts} attempts remaining."
             else:
-                return None, f"Account locked for {self.lockout_duration_minutes} minutes due to too many failed attempts."
+                return (
+                    None,
+                    f"Account locked for {self.lockout_duration_minutes} minutes due to too many failed attempts.",
+                )
 
         # Successful login
         # Reset failed attempts and update last login
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE users
             SET failed_login_attempts = 0, last_login = ?
             WHERE user_id = ?
-        """, (timestamp, user_id))
+        """,
+            (timestamp, user_id),
+        )
 
         # Log successful attempt
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO login_attempts (
                 attempt_id, username, success, ip_address, timestamp, failure_reason
             ) VALUES (?, ?, 1, ?, ?, NULL)
-        """, (attempt_id, username, ip_address, timestamp))
+        """,
+            (attempt_id, username, ip_address, timestamp),
+        )
 
         conn.commit()
         conn.close()
@@ -350,16 +396,12 @@ class AuthService:
             created_at=created_at,
             last_login=timestamp,
             is_active=bool(is_active),
-            failed_login_attempts=0
+            failed_login_attempts=0,
         )
 
         return user, None
 
-    def create_session(
-        self,
-        user: User,
-        ip_address: Optional[str] = None
-    ) -> Session:
+    def create_session(self, user: User, ip_address: Optional[str] = None) -> Session:
         """Create a new session for authenticated user."""
         session_id = secrets.token_urlsafe(32)
         now = datetime.now(timezone.utc)
@@ -368,12 +410,21 @@ class AuthService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO sessions (
                 session_id, user_id, created_at, expires_at, last_activity, ip_address
             ) VALUES (?, ?, ?, ?, ?, ?)
-        """, (session_id, user.user_id, now.isoformat(), expires_at.isoformat(),
-              now.isoformat(), ip_address))
+        """,
+            (
+                session_id,
+                user.user_id,
+                now.isoformat(),
+                expires_at.isoformat(),
+                now.isoformat(),
+                ip_address,
+            ),
+        )
 
         conn.commit()
         conn.close()
@@ -386,7 +437,7 @@ class AuthService:
             created_at=now.isoformat(),
             expires_at=expires_at.isoformat(),
             last_activity=now.isoformat(),
-            ip_address=ip_address
+            ip_address=ip_address,
         )
 
     def validate_session(self, session_id: str) -> Tuple[Optional[Session], Optional[str]]:
@@ -400,14 +451,17 @@ class AuthService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT s.session_id, s.user_id, s.created_at, s.expires_at,
                    s.last_activity, s.ip_address, s.revoked,
                    u.username, u.role
             FROM sessions s
             JOIN users u ON s.user_id = u.user_id
             WHERE s.session_id = ?
-        """, (session_id,))
+        """,
+            (session_id,),
+        )
 
         row = cursor.fetchone()
 
@@ -415,15 +469,24 @@ class AuthService:
             conn.close()
             return None, "Invalid session"
 
-        (sid, user_id, created_at, expires_at, last_activity,
-         ip_address, revoked, username, role_str) = row
+        (
+            sid,
+            user_id,
+            created_at,
+            expires_at,
+            last_activity,
+            ip_address,
+            revoked,
+            username,
+            role_str,
+        ) = row
 
         if revoked:
             conn.close()
             return None, "Session revoked"
 
         # Check expiration
-        expires = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        expires = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
         if datetime.now(timezone.utc) > expires:
             conn.close()
             return None, "Session expired"
@@ -432,36 +495,45 @@ class AuthService:
         now = datetime.now(timezone.utc)
         new_expires = now + timedelta(minutes=self.session_timeout_minutes)
 
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE sessions
             SET last_activity = ?, expires_at = ?
             WHERE session_id = ?
-        """, (now.isoformat(), new_expires.isoformat(), session_id))
+        """,
+            (now.isoformat(), new_expires.isoformat(), session_id),
+        )
 
         conn.commit()
         conn.close()
 
-        return Session(
-            session_id=sid,
-            user_id=user_id,
-            username=username,
-            role=Role(role_str),
-            created_at=created_at,
-            expires_at=new_expires.isoformat(),
-            last_activity=now.isoformat(),
-            ip_address=ip_address
-        ), None
+        return (
+            Session(
+                session_id=sid,
+                user_id=user_id,
+                username=username,
+                role=Role(role_str),
+                created_at=created_at,
+                expires_at=new_expires.isoformat(),
+                last_activity=now.isoformat(),
+                ip_address=ip_address,
+            ),
+            None,
+        )
 
     def revoke_session(self, session_id: str):
         """Revoke a session (logout)."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE sessions
             SET revoked = 1
             WHERE session_id = ?
-        """, (session_id,))
+        """,
+            (session_id,),
+        )
 
         conn.commit()
         conn.close()
@@ -475,12 +547,15 @@ class AuthService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT user_id, username, email, role, full_name, created_at,
                    last_login, is_active, failed_login_attempts, locked_until
             FROM users
             WHERE user_id = ?
-        """, (user_id,))
+        """,
+            (user_id,),
+        )
 
         row = cursor.fetchone()
         conn.close()
@@ -498,7 +573,7 @@ class AuthService:
             last_login=row[6],
             is_active=bool(row[7]),
             failed_login_attempts=row[8],
-            locked_until=row[9]
+            locked_until=row[9],
         )
 
     def list_users(self) -> List[User]:
@@ -506,27 +581,31 @@ class AuthService:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT user_id, username, email, role, full_name, created_at,
                    last_login, is_active, failed_login_attempts, locked_until
             FROM users
             ORDER BY created_at DESC
-        """)
+        """
+        )
 
         users = []
         for row in cursor.fetchall():
-            users.append(User(
-                user_id=row[0],
-                username=row[1],
-                email=row[2],
-                role=Role(row[3]),
-                full_name=row[4],
-                created_at=row[5],
-                last_login=row[6],
-                is_active=bool(row[7]),
-                failed_login_attempts=row[8],
-                locked_until=row[9]
-            ))
+            users.append(
+                User(
+                    user_id=row[0],
+                    username=row[1],
+                    email=row[2],
+                    role=Role(row[3]),
+                    full_name=row[4],
+                    created_at=row[5],
+                    last_login=row[6],
+                    is_active=bool(row[7]),
+                    failed_login_attempts=row[8],
+                    locked_until=row[9],
+                )
+            )
 
         conn.close()
         return users
@@ -537,36 +616,44 @@ class AuthService:
         cursor = conn.cursor()
 
         if user_id:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT s.session_id, s.user_id, s.created_at, s.expires_at,
                        s.last_activity, s.ip_address, u.username, u.role
                 FROM sessions s
                 JOIN users u ON s.user_id = u.user_id
                 WHERE s.user_id = ? AND s.revoked = 0 AND s.expires_at > ?
                 ORDER BY s.last_activity DESC
-            """, (user_id, datetime.now(timezone.utc).isoformat()))
+            """,
+                (user_id, datetime.now(timezone.utc).isoformat()),
+            )
         else:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT s.session_id, s.user_id, s.created_at, s.expires_at,
                        s.last_activity, s.ip_address, u.username, u.role
                 FROM sessions s
                 JOIN users u ON s.user_id = u.user_id
                 WHERE s.revoked = 0 AND s.expires_at > ?
                 ORDER BY s.last_activity DESC
-            """, (datetime.now(timezone.utc).isoformat(),))
+            """,
+                (datetime.now(timezone.utc).isoformat(),),
+            )
 
         sessions = []
         for row in cursor.fetchall():
-            sessions.append(Session(
-                session_id=row[0],
-                user_id=row[1],
-                created_at=row[2],
-                expires_at=row[3],
-                last_activity=row[4],
-                ip_address=row[5],
-                username=row[6],
-                role=Role(row[7])
-            ))
+            sessions.append(
+                Session(
+                    session_id=row[0],
+                    user_id=row[1],
+                    created_at=row[2],
+                    expires_at=row[3],
+                    last_activity=row[4],
+                    ip_address=row[5],
+                    username=row[6],
+                    role=Role(row[7]),
+                )
+            )
 
         conn.close()
         return sessions

@@ -51,6 +51,7 @@ class NodeIdentity:
         # For string data (like hashes), we need to verify against the string directly
         try:
             import base64
+
             signature_bytes = base64.b64decode(signature)
             message = data.encode() if isinstance(data, str) else str(data).encode()
             self.key_manager.public_key.verify(signature_bytes, message)

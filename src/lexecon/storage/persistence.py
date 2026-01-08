@@ -36,7 +36,8 @@ class LedgerStorage:
         cursor = conn.cursor()
 
         # Main ledger entries table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS ledger_entries (
                 entry_id TEXT PRIMARY KEY,
                 event_type TEXT NOT NULL,
@@ -46,25 +47,32 @@ class LedgerStorage:
                 entry_hash TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
-        """)
+        """
+        )
 
         # Create indexes separately (SQLite syntax)
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_event_type ON ledger_entries(event_type)
-        """)
+        """
+        )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_timestamp ON ledger_entries(timestamp)
-        """)
+        """
+        )
 
         # Metadata table for chain verification
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS ledger_metadata (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
-        """)
+        """
+        )
 
         conn.commit()
         conn.close()
@@ -75,25 +83,31 @@ class LedgerStorage:
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR REPLACE INTO ledger_entries
                 (entry_id, event_type, timestamp, data, previous_hash, entry_hash, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                entry.entry_id,
-                entry.event_type,
-                entry.timestamp,
-                json.dumps(entry.data),
-                entry.previous_hash,
-                entry.entry_hash,
-                datetime.utcnow().isoformat()
-            ))
+            """,
+                (
+                    entry.entry_id,
+                    entry.event_type,
+                    entry.timestamp,
+                    json.dumps(entry.data),
+                    entry.previous_hash,
+                    entry.entry_hash,
+                    datetime.utcnow().isoformat(),
+                ),
+            )
 
             # Update metadata with latest hash
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR REPLACE INTO ledger_metadata (key, value, updated_at)
                 VALUES ('latest_hash', ?, ?)
-            """, (entry.entry_hash, datetime.utcnow().isoformat()))
+            """,
+                (entry.entry_hash, datetime.utcnow().isoformat()),
+            )
 
             conn.commit()
         finally:
@@ -105,11 +119,13 @@ class LedgerStorage:
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT entry_id, event_type, timestamp, data, previous_hash, entry_hash
                 FROM ledger_entries
                 ORDER BY timestamp ASC
-            """)
+            """
+            )
 
             entries = []
             for row in cursor.fetchall():
@@ -121,12 +137,14 @@ class LedgerStorage:
                     event_type=row[1],
                     timestamp=row[2],
                     data=json.loads(row[3]),
-                    previous_hash=row[4]
+                    previous_hash=row[4],
                 )
 
                 # Verify stored hash matches calculated hash
                 if entry.entry_hash != stored_hash:
-                    raise ValueError(f"Hash mismatch for entry {entry.entry_id}: stored={stored_hash}, calculated={entry.entry_hash}")
+                    raise ValueError(
+                        f"Hash mismatch for entry {entry.entry_id}: stored={stored_hash}, calculated={entry.entry_hash}"
+                    )
 
                 entries.append(entry)
 
@@ -140,12 +158,15 @@ class LedgerStorage:
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT entry_id, event_type, timestamp, data, previous_hash, entry_hash
                 FROM ledger_entries
                 WHERE event_type = ?
                 ORDER BY timestamp ASC
-            """, (event_type,))
+            """,
+                (event_type,),
+            )
 
             entries = []
             for row in cursor.fetchall():
@@ -156,7 +177,7 @@ class LedgerStorage:
                     event_type=row[1],
                     timestamp=row[2],
                     data=json.loads(row[3]),
-                    previous_hash=row[4]
+                    previous_hash=row[4],
                 )
 
                 # Verify hash integrity
@@ -186,9 +207,11 @@ class LedgerStorage:
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT value FROM ledger_metadata WHERE key = 'latest_hash'
-            """)
+            """
+            )
             result = cursor.fetchone()
             return result[0] if result else None
         finally:
@@ -221,10 +244,10 @@ class LedgerStorage:
         data = {
             "exported_at": datetime.utcnow().isoformat(),
             "total_entries": len(entries),
-            "entries": [entry.to_dict() for entry in entries]
+            "entries": [entry.to_dict() for entry in entries],
         }
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
 
     def get_statistics(self) -> dict:
@@ -238,18 +261,22 @@ class LedgerStorage:
             total = cursor.fetchone()[0]
 
             # Entries by type
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT event_type, COUNT(*)
                 FROM ledger_entries
                 GROUP BY event_type
-            """)
+            """
+            )
             by_type = dict(cursor.fetchall())
 
             # Date range
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT MIN(timestamp), MAX(timestamp)
                 FROM ledger_entries
-            """)
+            """
+            )
             date_range = cursor.fetchone()
 
             # Database file size
@@ -262,7 +289,7 @@ class LedgerStorage:
                 "newest_entry": date_range[1],
                 "database_size_bytes": db_size,
                 "database_path": self.db_path,
-                "chain_integrity": self.verify_chain_integrity()
+                "chain_integrity": self.verify_chain_integrity(),
             }
         finally:
             conn.close()

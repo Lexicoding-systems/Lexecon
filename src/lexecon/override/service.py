@@ -17,13 +17,13 @@ from typing import Any, Dict, List, Optional
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        Override,
-        OverrideType,
-        OriginalOutcome,
-        NewOutcome,
-        OverrideScope,
-        EvidenceArtifact,
         ArtifactType,
+        EvidenceArtifact,
+        NewOutcome,
+        OriginalOutcome,
+        Override,
+        OverrideScope,
+        OverrideType,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -105,9 +105,7 @@ class OverrideService:
             store_evidence: Whether to generate evidence artifacts
         """
         if not GOVERNANCE_MODELS_AVAILABLE:
-            raise RuntimeError(
-                "Governance models not available. Install model_governance_pack."
-            )
+            raise RuntimeError("Governance models not available. Install model_governance_pack.")
 
         self.config = config or OverrideConfig()
         self.store_evidence = store_evidence
@@ -134,8 +132,7 @@ class OverrideService:
         """
         # Check if actor is in authorized roles
         is_in_authorized_roles = any(
-            actor_id.startswith(role) or actor_id == role
-            for role in self.config.AUTHORIZED_ROLES
+            actor_id.startswith(role) or actor_id == role for role in self.config.AUTHORIZED_ROLES
         )
 
         if not is_in_authorized_roles:
@@ -344,14 +341,10 @@ class OverrideService:
             now = datetime.now(timezone.utc)
             if expired:
                 # Get expired overrides
-                overrides = [
-                    o for o in overrides if o.expires_at and now > o.expires_at
-                ]
+                overrides = [o for o in overrides if o.expires_at and now > o.expires_at]
             else:
                 # Get non-expired overrides
-                overrides = [
-                    o for o in overrides if not o.expires_at or now <= o.expires_at
-                ]
+                overrides = [o for o in overrides if not o.expires_at or now <= o.expires_at]
 
         # Sort by timestamp descending (most recent first)
         overrides.sort(key=lambda o: o.timestamp, reverse=True)
@@ -412,14 +405,10 @@ class OverrideService:
                     else None
                 ),
                 "new_outcome": (
-                    active_override.new_outcome.value
-                    if active_override.new_outcome
-                    else None
+                    active_override.new_outcome.value if active_override.new_outcome else None
                 ),
                 "expires_at": (
-                    active_override.expires_at.isoformat()
-                    if active_override.expires_at
-                    else None
+                    active_override.expires_at.isoformat() if active_override.expires_at else None
                 ),
             }
         else:
@@ -496,9 +485,7 @@ class OverrideService:
 
         if override_id:
             artifacts = [
-                a
-                for a in artifacts
-                if a.metadata and a.metadata.get("override_id") == override_id
+                a for a in artifacts if a.metadata and a.metadata.get("override_id") == override_id
             ]
 
         if decision_id:

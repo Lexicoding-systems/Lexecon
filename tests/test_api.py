@@ -495,8 +495,8 @@ class TestAuthEndpoints:
                 "email": "test@example.com",
                 "password": "SecurePass123!",
                 "role": "viewer",
-                "full_name": "Test User"
-            }
+                "full_name": "Test User",
+            },
         )
         # May succeed, require auth, or fail depending on setup
         assert response.status_code in [200, 201, 401, 403, 500]
@@ -522,11 +522,8 @@ class TestGovernanceRiskEndpoints:
             "/api/governance/risk/assess",
             json={
                 "decision_id": "dec_test_123",
-                "risk_factors": {
-                    "data_sensitivity": "high",
-                    "action_reversibility": "low"
-                }
-            }
+                "risk_factors": {"data_sensitivity": "high", "action_reversibility": "low"},
+            },
         )
         # Endpoint may not be fully functional without setup, or require validation
         assert response.status_code in [200, 201, 404, 422, 500]
@@ -543,8 +540,8 @@ class TestGovernanceEvidenceEndpoints:
                 "artifact_type": "decision_log",
                 "content": {"test": "data"},
                 "source": "test_source",
-                "decision_id": "dec_test"
-            }
+                "decision_id": "dec_test",
+            },
         )
         # Endpoint behavior depends on setup
         assert response.status_code in [200, 201, 422, 500]

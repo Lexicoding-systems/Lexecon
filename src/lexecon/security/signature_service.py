@@ -12,11 +12,12 @@ import hashlib
 import json
 import os
 from datetime import datetime, timezone
-from typing import Dict, Any, Tuple, Optional
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.backends import default_backend
+from typing import Any, Dict, Optional, Tuple
+
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 
 class SignatureService:
@@ -52,9 +53,7 @@ class SignatureService:
         """Generate new RSA key pair."""
         # Generate private key (4096 bits for high security)
         self.private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=4096,
-            backend=default_backend()
+            public_exponent=65537, key_size=4096, backend=default_backend()
         )
 
         # Derive public key
@@ -64,19 +63,19 @@ class SignatureService:
         private_pem = self.private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()  # For demo; use BestAvailableEncryption in production
+            encryption_algorithm=serialization.NoEncryption(),  # For demo; use BestAvailableEncryption in production
         )
 
-        with open(self.private_key_path, 'wb') as f:
+        with open(self.private_key_path, "wb") as f:
             f.write(private_pem)
 
         # Save public key
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
-        with open(self.public_key_path, 'wb') as f:
+        with open(self.public_key_path, "wb") as f:
             f.write(public_pem)
 
         # Set restrictive permissions
@@ -85,18 +84,13 @@ class SignatureService:
 
     def _load_keys(self):
         """Load existing keys from disk."""
-        with open(self.private_key_path, 'rb') as f:
+        with open(self.private_key_path, "rb") as f:
             self.private_key = serialization.load_pem_private_key(
-                f.read(),
-                password=None,  # Use password in production
-                backend=default_backend()
+                f.read(), password=None, backend=default_backend()  # Use password in production
             )
 
-        with open(self.public_key_path, 'rb') as f:
-            self.public_key = serialization.load_pem_public_key(
-                f.read(),
-                backend=default_backend()
-            )
+        with open(self.public_key_path, "rb") as f:
+            self.public_key = serialization.load_pem_public_key(f.read(), backend=default_backend())
 
     def sign_packet(self, packet_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -118,11 +112,8 @@ class SignatureService:
         # Sign the hash with RSA private key
         signature = self.private_key.sign(
             packet_hash.encode(),
-            padding.PSS(
-                mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH
-            ),
-            hashes.SHA256()
+            padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+            hashes.SHA256(),
         )
 
         # Encode signature as hex
@@ -131,7 +122,7 @@ class SignatureService:
         # Get public key fingerprint
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
         public_key_fingerprint = hashlib.sha256(public_pem).hexdigest()[:16]
 
@@ -145,16 +136,12 @@ class SignatureService:
             "public_key_fingerprint": public_key_fingerprint,
             "signed_at": datetime.now(timezone.utc).isoformat(),
             "signed_by": "Lexecon Governance System",
-            "verification_instructions": "Use /compliance/verify-signature endpoint with packet and signature"
+            "verification_instructions": "Use /compliance/verify-signature endpoint with packet and signature",
         }
 
         return signature_info
 
-    def verify_signature(
-        self,
-        packet_data: Dict[str, Any],
-        signature_hex: str
-    ) -> Tuple[bool, str]:
+    def verify_signature(self, packet_data: Dict[str, Any], signature_hex: str) -> Tuple[bool, str]:
         """
         Verify a signature on an audit packet.
 
@@ -180,11 +167,8 @@ class SignatureService:
             self.public_key.verify(
                 signature,
                 packet_hash.encode(),
-                padding.PSS(
-                    mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.MAX_LENGTH
-                ),
-                hashes.SHA256()
+                padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+                hashes.SHA256(),
             )
 
             return True, "Signature is valid"
@@ -201,10 +185,10 @@ class SignatureService:
 
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
-        return public_pem.decode('utf-8')
+        return public_pem.decode("utf-8")
 
     def get_public_key_fingerprint(self) -> str:
         """Get SHA-256 fingerprint of public key."""
@@ -213,7 +197,7 @@ class SignatureService:
 
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
         return hashlib.sha256(public_pem).hexdigest()
@@ -229,16 +213,13 @@ class SignatureService:
             Enriched packet with signature_info field
         """
         # Create a copy without signature_info (if it exists)
-        packet_to_sign = {k: v for k, v in packet_data.items() if k != 'signature_info'}
+        packet_to_sign = {k: v for k, v in packet_data.items() if k != "signature_info"}
 
         # Generate signature
         signature_info = self.sign_packet(packet_to_sign)
 
         # Add signature to packet
-        enriched_packet = {
-            **packet_data,
-            "signature_info": signature_info
-        }
+        enriched_packet = {**packet_data, "signature_info": signature_info}
 
         return enriched_packet
 
@@ -261,7 +242,7 @@ class SignatureService:
             return False, "No signature found in signature_info"
 
         # Extract packet without signature
-        packet_to_verify = {k: v for k, v in packet_data.items() if k != 'signature_info'}
+        packet_to_verify = {k: v for k, v in packet_data.items() if k != "signature_info"}
 
         # Verify
         return self.verify_signature(packet_to_verify, signature_info["signature"])

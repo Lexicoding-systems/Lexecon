@@ -15,6 +15,7 @@ from typing import Dict, List, Tuple
 
 class AuditVerificationError(Exception):
     """Base exception for verification failures."""
+
     pass
 
 
@@ -192,9 +193,7 @@ class AuditVerifier:
         if self.packet_path.is_file():
             # Note: This is a simplified check. Full verification would
             # require canonical JSON serialization
-            self.warnings.append(
-                "Root checksum verification for single-file packet is simplified"
-            )
+            self.warnings.append("Root checksum verification for single-file packet is simplified")
             return
 
         # For directory packets, compute root hash
