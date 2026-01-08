@@ -69,7 +69,8 @@ Issues = "https://github.com/Lexicoding-systems/Lexecon/issues"
 lexecon = "lexecon.cli.main:cli"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "."]
+include = ["lexecon*", "model_governance_pack*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

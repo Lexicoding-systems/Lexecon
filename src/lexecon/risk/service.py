@@ -80,13 +80,22 @@ class RiskScoringEngine:
         "financial": 0.10,
     }
 
-    # Risk level thresholds
-    RISK_THRESHOLDS = {
-        RiskLevel.CRITICAL: 80,  # >= 80
-        RiskLevel.HIGH: 60,  # 60-79
-        RiskLevel.MEDIUM: 30,  # 30-59
-        RiskLevel.LOW: 0,  # 0-29
-    }
+    # Risk level thresholds (defined conditionally to avoid import errors)
+    if GOVERNANCE_MODELS_AVAILABLE:
+        RISK_THRESHOLDS = {
+            RiskLevel.CRITICAL: 80,  # >= 80
+            RiskLevel.HIGH: 60,  # 60-79
+            RiskLevel.MEDIUM: 30,  # 30-59
+            RiskLevel.LOW: 0,  # 0-29
+        }
+    else:
+        # Fallback thresholds using string keys
+        RISK_THRESHOLDS = {
+            "critical": 80,
+            "high": 60,
+            "medium": 30,
+            "low": 0,
+        }
 
     def __init__(self, weights: Optional[Dict[str, float]] = None):
         """
