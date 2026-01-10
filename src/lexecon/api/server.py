@@ -40,7 +40,7 @@ from lexecon.risk.service import RiskService
 from lexecon.security.audit_service import AuditService, ExportStatus
 
 # Security imports
-from lexecon.security.auth_service import AuthService, Permission, Role, Session, User
+from lexecon.security.auth_service import AuthService, Permission, Role
 from lexecon.security.signature_service import SignatureService
 from lexecon.storage.persistence import LedgerStorage
 
