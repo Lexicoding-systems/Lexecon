@@ -36,7 +36,7 @@ from lexecon.responsibility.storage import ResponsibilityStorage
 from lexecon.responsibility.tracker import DecisionMaker, ResponsibilityLevel, ResponsibilityTracker
 
 # Governance service imports
-from lexecon.risk.service import RiskScoringEngine, RiskService
+from lexecon.risk.service import RiskService
 from lexecon.security.audit_service import AuditService, ExportStatus
 
 # Security imports
