@@ -23,6 +23,21 @@
             --text-secondary: #94a3b8;
             --border: #334155;
             --verified: #10b981;
+            --risk-critical: #dc2626;
+            --risk-high: #f59e0b;
+            --risk-medium: #eab308;
+            --risk-low: #84cc16;
+            /* Hover states derived from base colors */
+            --hover-overlay: rgba(255, 255, 255, 0.05);
+            /* 8px-based spacing scale */
+            --spacing-1: 4px;
+            --spacing-2: 8px;
+            --spacing-3: 12px;
+            --spacing-4: 16px;
+            --spacing-5: 20px;
+            --spacing-6: 24px;
+            --spacing-8: 32px;
+            --spacing-10: 40px;
         }
 
         body {
@@ -132,7 +147,7 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 20px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
@@ -272,7 +287,7 @@
         .legal-ref {
             background: rgba(8, 145, 178, 0.15);
             color: var(--primary);
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
@@ -306,7 +321,7 @@
         }
 
         .badge {
-            padding: 4px 10px;
+            padding: 4px 12px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: 600;
@@ -342,7 +357,7 @@
         code {
             font-family: 'Courier New', monospace;
             background: rgba(0,0,0,0.3);
-            padding: 2px 6px;
+            padding: 4px 8px;
             border-radius: 3px;
             font-size: 12px;
         }
@@ -475,7 +490,7 @@
         background: rgba(0, 0, 0, 0.3);
         border: 1px solid var(--border);
         border-radius: 6px;
-        padding: 10px 12px;
+        padding: 12px;
         color: var(--text-primary);
         font-size: 14px;
     }
@@ -800,7 +815,7 @@
     }
 
     .attestation-content li {
-        margin: 6px 0;
+        margin: 8px 0;
     }
 
     .attestation-signature-block {
@@ -1759,10 +1774,10 @@ function generateAuditPacketOriginal() {
                     <input type="date" class="form-input" id="dateTo" placeholder="To date">
                 </div>
                 <div style="margin-top: 8px;">
-                    <button class="btn-secondary" onclick="setQuickRange('24h')" style="margin-right: 8px; padding: 6px 12px; border-radius: 4px; font-size: 12px;">Last 24h</button>
-                    <button class="btn-secondary" onclick="setQuickRange('7d')" style="margin-right: 8px; padding: 6px 12px; border-radius: 4px; font-size: 12px;">Last 7d</button>
-                    <button class="btn-secondary" onclick="setQuickRange('30d')" style="margin-right: 8px; padding: 6px 12px; border-radius: 4px; font-size: 12px;">Last 30d</button>
-                    <button class="btn-secondary" onclick="setQuickRange('all')" style="padding: 6px 12px; border-radius: 4px; font-size: 12px;">All Time</button>
+                    <button class="btn-secondary" onclick="setQuickRange('24h')" style="margin-right: 8px; padding: 8px 12px; border-radius: 4px; font-size: 12px;">Last 24h</button>
+                    <button class="btn-secondary" onclick="setQuickRange('7d')" style="margin-right: 8px; padding: 8px 12px; border-radius: 4px; font-size: 12px;">Last 7d</button>
+                    <button class="btn-secondary" onclick="setQuickRange('30d')" style="margin-right: 8px; padding: 8px 12px; border-radius: 4px; font-size: 12px;">Last 30d</button>
+                    <button class="btn-secondary" onclick="setQuickRange('all')" style="padding: 8px 12px; border-radius: 4px; font-size: 12px;">All Time</button>
                 </div>
             </div>
 

@@ -19,14 +19,25 @@
             --danger: #dc2626;
             --bg-dark: #0f172a;
             --bg-card: #1e293b;
-            --bg-card-hover: #2d3b52;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --border: #334155;
+            --verified: #10b981;
             --risk-critical: #dc2626;
             --risk-high: #f59e0b;
             --risk-medium: #eab308;
             --risk-low: #84cc16;
+            /* Hover states derived from base colors */
+            --hover-overlay: rgba(255, 255, 255, 0.05);
+            /* 8px-based spacing scale */
+            --spacing-1: 4px;
+            --spacing-2: 8px;
+            --spacing-3: 12px;
+            --spacing-4: 16px;
+            --spacing-5: 20px;
+            --spacing-6: 24px;
+            --spacing-8: 32px;
+            --spacing-10: 40px;
         }
 
         body {
@@ -212,7 +223,7 @@
         }
 
         .risk-card:hover {
-            background: var(--bg-card-hover);
+            background: var(--hover-overlay);
             border-color: var(--primary);
         }
 
@@ -319,7 +330,7 @@
         }
 
         .escalation-card:hover {
-            background: var(--bg-card-hover);
+            background: var(--hover-overlay);
         }
 
         .escalation-header {
@@ -397,7 +408,7 @@
         }
 
         .override-card:hover {
-            background: var(--bg-card-hover);
+            background: var(--hover-overlay);
         }
 
         .override-header {
@@ -445,7 +456,7 @@
         }
 
         .evidence-card:hover {
-            background: var(--bg-card-hover);
+            background: var(--hover-overlay);
         }
 
         .evidence-header {
