@@ -374,7 +374,7 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-    
+
     .modal-overlay {
         display: none;
         position: fixed;
@@ -1046,7 +1046,16 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000';
+        // Environment configuration
+        // In production, window.LEXECON_ENV will be undefined or 'production'
+        // To enable dev mode, set: <script>window.LEXECON_ENV = 'development';</script> before this file
+        const ENV = window.LEXECON_ENV || 'production';
+        const IS_DEV = ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        // API Base URL - environment aware
+        const API_BASE = window.LEXECON_API_BASE ||
+                        (IS_DEV ? 'http://localhost:8000' : window.location.origin + '/api');
+
         let currentTimeWindow = 'all';
 
         async function fetchAPI(endpoint) {
@@ -1256,7 +1265,7 @@ function openAuditModal() {
     document.getElementById('auditModal').style.display = 'block';
     currentStep = 1;
     updateModalUI();
-    
+
     // Pre-fill current user if available
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('dateTo').value = today;
@@ -1344,7 +1353,7 @@ function validateStep1() {
     const requester = document.getElementById('requesterName').value.trim();
     const email = document.getElementById('requesterEmail').value.trim();
     const purpose = document.getElementById('requestPurpose').value;
-    
+
     if (!requester) {
         alert('❌ Please enter your name');
         return false;
@@ -1361,10 +1370,10 @@ function validateStep1() {
 }
 
 function validateStep2() {
-    const hasFormat = document.getElementById('formatJSON').checked || 
-                     document.getElementById('formatText').checked || 
+    const hasFormat = document.getElementById('formatJSON').checked ||
+                     document.getElementById('formatText').checked ||
                      document.getElementById('formatCSV').checked;
-    
+
     if (!hasFormat) {
         alert('❌ Please select at least one export format');
         return false;
@@ -1386,7 +1395,7 @@ function captureStep1Data() {
 function captureStep2Data() {
     const dateFrom = document.getElementById('dateFrom').value;
     const dateTo = document.getElementById('dateTo').value;
-    
+
     auditPacketData.config = {
         date_range: {
             from: dateFrom || null,
@@ -1409,23 +1418,23 @@ function captureStep2Data() {
 async function updatePreview() {
     // Update metadata preview
     document.getElementById('previewRequester').textContent = auditPacketData.metadata.requester_name;
-    document.getElementById('previewPurpose').textContent = 
+    document.getElementById('previewPurpose').textContent =
         document.getElementById('requestPurpose').options[document.getElementById('requestPurpose').selectedIndex].text;
     document.getElementById('previewCaseId').textContent = auditPacketData.metadata.case_id;
-    
+
     // Update date range
     const from = auditPacketData.config.date_range.from || 'All time';
     const to = auditPacketData.config.date_range.to;
-    document.getElementById('previewDateRange').textContent = 
+    document.getElementById('previewDateRange').textContent =
         from === 'All time' ? 'All time' : `${from} to ${to}`;
-    
+
     // Update formats
     const formats = [];
     if (auditPacketData.config.formats.json) formats.push('JSON');
     if (auditPacketData.config.formats.text) formats.push('Text');
     if (auditPacketData.config.formats.csv) formats.push('CSV');
     document.getElementById('previewFormats').textContent = formats.join(', ');
-    
+
     // Fetch actual counts from API (simplified - you'd call real endpoints)
     try {
         const timeWindow = calculateTimeWindow();
@@ -1433,11 +1442,11 @@ async function updatePreview() {
             fetchAPI('/ledger/entries'),
             fetchAPI('/compliance/eu-ai-act/article-14/storage/stats')
         ]);
-        
+
         const decisions = ledger?.entries?.filter(e => e.event_type === 'decision').length || 0;
         const interventions = storage?.total_interventions || 0;
         const ledgerEntries = ledger?.entries?.length || 0;
-        
+
         document.getElementById('previewDecisions').textContent = auditPacketData.config.include.decisions ? decisions : 'Excluded';
         document.getElementById('previewInterventions').textContent = auditPacketData.config.include.interventions ? interventions : 'Excluded';
         document.getElementById('previewLedger').textContent = auditPacketData.config.include.ledger ? ledgerEntries : 'Excluded';
@@ -1449,13 +1458,13 @@ async function updatePreview() {
 function calculateTimeWindow() {
     const from = auditPacketData.config.date_range.from;
     const to = auditPacketData.config.date_range.to;
-    
+
     if (!from) return 'all';
-    
+
     const fromDate = new Date(from);
     const toDate = new Date(to);
     const diffDays = Math.ceil((toDate - fromDate) / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays <= 1) return '24h';
     if (diffDays <= 7) return '7d';
     if (diffDays <= 30) return '30d';
@@ -1466,7 +1475,7 @@ function setQuickRange(range) {
     const today = new Date();
     const to = today.toISOString().split('T')[0];
     document.getElementById('dateTo').value = to;
-    
+
     if (range === 'all') {
         document.getElementById('dateFrom').value = '';
     } else {
@@ -1556,45 +1565,45 @@ async function generateAuditPacket() {
     document.getElementById('modalStep5').style.display = 'block';
     document.getElementById('modalBackBtn').style.display = 'none';
     document.getElementById('modalNextBtn').style.display = 'none';
-    
+
     const progressFill = document.getElementById('progressFill');
     const statusText = document.getElementById('generationStatus');
-    
+
     try {
         // Step 1: Validate request
         progressFill.style.width = '20%';
         statusText.textContent = 'Validating request...';
         await sleep(300);
-        
+
         // Step 2: Collect data
         progressFill.style.width = '40%';
         statusText.textContent = 'Collecting compliance data...';
         await sleep(300);
-        
+
         const timeWindow = calculateTimeWindow();
         const formats = [];
         if (auditPacketData.config.formats.json) formats.push('json');
         if (auditPacketData.config.formats.text) formats.push('text');
         if (auditPacketData.config.formats.csv) formats.push('csv');
-        
+
         // Step 3: Generate packets
         progressFill.style.width = '60%';
         statusText.textContent = 'Generating audit packets...';
-        
+
         const downloads = [];
         for (const format of formats) {
             const response = await fetch(`${API_BASE}/compliance/eu-ai-act/audit-packet?time_window=${timeWindow}&format=${format}`);
             if (!response.ok) throw new Error(`Failed to generate ${format} format`);
-            
+
             const data = format === 'json' ? await response.json() : await response.text();
             downloads.push({ format, data });
         }
-        
+
         // Step 4: Add metadata
         progressFill.style.width = '80%';
         statusText.textContent = 'Adding request metadata...';
         await sleep(200);
-        
+
         // Enhance JSON packet with metadata
         if (auditPacketData.config.formats.json) {
             const jsonDownload = downloads.find(d => d.format === 'json');
@@ -1603,21 +1612,21 @@ async function generateAuditPacket() {
                 jsonDownload.data.generation_config = auditPacketData.config;
             }
         }
-        
+
         // Step 5: Download files
         progressFill.style.width = '100%';
         statusText.textContent = 'Preparing downloads...';
         await sleep(200);
-        
+
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-        
+
         for (const download of downloads) {
             const extension = download.format === 'json' ? 'json' : download.format === 'text' ? 'txt' : 'csv';
             const content = download.format === 'json' ? JSON.stringify(download.data, null, 2) : download.data;
-            const blob = new Blob([content], { 
-                type: download.format === 'json' ? 'application/json' : 'text/plain' 
+            const blob = new Blob([content], {
+                type: download.format === 'json' ? 'application/json' : 'text/plain'
             });
-            
+
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1626,13 +1635,13 @@ async function generateAuditPacket() {
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-            
+
             await sleep(100); // Small delay between downloads
         }
-        
+
         // Success!
         closeAuditModal();
-        
+
         alert(`✅ Audit Packet Generated Successfully!
 
 Requester: ${auditPacketData.metadata.requester_name}
@@ -1641,13 +1650,13 @@ Formats: ${formats.join(', ').toUpperCase()}
 Files Downloaded: ${downloads.length}
 
 This generation has been logged in the audit trail.`);
-        
+
     } catch (error) {
         console.error('Generation failed:', error);
         progressFill.style.width = '0%';
         statusText.textContent = 'Generation failed';
         statusText.style.color = 'var(--danger)';
-        
+
         setTimeout(() => {
             alert('❌ Failed to generate audit packet:\n\n' + error.message);
             closeAuditModal();
@@ -1686,7 +1695,7 @@ function generateAuditPacketOriginal() {
         <h2 class="modal-title">Generate Compliance Audit Packet</h2>
         <button class="modal-close" onclick="closeAuditModal()">×</button>
     </div>
-    
+
     <div class="modal-body">
         <!-- Step Indicator -->
         <div class="step-indicator">
@@ -2016,7 +2025,7 @@ function generateAuditPacketOriginal() {
             </div>
         </div>
     </div>
-    
+
     <div class="modal-footer">
         <button class="action-btn btn-secondary" id="modalBackBtn" onclick="previousStep()" style="display: none;">
             ← Back
