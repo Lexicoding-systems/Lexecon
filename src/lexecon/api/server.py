@@ -489,8 +489,12 @@ async def load_policy(policy_load: PolicyLoadModel):
     try:
         # Support both wrapped {"policy": {...}} and direct format
         if policy_load.policy is not None:
-            # Wrapped format - be tolerant, policy engine will handle it
+            # Wrapped format - validate structure
             policy_dict = policy_load.policy
+            if not isinstance(policy_dict, dict):
+                raise ValueError("Policy must be a dictionary")
+            if "terms" not in policy_dict and "relations" not in policy_dict:
+                raise ValueError("Policy must contain at least 'terms' or 'relations' field")
         else:
             # Direct format - convert PolicyLoadModel to dict and validate
             policy_dict = policy_load.model_dump(exclude={"policy"}, exclude_none=True)
@@ -600,7 +604,10 @@ async def verify_decision(request_data: Dict[str, Any]):
             break
 
     if entry is None:
-        return {"verified": False, "error": "Entry not found in ledger"}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Decision with hash {ledger_entry_hash} not found in ledger"
+        )
 
     # Verify hash matches
     calculated_hash = entry.calculate_hash()
@@ -2860,6 +2867,488 @@ async def get_audit_export_statistics(http_request: Request = None):
         return stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get statistics: {str(e)}")
+
+
+# ============================================================================
+# Audit Dashboard API (v1) - Frontend Integration
+# ============================================================================
+
+
+@app.get("/api/v1/audit/decisions")
+async def get_audit_decisions(
+    search: Optional[str] = None,
+    risk_level: Optional[str] = None,
+    outcome: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    verified_only: bool = False,
+    limit: int = 100,
+    offset: int = 0,
+    http_request: Request = None
+):
+    """
+    Get list of decisions with filtering for audit dashboard.
+
+    Query Parameters:
+    - search: Text search across decision ID, action, actor
+    - risk_level: Filter by risk level (minimal, low, medium, high, critical)
+    - outcome: Filter by outcome (approved, denied, escalated, override)
+    - start_date: ISO format date string
+    - end_date: ISO format date string
+    - verified_only: Only return verified entries
+    - limit: Maximum results to return (default 100)
+    - offset: Pagination offset (default 0)
+    """
+    initialize_services()
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit logs")
+
+    try:
+        # Get all decision entries from ledger
+        entries = [e for e in ledger.entries if e.event_type == "decision"]
+
+        # Apply filters
+        filtered_entries = []
+        for entry in entries:
+            data = entry.data
+
+            # Text search filter
+            if search:
+                search_lower = search.lower()
+                searchable_text = f"{entry.entry_id} {data.get('action', '')} {data.get('actor', '')}".lower()
+                if search_lower not in searchable_text:
+                    continue
+
+            # Risk level filter
+            if risk_level:
+                entry_risk = data.get('risk_level', 'low')
+                if isinstance(entry_risk, int):
+                    # Map numeric risk to level names
+                    risk_map = {1: 'minimal', 2: 'low', 3: 'medium', 4: 'high', 5: 'critical'}
+                    entry_risk = risk_map.get(entry_risk, 'low')
+                if entry_risk.lower() != risk_level.lower():
+                    continue
+
+            # Outcome filter
+            if outcome:
+                entry_outcome = data.get('outcome', 'approved')
+                if entry_outcome.lower() != outcome.lower():
+                    continue
+
+            # Date range filter
+            if start_date:
+                entry_time = datetime.fromisoformat(entry.timestamp.replace('Z', '+00:00'))
+                filter_time = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                if entry_time < filter_time:
+                    continue
+
+            if end_date:
+                entry_time = datetime.fromisoformat(entry.timestamp.replace('Z', '+00:00'))
+                filter_time = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+                if entry_time > filter_time:
+                    continue
+
+            # Verified only filter
+            if verified_only:
+                # Verify this specific entry
+                calculated_hash = entry.calculate_hash()
+                if calculated_hash != entry.entry_hash:
+                    continue
+
+            filtered_entries.append(entry)
+
+        # Sort by timestamp (newest first)
+        filtered_entries.sort(key=lambda e: e.timestamp, reverse=True)
+
+        # Pagination
+        total = len(filtered_entries)
+        paginated_entries = filtered_entries[offset:offset + limit]
+
+        # Transform to frontend format
+        decisions = []
+        for entry in paginated_entries:
+            data = entry.data
+
+            # Map risk level
+            risk = data.get('risk_level', 'low')
+            if isinstance(risk, int):
+                risk_map = {1: 'minimal', 2: 'low', 3: 'medium', 4: 'high', 5: 'critical'}
+                risk = risk_map.get(risk, 'low')
+
+            # Extract applied policies
+            applied_policies = []
+            if 'policy_results' in data:
+                for policy_name, result in data.get('policy_results', {}).items():
+                    applied_policies.append({
+                        "name": policy_name,
+                        "result": "passed" if result else "failed"
+                    })
+
+            decisions.append({
+                "id": entry.entry_id,
+                "timestamp": entry.timestamp,
+                "action": data.get('action', data.get('proposed_action', 'Unknown action')),
+                "actor": data.get('actor', 'system@lexecon.ai'),
+                "riskLevel": risk,
+                "outcome": data.get('outcome', 'approved'),
+                "signature": entry.entry_hash,
+                "previousHash": entry.previous_hash,
+                "policyVersion": data.get('policy_version', 'v1.0.0'),
+                "verified": entry.calculate_hash() == entry.entry_hash,
+                "appliedPolicies": applied_policies,
+                "context": data.get('context', {})
+            })
+
+        return {
+            "decisions": decisions,
+            "total": total,
+            "offset": offset,
+            "limit": limit
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve decisions: {str(e)}")
+
+
+@app.get("/api/v1/audit/decisions/{decision_id}")
+async def get_decision_details(decision_id: str, http_request: Request = None):
+    """
+    Get detailed information for a specific decision.
+    """
+    initialize_services()
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit logs")
+
+    try:
+        # Find decision entry
+        entry = None
+        for e in ledger.entries:
+            if e.entry_id == decision_id and e.event_type == "decision":
+                entry = e
+                break
+
+        if not entry:
+            raise HTTPException(status_code=404, detail=f"Decision {decision_id} not found")
+
+        data = entry.data
+
+        # Map risk level
+        risk = data.get('risk_level', 'low')
+        if isinstance(risk, int):
+            risk_map = {1: 'minimal', 2: 'low', 3: 'medium', 4: 'high', 5: 'critical'}
+            risk = risk_map.get(risk, 'low')
+
+        # Extract applied policies
+        applied_policies = []
+        if 'policy_results' in data:
+            for policy_name, result in data.get('policy_results', {}).items():
+                applied_policies.append({
+                    "name": policy_name,
+                    "result": "passed" if result else "failed"
+                })
+
+        # Verify integrity
+        calculated_hash = entry.calculate_hash()
+        hash_valid = calculated_hash == entry.entry_hash
+
+        # Check chain integrity (previous hash)
+        chain_valid = True
+        entry_index = ledger.entries.index(entry)
+        if entry_index > 0:
+            prev_entry = ledger.entries[entry_index - 1]
+            chain_valid = entry.previous_hash == prev_entry.entry_hash
+
+        return {
+            "id": entry.entry_id,
+            "timestamp": entry.timestamp,
+            "action": data.get('action', data.get('proposed_action', 'Unknown action')),
+            "actor": data.get('actor', 'system@lexecon.ai'),
+            "riskLevel": risk,
+            "outcome": data.get('outcome', 'approved'),
+            "signature": entry.entry_hash,
+            "previousHash": entry.previous_hash,
+            "policyVersion": data.get('policy_version', 'v1.0.0'),
+            "verified": hash_valid and chain_valid,
+            "appliedPolicies": applied_policies,
+            "context": data.get('context', {}),
+            "verification": {
+                "signatureValid": hash_valid,
+                "chainIntegrityValid": chain_valid,
+                "calculatedHash": calculated_hash,
+                "recordedHash": entry.entry_hash
+            },
+            "fullData": data
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve decision: {str(e)}")
+
+
+@app.get("/api/v1/audit/stats")
+async def get_audit_statistics(http_request: Request = None):
+    """
+    Get dashboard statistics for audit overview.
+    """
+    initialize_services()
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit logs")
+
+    try:
+        # Get all decision entries
+        decision_entries = [e for e in ledger.entries if e.event_type == "decision"]
+        total_decisions = len(decision_entries)
+
+        # Count verified entries
+        verified_count = 0
+        for entry in decision_entries:
+            if entry.calculate_hash() == entry.entry_hash:
+                verified_count += 1
+
+        # Count by outcome
+        escalations = 0
+        approvals = 0
+        denials = 0
+        overrides = 0
+
+        # Count by risk level
+        high_risk_count = 0
+        critical_risk_count = 0
+
+        for entry in decision_entries:
+            data = entry.data
+            outcome = data.get('outcome', 'approved').lower()
+
+            if outcome == 'escalated':
+                escalations += 1
+            elif outcome == 'approved':
+                approvals += 1
+            elif outcome == 'denied':
+                denials += 1
+            elif outcome == 'override':
+                overrides += 1
+
+            # Check risk level
+            risk = data.get('risk_level', 'low')
+            if isinstance(risk, int):
+                if risk >= 4:
+                    high_risk_count += 1
+                if risk == 5:
+                    critical_risk_count += 1
+            elif isinstance(risk, str):
+                if risk.lower() in ['high', 'critical']:
+                    high_risk_count += 1
+                if risk.lower() == 'critical':
+                    critical_risk_count += 1
+
+        # Calculate percentages and trends (simplified - would need historical data for real trends)
+        verified_percentage = (verified_count / total_decisions * 100) if total_decisions > 0 else 100
+
+        return {
+            "totalDecisions": total_decisions,
+            "totalDecisionsChange": "+12%",  # Placeholder - would need historical comparison
+            "verifiedEntries": verified_count,
+            "verifiedPercentage": round(verified_percentage, 1),
+            "escalations": escalations,
+            "escalationsChange": "-8%",  # Placeholder
+            "highRiskCount": high_risk_count,
+            "criticalRiskCount": critical_risk_count,
+            "highRiskStatus": "Requiring oversight" if high_risk_count > 0 else "Normal",
+            "outcomeBreakdown": {
+                "approved": approvals,
+                "denied": denials,
+                "escalated": escalations,
+                "override": overrides
+            },
+            "riskBreakdown": {
+                "high": high_risk_count,
+                "critical": critical_risk_count
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to calculate statistics: {str(e)}")
+
+
+@app.post("/api/v1/audit/verify")
+async def verify_audit_ledger(http_request: Request = None):
+    """
+    Verify integrity of entire audit ledger.
+    """
+    initialize_services()
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit verification")
+
+    try:
+        # Use existing ledger verification
+        verification_result = ledger.verify_integrity()
+
+        # Add detailed verification info
+        total_entries = len(ledger.entries)
+        verified_entries = 0
+        failed_entries = []
+
+        for i, entry in enumerate(ledger.entries):
+            # Verify hash
+            calculated_hash = entry.calculate_hash()
+            hash_valid = calculated_hash == entry.entry_hash
+
+            # Verify chain
+            chain_valid = True
+            if i > 0:
+                prev_entry = ledger.entries[i - 1]
+                chain_valid = entry.previous_hash == prev_entry.entry_hash
+
+            if hash_valid and chain_valid:
+                verified_entries += 1
+            else:
+                failed_entries.append({
+                    "entry_id": entry.entry_id,
+                    "index": i,
+                    "hash_valid": hash_valid,
+                    "chain_valid": chain_valid
+                })
+
+        return {
+            "verified": verification_result["valid"],
+            "totalEntries": total_entries,
+            "verifiedEntries": verified_entries,
+            "failedEntries": failed_entries,
+            "integrityPercentage": round((verified_entries / total_entries * 100), 2) if total_entries > 0 else 100,
+            "details": verification_result,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
+
+
+@app.post("/api/v1/audit/export")
+async def create_audit_export_v1(
+    request: AuditExportCreateRequest,
+    http_request: Request
+):
+    """
+    Create a new audit export request (v1 API alias).
+
+    This is an alias for /api/governance/audit-export/request for frontend compatibility.
+    """
+    # Forward to existing endpoint
+    return await create_audit_export_request(request, http_request)
+
+
+@app.get("/api/v1/audit/exports")
+async def list_audit_exports_v1(
+    status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    http_request: Request = None
+):
+    """
+    List audit export requests (v1 API).
+
+    Query Parameters:
+    - status: Filter by status (pending, completed, failed)
+    - limit: Maximum results (default 50)
+    - offset: Pagination offset (default 0)
+    """
+    initialize_services()
+
+    if not audit_export_service:
+        raise HTTPException(status_code=500, detail="Audit export service not initialized")
+
+    # Authentication check
+    if http_request:
+        session_id = http_request.cookies.get("session_id") or http_request.headers.get("Authorization", "").replace("Bearer ", "")
+        if session_id:
+            session, error = auth_service.validate_session(session_id)
+            if session and not auth_service.has_permission(session.role, Permission.VIEW_AUDIT_LOGS):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for audit exports")
+
+    try:
+        # Get all export requests
+        all_requests = list(audit_export_service._requests.values())
+
+        # Filter by status if specified
+        if status:
+            status_enum = ExportStatus(status.upper())
+            all_requests = [r for r in all_requests if r.status == status_enum]
+
+        # Sort by requested_at (newest first)
+        all_requests.sort(key=lambda r: r.requested_at, reverse=True)
+
+        # Pagination
+        total = len(all_requests)
+        paginated = all_requests[offset:offset + limit]
+
+        # Transform to response format
+        exports = []
+        for req in paginated:
+            # Check if export package exists
+            package = audit_export_service.get_export(req.export_id)
+
+            exports.append({
+                "exportId": req.export_id,
+                "requester": req.requester,
+                "purpose": req.purpose,
+                "format": req.format.value,
+                "scope": req.scope.value,
+                "status": req.status.value,
+                "requestedAt": req.requested_at.isoformat(),
+                "startDate": req.start_date.isoformat() if req.start_date else None,
+                "endDate": req.end_date.isoformat() if req.end_date else None,
+                "generatedAt": package.generated_at.isoformat() if package else None,
+                "sizeBytes": package.size_bytes if package else None,
+                "recordCount": package.record_count if package else None
+            })
+
+        return {
+            "exports": exports,
+            "total": total,
+            "offset": offset,
+            "limit": limit
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list exports: {str(e)}")
+
+
+@app.get("/api/v1/audit/exports/{export_id}/download")
+async def download_audit_export_v1(export_id: str, http_request: Request = None):
+    """
+    Download an audit export package (v1 API).
+
+    This is an alias for /api/governance/audit-export/{export_id}/download.
+    """
+    # Forward to existing endpoint
+    return await download_audit_export(export_id, http_request)
 
 
 # ============================================================================
