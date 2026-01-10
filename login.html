@@ -207,7 +207,8 @@
             </button>
         </form>
 
-        <div class="info-box">
+        <!-- Development credentials - only shown in development environment -->
+        <div id="devCredentials" class="info-box" style="display: none;">
             <h3>ℹ Development Credentials</h3>
             <ul>
                 <li>admin / ChangeMe123!</li>
@@ -223,7 +224,23 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000';
+        // Environment configuration
+        // In production, window.LEXECON_ENV will be undefined or 'production'
+        // To enable dev mode, set: <script>window.LEXECON_ENV = 'development';</script> before this file
+        const ENV = window.LEXECON_ENV || 'production';
+        const IS_DEV = ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        // API Base URL - environment aware
+        const API_BASE = window.LEXECON_API_BASE ||
+                        (IS_DEV ? 'http://localhost:8000' : window.location.origin + '/api');
+
+        // Show development credentials only in development environment
+        if (IS_DEV) {
+            const devCredentials = document.getElementById('devCredentials');
+            if (devCredentials) {
+                devCredentials.style.display = 'block';
+            }
+        }
 
         const loginForm = document.getElementById('loginForm');
         const loginButton = document.getElementById('loginButton');
