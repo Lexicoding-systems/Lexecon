@@ -17,6 +17,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidSignature
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SignatureService:
@@ -192,7 +195,9 @@ class SignatureService:
         except InvalidSignature:
             return False, "Signature verification failed - packet may have been tampered with"
         except Exception as e:
-            return False, f"Verification error: {str(e)}"
+            # Log detailed error on the server, but return a generic message to the client
+            logger.exception("Unexpected error during signature verification")
+            return False, "Internal verification error"
 
     def get_public_key_pem(self) -> str:
         """Get public key in PEM format for distribution."""
