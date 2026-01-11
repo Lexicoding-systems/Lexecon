@@ -684,6 +684,106 @@
             border-left: 4px solid var(--warning);
         }
 
+        /* Batch Action Bar */
+        .batch-action-bar {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            padding: 16px 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            gap: 16px;
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .batch-action-bar.show {
+            display: flex;
+        }
+
+        .batch-info {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .batch-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .batch-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .batch-btn.primary {
+            background: var(--success);
+            color: white;
+        }
+
+        .batch-btn.primary:hover {
+            background: #047857;
+        }
+
+        .batch-btn.secondary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .batch-btn.secondary:hover {
+            background: #0e7490;
+        }
+
+        .batch-btn.clear {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .batch-btn.clear:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Escalation Card Selection */
+        .escalation-card.selected {
+            background: rgba(8, 145, 178, 0.15);
+            border-color: var(--primary);
+        }
+
+        .escalation-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .escalation-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
         /* Scrollbar Styling */
         ::-webkit-scrollbar {
             width: 8px;
@@ -833,6 +933,24 @@
         </div>
     </div>
 
+    <!-- Batch Action Bar -->
+    <div id="batch-action-bar" class="batch-action-bar">
+        <div class="batch-info">
+            <span id="batch-count">0</span> escalations selected
+        </div>
+        <div class="batch-actions">
+            <button class="batch-btn primary" onclick="batchApproveEscalations()">
+                ✓ Approve All
+            </button>
+            <button class="batch-btn secondary" onclick="batchReviewEscalations()">
+                👁️ Mark for Review
+            </button>
+            <button class="batch-btn clear" onclick="clearBatchSelection()">
+                Clear
+            </button>
+        </div>
+    </div>
+
     <!-- Risk Assessment Modal -->
     <div id="risk-modal" class="modal">
         <div class="modal-content">
@@ -955,16 +1073,102 @@
             }
         }
 
+        // Track selected escalations
+        const selectedEscalations = new Set();
+
         async function loadEscalations() {
             const container = document.getElementById('escalation-list');
             try {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🚨</div>
-                        <div>No escalations found</div>
-                        <div class="form-help">Click "+ Create Escalation" to create one</div>
+                // Mock escalation data - in production, fetch from API
+                const escalations = [
+                    {
+                        id: 'esc_001',
+                        priority: 'critical',
+                        status: 'pending_review',
+                        title: 'High-Risk Decision Approval Required',
+                        description: 'Decision dec_user_123 requires senior approval due to high security risk score (87)',
+                        decision_id: 'dec_user_123',
+                        created_at: '2026-01-10T10:30:00Z',
+                        sla_violation: true
+                    },
+                    {
+                        id: 'esc_002',
+                        priority: 'high',
+                        status: 'pending_review',
+                        title: 'Privacy Compliance Review Needed',
+                        description: 'Multiple privacy risk dimensions exceed threshold for decision dec_data_456',
+                        decision_id: 'dec_data_456',
+                        created_at: '2026-01-10T11:00:00Z',
+                        sla_violation: false
+                    },
+                    {
+                        id: 'esc_003',
+                        priority: 'high',
+                        status: 'pending_review',
+                        title: 'Financial Impact Assessment',
+                        description: 'Decision dec_contract_789 has high financial risk requiring CFO review',
+                        decision_id: 'dec_contract_789',
+                        created_at: '2026-01-10T11:15:00Z',
+                        sla_violation: false
+                    }
+                ];
+
+                if (escalations.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🚨</div>
+                            <div>No escalations found</div>
+                            <div class="form-help">Click "+ Create Escalation" to create one</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = escalations.map(esc => `
+                    <div class="escalation-card ${esc.sla_violation ? 'sla-violation' : ''} ${selectedEscalations.has(esc.id) ? 'selected' : ''}"
+                         data-escalation-id="${esc.id}">
+                        <div class="escalation-header">
+                            <div class="escalation-checkbox">
+                                <input type="checkbox"
+                                       id="esc-check-${esc.id}"
+                                       ${selectedEscalations.has(esc.id) ? 'checked' : ''}
+                                       onchange="toggleEscalationSelection('${esc.id}')">
+                                <label for="esc-check-${esc.id}" style="cursor: pointer;">
+                                    <strong>${esc.title}</strong>
+                                </label>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="escalation-priority ${esc.priority}">${esc.priority}</span>
+                                ${esc.sla_violation ? '<span style="color: var(--danger); font-size: 0.875rem;">⚠️ SLA</span>' : ''}
+                            </div>
+                        </div>
+                        <div style="margin: 8px 0; color: var(--text-secondary); font-size: 0.875rem;">
+                            ${esc.description}
+                        </div>
+                        <div class="escalation-meta">
+                            <div class="escalation-meta-item">
+                                <span>🆔</span>
+                                <span>${esc.decision_id}</span>
+                            </div>
+                            <div class="escalation-meta-item">
+                                <span>📋</span>
+                                <span>${esc.status.replace(/_/g, ' ')}</span>
+                            </div>
+                            <div class="escalation-meta-item">
+                                <span>🕐</span>
+                                <span>${new Date(esc.created_at).toLocaleTimeString()}</span>
+                            </div>
+                        </div>
                     </div>
-                `;
+                `).join('');
+
+                // Update stats
+                document.getElementById('pending-escalations').textContent = escalations.length;
+                const slaViolations = escalations.filter(e => e.sla_violation).length;
+                document.getElementById('escalation-trend').innerHTML = slaViolations > 0
+                    ? `<span class="trend-down">⚠️ ${slaViolations} SLA violations</span>`
+                    : `<span class="trend-up">✓ All within SLA</span>`;
+
             } catch (error) {
                 console.error('Error loading escalations:', error);
                 container.innerHTML = `<div class="empty-state">Error loading escalations</div>`;
@@ -1100,6 +1304,88 @@
                 }
             });
         });
+
+        // Batch Selection Functions
+        function toggleEscalationSelection(escalationId) {
+            if (selectedEscalations.has(escalationId)) {
+                selectedEscalations.delete(escalationId);
+            } else {
+                selectedEscalations.add(escalationId);
+            }
+            updateBatchActionBar();
+            updateEscalationCardStyles();
+        }
+
+        function updateBatchActionBar() {
+            const batchBar = document.getElementById('batch-action-bar');
+            const batchCount = document.getElementById('batch-count');
+            const count = selectedEscalations.size;
+
+            batchCount.textContent = count;
+
+            if (count > 0) {
+                batchBar.classList.add('show');
+            } else {
+                batchBar.classList.remove('show');
+            }
+        }
+
+        function updateEscalationCardStyles() {
+            document.querySelectorAll('.escalation-card').forEach(card => {
+                const id = card.getAttribute('data-escalation-id');
+                if (selectedEscalations.has(id)) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+        }
+
+        async function batchApproveEscalations() {
+            if (selectedEscalations.size === 0) return;
+
+            const count = selectedEscalations.size;
+            const ids = Array.from(selectedEscalations);
+
+            // In production, send to API:
+            // await fetch(`${API_BASE}/api/governance/escalations/batch-approve`, {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify({ escalation_ids: ids })
+            // });
+
+            showToast(`${count} escalation${count > 1 ? 's' : ''} approved successfully`, 'success');
+            clearBatchSelection();
+            await loadEscalations();
+        }
+
+        async function batchReviewEscalations() {
+            if (selectedEscalations.size === 0) return;
+
+            const count = selectedEscalations.size;
+            const ids = Array.from(selectedEscalations);
+
+            // In production, send to API:
+            // await fetch(`${API_BASE}/api/governance/escalations/batch-review`, {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify({ escalation_ids: ids })
+            // });
+
+            showToast(`${count} escalation${count > 1 ? 's' : ''} marked for review`, 'success');
+            clearBatchSelection();
+            await loadEscalations();
+        }
+
+        function clearBatchSelection() {
+            selectedEscalations.clear();
+            updateBatchActionBar();
+            // Uncheck all checkboxes
+            document.querySelectorAll('.escalation-card input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            updateEscalationCardStyles();
+        }
     </script>
 </body>
 </html>
