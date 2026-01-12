@@ -1,4 +1,4 @@
-# Lexecon - Cryptographic Governance Protocol for AI Systems
+# Lexecon - Universal Governance Protocol
 
 <div align="center">
 
@@ -11,11 +11,11 @@
 [![Test Coverage](https://img.shields.io/badge/coverage-69%25-yellow.svg)](https://github.com/Lexicoding-systems/Lexecon)
 [![GitHub stars](https://img.shields.io/github/stars/Lexicoding-systems/Lexecon?style=social)](https://github.com/Lexicoding-systems/Lexecon/stargazers)
 
-**Enterprise-grade cryptographic governance framework for AI safety, compliance, and auditability**
+**The universal governance protocol for autonomous systems**
 
-*Built for the EU AI Act era—tamper-proof audit trails, deny-by-default security, and runtime enforcement*
+*Enterprise-grade cryptographic governance for AI, finance, healthcare, automotive, and beyond.*
 
-[Documentation](#documentation) • [Quick Start](#quick-start) • [Features](#core-capabilities) • [Roadmap](#roadmap) • [Contributing](#contributing)
+[Developer Dashboard](./launch_dashboard.sh) • [Quick Start](#quick-start) • [Features](#core-capabilities) • [Roadmap](#roadmap) • [Contributing](#contributing)
 
 </div>
 
@@ -23,16 +23,16 @@
 
 ## 🎯 What is Lexecon?
 
-Lexecon is a **comprehensive cryptographic governance protocol** that provides:
+Lexecon is a **universal governance protocol** that provides:
 
-- **🔐 Cryptographically Auditable Decision-Making**: Every AI action is signed, hashed, and chain-linked
+- **🔐 Cryptographically Auditable Decision-Making**: Every autonomous action is signed, hashed, and chain-linked
 - **⚡ Runtime Policy Enforcement**: Deny-by-default gating with capability-based authorization
-- **📋 Compliance Automation**: Built-in mappings for EU AI Act, GDPR, SOC 2, and ISO 27001
-- **🛡️ Enterprise Security**: RBAC, digital signatures (Ed25519/RSA-4096), audit logging
+- **📋 Compliance Automation**: Built-in mappings for EU AI Act, MIFID II, HIPAA, SOC 2, GDPR, ISO 27001
+- **🛡️ Enterprise Security**: RBAC, MFA, OIDC, rate limiting, digital signatures (Ed25519/RSA-4096)
 - **🔗 Tamper-Evident Ledgers**: Hash-chained audit trails with integrity verification
-- **🤖 Model-Agnostic**: Works with OpenAI, Anthropic, and open-source models
+- **🌐 Domain-Agnostic**: Works with AI, trading algorithms, autonomous vehicles, IoT, and more
 
-Think of it as **blockchain-grade governance for AI systems**—without the blockchain.
+Think of it as **blockchain-grade governance**—without the blockchain—for any autonomous system.
 
 ---
 
@@ -40,15 +40,15 @@ Think of it as **blockchain-grade governance for AI systems**—without the bloc
 
 ### The Problem
 
-Modern AI systems face critical governance challenges:
+Modern autonomous systems face critical governance challenges:
 
 | Challenge | Impact | Regulatory Risk |
 |-----------|--------|-----------------|
-| **Uncontrolled Tool Usage** | Models execute arbitrary tools without oversight | High |
+| **Uncontrolled Autonomous Actions** | Systems execute without oversight | High |
 | **No Audit Trail** | Can't prove what decisions were made or why | Critical |
-| **Compliance Burden** | Manual mapping of AI behavior to regulations | Very High |
+| **Compliance Burden** | Manual mapping to regulations (AI Act, MIFID II, HIPAA) | Very High |
 | **Policy Drift** | Policies become outdated, inconsistent | Medium |
-| **Prompt Injection** | Adversarial inputs bypass controls | High |
+| **Prompt Injection / Rogue Actors** | Adversarial inputs bypass controls | High |
 
 ### The Solution
 
@@ -56,10 +56,12 @@ Lexecon provides **cryptographic proof of governance**:
 
 ```python
 # Before Lexecon: Hope and pray
-model.call_tool("delete_production_database")  # 😱
+ai_agent.execute("delete_production_database")  # 😱
+trading_algo.place_order(value=10000000)  # 😱
 
 # With Lexecon: Cryptographically enforced
 decision = governance.request_decision(
+    actor="act_ai_agent:gpt4",
     action="database:delete",
     context={"environment": "production"}
 )
@@ -68,18 +70,109 @@ decision = governance.request_decision(
 
 ---
 
+## 🌐 Multi-Domain Governance
+
+Lexecon is **evolving from AI governance to the universal governance protocol** for autonomous systems:
+
+### Supported Governance Domains
+
+| Domain | Use Cases | Regulations | Status |
+|--------|-----------|-------------|--------|
+| **🤖 AI/ML** | LLMs, autonomous agents, computer vision | EU AI Act, GDPR, SOC 2 | ✅ **Complete** (Phases 1-2) |
+| **💰 Finance** | Algorithmic trading, risk management | MIFID II, Basel III, SOC 2 | 📋 Phase 4 |
+| **🏥 Healthcare** | Diagnostic AI, patient data analysis | HIPAA, FDA 21 CFR Part 11 | 📋 Phase 4 |
+| **🚗 Automotive** | Autonomous vehicles, advanced driver assistance | ISO 26262, UNECE WP.29 | 📋 Phase 4 |
+| **📦 Supply Chain** | Logistics optimization, ESG tracking | ESG standards, conflict minerals | 🔮 Future |
+| **⚡ Energy** | Smart grid management, predictive maintenance | NERC CIP, IEC 62351 | 🔮 Future |
+
+**Key Insight**: The same governance primitives (decisions, policies, audit trails) work across *all* domains. Lexecon is the universal protocol layer.
+
+[Read Multi-Domain Roadmap](./MULTI_DOMAIN_IMPLEMENTATION_ROADMAP.md)
+[Read Universal Governance Vision](./MULTI_DOMAIN_GOVERNANCE_VISION.md)
+
+---
+
+## 💻 Developer Workspace & IP Vault
+
+### Personal Engineering Dashboard
+
+Launch your secure workspace to track development and protect intellectual property:
+
+```bash
+./launch_dashboard.sh
+```
+
+**Features**:
+- 🔐 **Cryptographic IP Registry**: 5 patentable innovations documented with timestamps
+- 📈 **Development Timeline**: Complete history from Jan 1, 2026 inception
+- 📊 **Project Metrics**: Real-time tracking of coverage, tests, progress
+- 📋 **Tamper-Evident Audit Trail**: Every action signed and logged
+- 🎯 **Sprint Planning**: Current task tracking and goal management
+
+### Personal Vault
+
+Secure vault for engineering notes, code snippets, and IP protection:
+
+```bash
+./launch_vault.sh
+```
+
+[Read Dashboard Guide](./DASHBOARD_GUIDE.md) | [Read Vault Quickstart](./VAULT_QUICKSTART.md)
+
+---
+
+## 🏆 Building the Universal Standard
+
+Lexecon is positioned to become the **HTTP of governance**—the unavoidable standard for autonomous systems.
+
+### Our Vision
+
+**From AI governance tool → Universal governance protocol → Industry standard**
+
+### Strategic Pillars
+
+1. **📐 Formal Protocol Specification** (In Progress)
+   - Standardized governance primitives
+   - Technology Compatibility Kit (TCK)
+   - Reference implementations (Python, Rust, Go)
+
+2. **🏛️ Standards Body Engagement** (Ongoing)
+   - **NIST AI RMF**: Reference implementation
+   - **IEEE**: Submit PAR for governance protocol standard
+   - **OWASP**: Primary defense for Top 10 LLM
+   - **ISO**: Align with ISO 42001 (AI management systems)
+
+3. **🌐 Multi-Domain Ecosystem** (Launching Phase 4)
+   - Domain-specific plugins (finance, healthcare, automotive)
+   - 50+ regulatory framework mappings
+   - Governance Exchange (GEX) marketplace
+
+4. **👥 Certified Developer Community**
+   - Certified Lexecon Governance Engineer (LCGE)
+   - Training programs and certifications
+   - 10,000+ certified engineers goal
+
+5. **🏢 Enterprise Alliance**
+   - Fortune 500 founding members
+   - Board seats and governance participation
+   - Co-marketing and case studies
+
+[Read Standard-Setting Strategy](./STANDARD_SETTING_STRATEGY.md)
+
+---
+
 ## 🏗️ Core Capabilities
 
 ### 1. **Policy Engine** (`src/lexecon/policy/`)
-Lexicoding-forward policy system with graph-based evaluation.
+Graph-based policy evaluation system.
 
-**Features:**
+**Features**:
 - ✅ Declarative policy language (terms + relations)
 - ✅ Compile-time validation and runtime evaluation
 - ✅ Policy versioning with hash pinning
 - ✅ Deterministic evaluation (no LLM in the loop)
 
-**Example:**
+**Example**:
 ```python
 from lexecon.policy import PolicyEngine, PolicyTerm, PolicyRelation
 
@@ -99,261 +192,97 @@ result = engine.evaluate(actor="user", action="read")  # ✅ Permitted
 ### 2. **Decision Service** (`src/lexecon/decision/`)
 Real-time policy evaluation and capability token issuance.
 
-**Features:**
-- ✅ Pre-execution gating for all tool calls
-- ✅ Context-aware policy evaluation
-- ✅ Reason traces for explainability
-- ✅ Capability token minting (time-limited, scoped)
-
-**Flow:**
+**Flow**:
 ```
-Model Request → Decision Service → Policy Evaluation → Token Issuance → Ledger Recording
+Request → Decision Service → Policy Evaluation → Token Issuance → Ledger Recording
 ```
 
 ### 3. **Capability System** (`src/lexecon/capability/`)
 Short-lived authorization tokens for approved actions.
 
-**Features:**
+**Features**:
 - ✅ Scoped permissions (single action or resource)
 - ✅ Time-limited validity (configurable TTL)
 - ✅ Policy version binding
 - ✅ Cryptographic verification
 
-**Example:**
-```python
-token = capability_service.mint_token(
-    action="database:read",
-    scope={"table": "users"},
-    ttl_seconds=300  # 5-minute validity
-)
-# Token: cap_a1b2c3d4_read_users_exp1704412800
-```
-
 ### 4. **Cryptographic Ledger** (`src/lexecon/ledger/`)
 Tamper-evident audit log using hash chaining.
 
-**Features:**
-- ✅ Hash-chained entries (like blockchain, but faster)
-- ✅ Ed25519 signatures on all events
-- ✅ Integrity verification tooling
-- ✅ Audit report generation
-
-**Properties:**
+**Properties**:
 - 🔒 **Tamper-Evident**: Any modification breaks the chain
 - 🔍 **Auditable**: Complete forensic trail
 - ⚡ **Fast**: 10,000+ entries/second
 - 📦 **Portable**: Export to JSON/SQLite
 
-### 5. **Evidence Management** (`src/lexecon/evidence/`)
-Immutable artifact storage for compliance evidence.
+### 5. **Enterprise Security** (`src/lexecon/security/`)
+Comprehensive security infrastructure.
 
-**Features:**
-- ✅ Append-only storage (optional)
-- ✅ SHA-256 content hashing
-- ✅ Digital signatures (RSA-4096)
-- ✅ Artifact types: decisions, attestations, compliance records
-
-**Use Cases:**
-- 📄 EU AI Act technical documentation
-- 📊 Compliance audit trails
-- 🔏 Signed attestations from executives
-- 📈 Risk assessments
-
-### 6. **Risk Management** (`src/lexecon/risk/`)
-Quantitative risk assessment and tracking.
-
-**Features:**
-- ✅ Risk scoring (likelihood × impact)
-- ✅ Mitigation tracking
-- ✅ Escalation workflows
-- ✅ Risk register management
-
-### 7. **Escalation System** (`src/lexecon/escalation/`)
-Human-in-the-loop oversight for high-risk decisions.
-
-**Features:**
-- ✅ Automatic escalation triggers
-- ✅ Resolution workflows (approve/reject/defer)
-- ✅ Escalation history tracking
-- ✅ Notification integration (email, Slack, PagerDuty)
-
-### 8. **Override Management** (`src/lexecon/override/`)
-Executive override capabilities with full audit trail.
-
-**Features:**
-- ✅ Break-glass emergency procedures
-- ✅ Executive approval workflows
-- ✅ Override justification requirements
-- ✅ Compliance reporting
-
-### 9. **Compliance Mapping** (`src/lexecon/compliance_mapping/`)
-Automatic mapping of governance primitives to regulatory controls.
-
-**Supported Frameworks:**
-- ✅ **EU AI Act** (Articles 9-17, 72)
-- ✅ **GDPR** (Articles 5, 22, 25, 32, 35)
-- ✅ **SOC 2** (CC1-CC9, Trust Service Criteria)
-- ✅ **ISO 27001** (Controls A.5-A.18)
-
-**Example:**
-```python
-mapping = compliance_service.map_primitive_to_controls(
-    primitive_type="DECISION_LOGGING",
-    primitive_id="dec_12345",
-    framework=RegulatoryFramework.EU_AI_ACT
-)
-# Returns: [Article 12.1, Article 12.2, Article 16.d, Article 72]
-```
-
-### 10. **EU AI Act Compliance** (`src/lexecon/compliance/eu_ai_act/`)
-Specialized implementation of EU AI Act requirements.
-
-**Modules:**
-- ✅ **Article 11**: Technical documentation
-- ✅ **Article 12**: Record-keeping (automatic logging)
-- ✅ **Article 14**: Human oversight workflows
-
-### 11. **Security Services** (`src/lexecon/security/`)
-Enterprise security infrastructure.
-
-**Components:**
+**Components**:
 - ✅ **Authentication**: RBAC with hierarchical permissions
-- ✅ **Digital Signatures**: Ed25519 for audit packets, RSA-4096 for artifacts
+- ✅ **Digital Signatures**: Ed25519 (speed) + RSA-4096 (compliance)
+- ✅ **MFA**: TOTP and SMS support
+- ✅ **OIDC**: Enterprise SSO integration
+- ✅ **Rate Limiting**: Configurable policies with middleware
 - ✅ **Audit Logging**: Comprehensive security event tracking
-- ✅ **Middleware**: FastAPI integration for request signing
+- ✅ **Secrets Management**: Encrypted storage and rotation
+- ✅ **Database Encryption**: Transparent data encryption
 
-### 12. **Observability** (`src/lexecon/observability/`)
-Production-ready monitoring and telemetry.
+### 6. **Compliance Mapping** (`src/lexecon/compliance_mapping/`)
+Automated mapping of governance primitives to regulatory controls.
 
-**Features:**
-- ✅ Structured JSON logging with context vars
-- ✅ OpenTelemetry tracing integration
-- ✅ Prometheus metrics export
-- ✅ Health check endpoints
+**Supported Frameworks**:
+- **EU AI Act** (Articles 9-17, 72)
+- **GDPR** (Articles 5, 22, 25, 32, 35)
+- **SOC 2** (CC1-CC9, Trust Service Criteria)
+- **ISO 27001** (Controls A.5-A.18)
+- **HIPAA** (Privacy & Security Rules)
+- **MIFID II** (Financial instruments)
 
-### 13. **Audit Export** (`src/lexecon/audit_export/`)
-Compliance-ready audit report generation.
+### 7. **Multi-Domain Adapters**
+Plug-and-play adapters for different autonomous systems.
 
-**Features:**
-- ✅ Time-range filtering
-- ✅ Event type filtering
-- ✅ Multiple export formats (JSON, CSV, PDF)
-- ✅ Cryptographic integrity proofs
-
-### 14. **Responsibility Tracking** (`src/lexecon/responsibility/`)
-Chain of custody for AI decisions.
-
-**Features:**
-- ✅ Responsibility assignment per decision
-- ✅ Delegation workflows
-- ✅ Accountability reporting
-- ✅ RACI matrix support
-
-### 15. **Storage Layer** (`src/lexecon/storage/`)
-Flexible persistence with SQLite and PostgreSQL support.
-
-**Features:**
-- ✅ SQLite for development/testing
-- ✅ PostgreSQL for production
-- ✅ Migration support
-- ✅ Backup and restore utilities
-
-### 16. **CLI Tools** (`src/lexecon/cli/`)
-Comprehensive command-line interface.
-
-**Commands:**
-```bash
-lexecon init              # Initialize configuration
-lexecon policy validate   # Validate policy definitions
-lexecon audit verify      # Verify ledger integrity
-lexecon export audit      # Export audit reports
-lexecon doctor            # System diagnostics
-```
-
-### 17. **REST API** (`src/lexecon/api/`)
-Production FastAPI server with 30+ endpoints.
-
-**Endpoint Categories:**
-- `/decisions` - Decision requests and history
-- `/policies` - Policy management
-- `/capabilities` - Token operations
-- `/ledger` - Audit trail queries
-- `/evidence` - Artifact management
-- `/escalations` - Human oversight
-- `/overrides` - Executive actions
-- `/compliance` - Regulatory reporting
+**Available**:
+- 🤖 **LangChain**: Automatic tool call interception
+- 🤖 **OpenAI**: Function calling integration
+- 🤖 **Anthropic**: Tool use integration
+- ☁️ **AWS Bedrock**: Cloud model governance
+- ☁️ **Azure OpenAI**: Enterprise model deployment
 
 ---
 
-## 📊 Architecture
+## 📊 Current Status
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                         Lexecon Protocol Stack                            │
-├──────────────────────────────────────────────────────────────────────────┤
-│  🌐 API Layer (FastAPI)                                                  │
-│     REST Endpoints │ OpenAPI Docs │ Request Validation │ Rate Limiting   │
-├──────────────────────────────────────────────────────────────────────────┤
-│  🎭 Governance Core                                                      │
-│     ┌──────────────────┬──────────────────┬─────────────────────────┐   │
-│     │ Policy Engine    │ Decision Service │ Capability System       │   │
-│     │ • Graph Eval     │ • Gating         │ • Token Minting         │   │
-│     │ • Constraints    │ • Reason Traces  │ • Verification          │   │
-│     └──────────────────┴──────────────────┴─────────────────────────┘   │
-├──────────────────────────────────────────────────────────────────────────┤
-│  🔐 Cryptographic Services                                                │
-│     ┌──────────────────┬──────────────────┬─────────────────────────┐   │
-│     │ Ledger (Hashing) │ Identity (Keys)  │ Signatures (Ed25519)    │   │
-│     │ • Hash Chains    │ • Ed25519 Keys   │ • Packet Signing        │   │
-│     │ • Integrity      │ • Key Storage    │ • Verification          │   │
-│     └──────────────────┴──────────────────┴─────────────────────────┘   │
-├──────────────────────────────────────────────────────────────────────────┤
-│  📋 Compliance & Risk                                                     │
-│     ┌──────────────────┬──────────────────┬─────────────────────────┐   │
-│     │ EU AI Act        │ Compliance Map   │ Risk Management         │   │
-│     │ • Art. 11-14     │ • SOC 2 / GDPR   │ • Scoring               │   │
-│     │ • Documentation  │ • ISO 27001      │ • Mitigation            │   │
-│     └──────────────────┴──────────────────┴─────────────────────────┘   │
-├──────────────────────────────────────────────────────────────────────────┤
-│  🚨 Oversight & Controls                                                  │
-│     ┌──────────────────┬──────────────────┬─────────────────────────┐   │
-│     │ Escalations      │ Overrides        │ Responsibility          │   │
-│     │ • Human Review   │ • Break-glass    │ • Accountability        │   │
-│     │ • Workflows      │ • Justification  │ • Chain of Custody      │   │
-│     └──────────────────┴──────────────────┴─────────────────────────┘   │
-├──────────────────────────────────────────────────────────────────────────┤
-│  📦 Evidence & Audit                                                      │
-│     ┌──────────────────┬──────────────────┬─────────────────────────┐   │
-│     │ Evidence Store   │ Audit Export     │ Verification Tools      │   │
-│     │ • Artifacts      │ • Reports        │ • Integrity Checks      │   │
-│     │ • Signatures     │ • Time-range     │ • Hash Validation       │   │
-│     └──────────────────┴──────────────────┴─────────────────────────┘   │
-├──────────────────────────────────────────────────────────────────────────┤
-│  📊 Observability                                                         │
-│     Logging (Structured) │ Tracing (OpenTelemetry) │ Metrics (Prometheus)│
-├──────────────────────────────────────────────────────────────────────────┤
-│  💾 Storage Layer                                                         │
-│     SQLite (Dev) │ PostgreSQL (Prod) │ Migrations │ Backups             │
-└──────────────────────────────────────────────────────────────────────────┘
-```
+**Phase 3: Advanced Compliance** 🚧 **IN PROGRESS** (80% → 100% by Jan 31)
+
+| Metric | Current | Target | Status |
+|--------|---------|--------|--------|
+| **Test Coverage** | 69% | 80%+ | 🚧 In Progress |
+| **Tests Passing** | 824 / 824 | 824+ | ✅ Perfect |
+| **Phase 3 Complete** | 80% | 100% | 🚧 On Track |
+| **API Endpoints** | 30+ | 35+ | ✅ Complete |
+| **Documentation** | 85KB | 100KB+ | ✅ Complete |
+
+### Sprint Focus (Week of Jan 13-17)
+1. **Automated Compliance Reporting**: PDF/XBRL export
+2. **Real-Time Dashboards**: WebSocket integration
+3. **Test Coverage**: 69% → 80%+
+4. **Security Tests**: API hardening
+
+[View Detailed Task List](./TASKS_NEXT_2_WEEKS.md)
 
 ---
 
-## 🛠️ Installation
+## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8+
-- pip or Poetry
-
-### Quick Install
+### Installation
 
 ```bash
-# From PyPI (when published)
-pip install lexecon
-
-# From source
+# Clone repository
 git clone https://github.com/Lexicoding-systems/Lexecon.git
 cd Lexecon
+
+# Install with dev dependencies
 pip install -e ".[dev]"
 
 # Verify installation
@@ -361,51 +290,44 @@ lexecon --version
 lexecon doctor
 ```
 
-### Docker
+### 1. Launch Developer Dashboard
 
 ```bash
-docker pull lexecon/lexecon:latest
-docker run -p 8000:8000 lexecon/lexecon:latest
-```
-
----
-
-## 🚀 Quick Start
-
-### 1. Initialize Configuration
-
-```bash
-lexecon init
-# Creates: ~/.lexecon/config.yaml, keys/, policies/
+./launch_dashboard.sh
+# Opens: http://localhost:8002/ENGINEER_DASHBOARD.html
 ```
 
 ### 2. Start the API Server
 
 ```bash
 lexecon serve
-# Server running at: http://localhost:8000
-# API docs: http://localhost:8000/docs
+# Server: http://localhost:8000
+# API Docs: http://localhost:8000/docs
 ```
 
-### 3. Make Your First Decision Request
+### 3. Make Your First Decision
+
+```bash
+# CLI
+lexecon decision request \
+  --actor "ai_agent:research_assistant" \
+  --action "web_search" \
+  --context '{"purpose": "research"}'
+```
 
 ```python
+# Python
 import requests
 
 response = requests.post("http://localhost:8000/decisions/request", json={
     "actor": "act_human_user:alice",
     "action": "database:read",
-    "resource": "users_table",
-    "context": {
-        "environment": "production",
-        "purpose": "analytics"
-    }
+    "context": {"environment": "staging"}
 })
 
 decision = response.json()
 print(f"Decision: {decision['outcome']}")  # "allowed" or "denied"
 print(f"Reason: {decision['reason']}")
-print(f"Token: {decision.get('capability_token')}")
 ```
 
 ### 4. Verify Ledger Integrity
@@ -419,231 +341,25 @@ lexecon audit verify
 
 ---
 
-## 📚 Usage Examples
+## 📚 Documentation
 
-### Policy Definition
+### Technical Documentation
+- **[Technical Deep Dive](./TECHNICAL_DEEP_DIVE_ANALYSIS.md)**: Architecture & codebase analysis (19KB)
+- **[Multi-Domain Implementation Roadmap](./MULTI_DOMAIN_IMPLEMENTATION_ROADMAP.md)**: Path to universal protocol
+- **[Governance Vision](./MULTI_DOMAIN_GOVERNANCE_VISION.md)**: Long-term strategy
 
-```python
-from lexecon.policy import PolicyEngine, PolicyTerm, PolicyRelation, RelationType
+### Developer Resources
+- **[Personal Engineer Dashboard](./PERSONAL_ENGINEER_DASHBOARD.md)**: Workspace specification (30KB)
+- **[Dashboard Guide](./DASHBOARD_GUIDE.md)**: Using the developer dashboard (16KB)
+- **[Vault Quickstart](./VAULT_QUICKSTART.md)**: IP protection with personal vault
+- **[Task Planning](./TASKS_NEXT_2_WEEKS.md)**: Current sprint tasks (15KB)
 
-engine = PolicyEngine()
+### Strategic Documents
+- **[Standard-Setting Strategy](./STANDARD_SETTING_STRATEGY.md)**: Roadmap to become universal standard (21KB)
+- **[Pitch Materials](./PITCH_DECK.md)**: Investor presentation deck
+- **[Investor FAQ](./INVESTOR_FAQ.md)**: Frequently asked questions
 
-# Define actors
-admin = PolicyTerm.create_actor("admin", "Administrator")
-user = PolicyTerm.create_actor("user", "Standard User")
-
-# Define actions
-read = PolicyTerm.create_action("read", "Read data")
-write = PolicyTerm.create_action("write", "Write data")
-delete = PolicyTerm.create_action("delete", "Delete data")
-
-# Define relations
-engine.add_relation(PolicyRelation.permits(admin, read))
-engine.add_relation(PolicyRelation.permits(admin, write))
-engine.add_relation(PolicyRelation.permits(admin, delete))
-engine.add_relation(PolicyRelation.permits(user, read))
-engine.add_relation(PolicyRelation.forbids(user, delete))
-
-# Evaluate
-result = engine.evaluate(actor="user", action="delete")
-print(result.outcome)  # "denied"
-```
-
-### Compliance Mapping
-
-```python
-from lexecon.compliance_mapping import ComplianceMappingService, RegulatoryFramework
-
-service = ComplianceMappingService()
-
-# Map a decision to EU AI Act articles
-mapping = service.map_primitive_to_controls(
-    primitive_type="DECISION_LOGGING",
-    primitive_id="dec_12345",
-    framework=RegulatoryFramework.EU_AI_ACT
-)
-
-print(f"Mapped to {len(mapping.control_ids)} controls:")
-for control_id in mapping.control_ids:
-    print(f"  - {control_id}")
-
-# Generate compliance report
-report = service.generate_compliance_report(RegulatoryFramework.SOC2)
-print(f"Compliance: {report.compliance_percentage:.1f}%")
-```
-
-### Risk Assessment
-
-```python
-from lexecon.risk import RiskService, RiskLevel
-
-risk_service = RiskService()
-
-# Create risk assessment
-risk = risk_service.create_risk(
-    title="Unauthorized data access",
-    description="User attempting to access PII without proper authorization",
-    category="data_privacy",
-    likelihood=0.3,
-    impact=0.9,
-    affected_systems=["user_database", "audit_log"]
-)
-
-print(f"Risk ID: {risk.risk_id}")
-print(f"Risk Score: {risk.risk_score:.2f}")
-print(f"Risk Level: {risk.risk_level}")  # HIGH
-
-# Add mitigation
-risk_service.add_mitigation(
-    risk_id=risk.risk_id,
-    action="Implement additional RBAC checks",
-    responsible_party="security_team"
-)
-```
-
-### Evidence Management
-
-```python
-from lexecon.evidence import EvidenceService, ArtifactType
-
-evidence_service = EvidenceService()
-
-# Store compliance evidence
-artifact = evidence_service.store_artifact(
-    artifact_type=ArtifactType.ATTESTATION,
-    content="We certify that all AI decisions are logged and auditable",
-    source="cto@company.com",
-    metadata={
-        "regulation": "EU AI Act Article 12",
-        "period": "2024-Q1"
-    }
-)
-
-# Sign artifact (RSA-4096)
-signed = evidence_service.sign_artifact(
-    artifact_id=artifact.artifact_id,
-    signer_id="act_human_user:cto",
-    signature="...",
-    algorithm="RSA-SHA256"
-)
-
-print(f"Artifact ID: {artifact.artifact_id}")
-print(f"SHA256 Hash: {artifact.sha256_hash}")
-```
-
----
-
-## 🧪 Testing & Quality
-
-### Test Coverage
-
-```bash
-pytest --cov=src/lexecon --cov-report=html
-# 824 tests passing
-# 69% coverage (targeting 80%+)
-```
-
-### Modules at 100% Coverage
-
-- ✅ `observability/logging.py`
-- ✅ `observability/metrics.py`
-- ✅ `observability/health.py`
-- ✅ `evidence/append_only_store.py`
-- ✅ `compliance_mapping/service.py`
-- ✅ `policy/terms.py`
-- ✅ `ledger/chain.py`
-- ✅ `identity/signing.py`
-- ✅ `capability/tokens.py`
-
-### Quality Metrics
-
-| Metric | Status | Target |
-|--------|--------|--------|
-| Test Coverage | 69% | 80%+ |
-| Tests Passing | 824 | All |
-| Type Coverage | 85% | 90%+ |
-| Linting | ✅ Black + Ruff | Clean |
-| Security Scan | ✅ CodeQL | No High |
-
----
-
-## 🗺️ Roadmap
-
-### Phase 1: Foundation ✅ **COMPLETE**
-- ✅ Policy engine with graph evaluation
-- ✅ Decision service with capability tokens
-- ✅ Cryptographic ledger with hash chaining
-- ✅ Evidence management system
-- ✅ Basic compliance mapping (EU AI Act, GDPR, SOC 2)
-
-### Phase 2: Enterprise Features ✅ **COMPLETE**
-- ✅ Risk management and scoring
-- ✅ Escalation workflows
-- ✅ Override management
-- ✅ Responsibility tracking
-- ✅ Security services (RBAC, signing, audit)
-- ✅ REST API (30+ endpoints)
-- ✅ CLI tooling
-
-### Phase 3: Advanced Compliance 🚧 **IN PROGRESS**
-- ✅ EU AI Act Articles 11, 12, 14
-- ✅ Compliance mapping automation
-- 🚧 Automated compliance reporting
-- 🚧 Real-time compliance dashboards
-- 🚧 Export to regulatory formats (ESEF, XBRL)
-
-### Phase 4: Production Hardening 📋 **PLANNED**
-- 📋 PostgreSQL production backend
-- 📋 Horizontal scaling support
-- 📋 High-availability deployments
-- 📋 Kubernetes operators
-- 📋 Terraform modules
-- 📋 Performance benchmarking (10K+ req/s)
-
-### Phase 5: ML Integration 📋 **PLANNED**
-- 📋 LangChain integration
-- 📋 OpenAI function calling adapters
-- 📋 Anthropic tool use integration
-- 📋 Prompt injection detection
-- 📋 Model behavior analysis
-
-### Phase 6: Advanced Features 🔮 **FUTURE**
-- 🔮 Federated governance (multi-org)
-- 🔮 Zero-knowledge proofs for privacy
-- 🔮 Blockchain anchoring (optional)
-- 🔮 AI-generated policy suggestions
-- 🔮 Automated red-teaming
-- 🔮 Compliance prediction (ML-based)
-
----
-
-## 📖 Documentation
-
-### Core Concepts
-
-- **Policy Terms**: Nodes in the policy graph (actors, actions, resources, data classes)
-- **Policy Relations**: Edges defining permissions (permits, forbids, requires, implies)
-- **Governance Primitives**: Core operations (decisions, escalations, overrides, evidence)
-- **Capability Tokens**: Short-lived authorization tokens for approved actions
-- **Hash Chaining**: Tamper-evident linking of audit entries
-- **Digital Signatures**: Ed25519 for speed, RSA-4096 for compliance
-
-### API Reference
-
-Full API documentation available at `/docs` when server is running:
-```bash
-lexecon serve
-# Visit: http://localhost:8000/docs
-```
-
-### CLI Reference
-
-```bash
-lexecon --help              # Show all commands
-lexecon policy --help       # Policy management
-lexecon audit --help        # Audit operations
-lexecon export --help       # Export utilities
-```
+Total Documentation: **~150KB** of comprehensive guides
 
 ---
 
@@ -674,56 +390,11 @@ mypy src/
 
 ### Areas for Contribution
 
-- 🧪 Test coverage (target: 80%+)
-- 📚 Documentation and examples
-- 🌍 Additional compliance frameworks
-- 🔌 Model integrations (LangChain, LlamaIndex)
-- 🚀 Performance optimizations
-- 🐛 Bug fixes and improvements
-
----
-
-## 🔒 Security
-
-### Reporting Vulnerabilities
-
-Please report security issues to: [Jacobporter@lexicoding.tech]
-
-**Do not** open public issues for security vulnerabilities.
-
-### Security Features
-
-- ✅ Ed25519 cryptographic signatures (tamper-proof)
-- ✅ Hash-chained audit logs (immutable)
-- ✅ RBAC with hierarchical permissions
-- ✅ Time-limited capability tokens
-- ✅ Request signing middleware
-- ✅ Audit log integrity verification
-- ✅ Input validation and sanitization
-
----
-
-## 📄 License
-
-Lexecon is released under the [MIT License](LICENSE).
-
-```
-Copyright (c) 2024 Lexicoding Systems
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-```
+- 🧪 **Test coverage**: Help us reach 80%+ (currently 69%)
+- 🌍 **Multi-domain**: Build adapters for new domains
+- 📚 **Documentation**: Examples and tutorials
+- 🔌 **Model integrations**: New AI model adapters
+- 🚀 **Performance**: Optimizations for 10K+ req/s
 
 ---
 
@@ -733,10 +404,11 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 |---------|---------|----------------------|
 | **Audit Trail** | Cryptographically tamper-proof | Mutable logs, easy to alter |
 | **Policy Enforcement** | Runtime gating, deny-by-default | Post-hoc analysis, hope-based |
-| **Compliance** | Automated mapping, real-time | Manual processes, expensive |
+| **Compliance** | Automated mapping, multi-framework | Manual processes, expensive |
 | **Transparency** | Every decision explained | Black-box decisions |
-| **Security** | Ed25519 signatures, hash chains | Often none |
-| **Scalability** | 10K+ req/s (target) | Varies |
+| **Security** | Ed25519 + RSA-4096 + MFA + OIDC | Often none |
+| **Standard** | Universal protocol positioning | Proprietary solutions |
+| **Ecosystem** | GEX marketplace, certification | Isolated tools |
 
 ---
 
@@ -745,24 +417,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 - **Documentation**: [https://lexecon.readthedocs.io](https://lexecon.readthedocs.io) (coming soon)
 - **Issues**: [GitHub Issues](https://github.com/Lexicoding-systems/Lexecon/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Lexicoding-systems/Lexecon/discussions)
-- **Email**: [Jacobporter@lexicoding.tech] (mailto:Jacobporter@lexicoding.tech)
-
----
-
-## 🙏 Acknowledgments
-
-Built with:
-- **FastAPI** - Modern web framework
-- **Pydantic** - Data validation
-- **Cryptography** - Ed25519 and RSA implementations
-- **SQLAlchemy** - Database ORM
-- **pytest** - Testing framework
-
-Inspired by:
-- EU AI Act requirements
-- NIST AI Risk Management Framework
-- OpenAI's safety practices
-- Anthropic's Constitutional AI
+- **Email**: [Jacobporter@lexicoding.tech](mailto:Jacobporter@lexicoding.tech)
 
 ---
 
