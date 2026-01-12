@@ -163,6 +163,54 @@ class CreateUserRequest(BaseModel):
     full_name: str
 
 
+class ChangePasswordRequest(BaseModel):
+    """Change password request."""
+    old_password: str
+    new_password: str
+
+
+class PasswordPolicyResponse(BaseModel):
+    """Password policy configuration response."""
+    min_length: int
+    max_age_days: Optional[int]
+    history_count: int
+    require_uppercase: bool
+    require_lowercase: bool
+    require_digits: bool
+    require_special: bool
+    special_chars: str
+
+
+class PasswordStatusResponse(BaseModel):
+    """Password status response."""
+    password_changed_at: Optional[str]
+    password_expires_at: Optional[str]
+    days_until_expiration: Optional[int]
+    is_expired: bool
+    force_password_change: bool
+    password_age_days: Optional[int]
+    policy: PasswordPolicyResponse
+
+
+class OIDCProviderInfo(BaseModel):
+    """OIDC provider information."""
+    name: str
+    display_name: str
+
+
+class OIDCLinkedProvider(BaseModel):
+    """Linked OIDC provider."""
+    provider_name: str
+    provider_email: Optional[str]
+    linked_at: str
+    last_login: Optional[str]
+
+
+class OIDCUnlinkRequest(BaseModel):
+    """Request to unlink OIDC provider."""
+    provider_name: str
+
+
 class ExportRequestModel(BaseModel):
     """Audit packet export request with attestation."""
     # Step 1: Metadata
@@ -304,16 +352,37 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Configure CORS
+# Configure CORS (hardened for Phase 1B)
 import os
 allowed_origins = os.getenv("LEXECON_CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+
+# Validate CORS origins - don't allow wildcard in production
+if os.getenv("LEXECON_ENV") == "production" and "*" in allowed_origins:
+    raise ValueError("Wildcard CORS origins not allowed in production. Set LEXECON_CORS_ORIGINS environment variable.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins if allowed_origins != ["*"] else ["*"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # Explicit methods (more secure than "*")
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    # Explicit headers (more secure than "*")
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "Accept", "Origin"],
+    # Cache preflight requests for 1 hour
+    max_age=3600,
+    # Expose these headers to the client
+    expose_headers=["X-Request-ID", "X-RateLimit-Remaining", "X-RateLimit-Limit"],
 )
+
+# Add rate limiting middleware
+from lexecon.security.rate_limit_middleware import create_rate_limit_middleware
+rate_limit_middleware = create_rate_limit_middleware()
+app.middleware("http")(rate_limit_middleware)
+
+# Add security headers middleware
+from lexecon.security.security_headers import create_security_headers_middleware
+security_headers_middleware = create_security_headers_middleware()
+app.middleware("http")(security_headers_middleware)
 
 # Global state (in production, use dependency injection)
 policy_engine: Optional[PolicyEngine] = None
@@ -332,6 +401,39 @@ startup_time: float = time.time()
 auth_service: AuthService = AuthService("lexecon_auth.db")
 audit_service: AuditService = AuditService("lexecon_export_audit.db")
 signature_service: SignatureService = SignatureService("lexecon_keys")
+
+# OIDC OAuth service (Phase 1F)
+from lexecon.security.oidc_service import get_oidc_service
+oidc_service = get_oidc_service()
+
+# Register OIDC providers from environment variables
+# Google
+if os.getenv("OIDC_GOOGLE_CLIENT_ID") and os.getenv("OIDC_GOOGLE_CLIENT_SECRET"):
+    oidc_service.register_provider(
+        provider_name="google",
+        discovery_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_id=os.getenv("OIDC_GOOGLE_CLIENT_ID"),
+        client_secret=os.getenv("OIDC_GOOGLE_CLIENT_SECRET")
+    )
+
+# Azure AD
+if os.getenv("OIDC_AZURE_CLIENT_ID") and os.getenv("OIDC_AZURE_CLIENT_SECRET"):
+    tenant_id = os.getenv("OIDC_AZURE_TENANT_ID", "common")
+    oidc_service.register_provider(
+        provider_name="azure",
+        discovery_url=f"https://login.microsoftonline.com/{tenant_id}/v2.0/.well-known/openid-configuration",
+        client_id=os.getenv("OIDC_AZURE_CLIENT_ID"),
+        client_secret=os.getenv("OIDC_AZURE_CLIENT_SECRET")
+    )
+
+# Custom OIDC provider
+if os.getenv("OIDC_CUSTOM_DISCOVERY_URL") and os.getenv("OIDC_CUSTOM_CLIENT_ID"):
+    oidc_service.register_provider(
+        provider_name="custom",
+        discovery_url=os.getenv("OIDC_CUSTOM_DISCOVERY_URL"),
+        client_id=os.getenv("OIDC_CUSTOM_CLIENT_ID"),
+        client_secret=os.getenv("OIDC_CUSTOM_CLIENT_SECRET")
+    )
 
 # Governance services (Phase 1-4)
 risk_service: Optional[RiskService] = None
@@ -1416,6 +1518,197 @@ async def list_users(request: Request):
             for u in users
         ]
     }
+
+
+@app.post("/auth/change-password")
+async def change_password(request: Request, password_req: ChangePasswordRequest):
+    """Change authenticated user's password."""
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    try:
+        success = auth_service.change_password(
+            user_id=session.user_id,
+            old_password=password_req.old_password,
+            new_password=password_req.new_password
+        )
+
+        if success:
+            # Log password change
+            audit_service.log_access(
+                endpoint="/auth/change-password",
+                method="POST",
+                status_code=200,
+                user_id=session.user_id,
+                username=session.username,
+                ip_address=request.client.host if request.client else None
+            )
+
+            return {"success": True, "message": "Password changed successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to change password")
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/auth/password-policy", response_model=PasswordPolicyResponse)
+async def get_password_policy():
+    """Get password policy requirements."""
+    from lexecon.security.password_policy import get_default_policy
+
+    policy = get_default_policy()
+
+    return PasswordPolicyResponse(
+        min_length=policy.min_length,
+        max_age_days=policy.max_age_days,
+        history_count=policy.history_count,
+        require_uppercase=policy.require_uppercase,
+        require_lowercase=policy.require_lowercase,
+        require_digits=policy.require_digits,
+        require_special=policy.require_special,
+        special_chars=policy.special_chars
+    )
+
+
+@app.get("/auth/password-status", response_model=PasswordStatusResponse)
+async def get_password_status(request: Request):
+    """Get current user's password status."""
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    try:
+        status = auth_service.get_password_status(session.user_id)
+
+        return PasswordStatusResponse(
+            password_changed_at=status["password_changed_at"],
+            password_expires_at=status["password_expires_at"],
+            days_until_expiration=status["days_until_expiration"],
+            is_expired=status["is_expired"],
+            force_password_change=status["force_password_change"],
+            password_age_days=status["password_age_days"],
+            policy=PasswordPolicyResponse(**status["policy"])
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ============================================================================
+# OIDC OAuth Endpoints (Phase 1F)
+# ============================================================================
+
+
+@app.get("/auth/oidc/providers", response_model=List[OIDCProviderInfo])
+async def list_oidc_providers():
+    """List available OIDC providers."""
+    providers = oidc_service.list_providers()
+    return [OIDCProviderInfo(**provider) for provider in providers]
+
+
+@app.get("/auth/oidc/login/{provider_name}")
+async def oidc_login(provider_name: str):
+    """Initiate OAuth login flow with provider."""
+    try:
+        auth_url, state = oidc_service.initiate_login(provider_name)
+        return {"authorization_url": auth_url, "state": state}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/auth/oidc/callback/{provider_name}")
+async def oidc_callback(
+    provider_name: str,
+    code: str,
+    state: str,
+    request: Request
+):
+    """Handle OAuth callback from provider."""
+    try:
+        user_id, error = oidc_service.handle_callback(provider_name, code, state)
+
+        if error:
+            raise HTTPException(status_code=400, detail=error)
+
+        # Get user details
+        user = auth_service.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Create session
+        ip_address = request.client.host if request.client else None
+        session = auth_service.create_session(user, ip_address)
+
+        # Log OAuth login
+        audit_service.log_access(
+            endpoint=f"/auth/oidc/callback/{provider_name}",
+            method="GET",
+            status_code=200,
+            user_id=user.user_id,
+            username=user.username,
+            ip_address=ip_address
+        )
+
+        return {
+            "success": True,
+            "session_id": session.session_id,
+            "user": {
+                "user_id": user.user_id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role.value,
+                "full_name": user.full_name
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OAuth callback failed: {str(e)}")
+
+
+@app.get("/auth/oidc/linked", response_model=List[OIDCLinkedProvider])
+async def get_linked_providers(request: Request):
+    """Get OIDC providers linked to current user."""
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    providers = oidc_service.get_linked_providers(session.user_id)
+    return [OIDCLinkedProvider(**provider) for provider in providers]
+
+
+@app.post("/auth/oidc/unlink")
+async def unlink_oidc_provider(request: Request, unlink_req: OIDCUnlinkRequest):
+    """Unlink OIDC provider from current user."""
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    session, error = auth_service.validate_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail=error)
+
+    success = oidc_service.unlink_provider(session.user_id, unlink_req.provider_name)
+
+    if not success:
+        raise HTTPException(status_code=404, detail="Provider not linked")
+
+    return {"success": True, "message": f"Unlinked {unlink_req.provider_name}"}
 
 
 # ============================================================================

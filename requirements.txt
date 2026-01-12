@@ -5,3 +5,11 @@ cryptography>=42.0.0
 click>=8.1.0
 pyyaml>=6.0
 requests>=2.31.0
+
+# MFA/TOTP Support (Phase 1E)
+pyotp>=2.9.0
+qrcode>=7.4.2
+Pillow>=10.0.0
+
+# OIDC OAuth Support (Phase 1F)
+PyJWT>=2.8.0

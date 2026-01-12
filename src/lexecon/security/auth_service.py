@@ -174,11 +174,25 @@ class AuthService:
         role: Role,
         full_name: str
     ) -> User:
-        """Create a new user."""
+        """Create a new user with password policy validation."""
+        # Validate password against policy (Phase 1C)
+        from lexecon.security.password_policy import get_default_policy
+        policy = get_default_policy()
+        is_valid, errors = policy.validate_password(password)
+
+        if not is_valid:
+            raise ValueError(f"Password does not meet policy requirements: {'; '.join(errors)}")
+
         user_id = f"user_{secrets.token_hex(16)}"
         salt = secrets.token_hex(32)
         password_hash = self._hash_password(password, salt)
         created_at = datetime.now(timezone.utc).isoformat()
+
+        # Calculate password expiration if policy requires it
+        password_expires_at = None
+        if policy.max_age_days:
+            expires = datetime.now(timezone.utc) + timedelta(days=policy.max_age_days)
+            password_expires_at = expires.isoformat()
 
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -187,10 +201,18 @@ class AuthService:
             cursor.execute("""
                 INSERT INTO users (
                     user_id, username, email, password_hash, salt,
-                    role, full_name, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    role, full_name, created_at, password_changed_at, password_expires_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (user_id, username, email, password_hash, salt,
-                  role.value, full_name, created_at))
+                  role.value, full_name, created_at, created_at, password_expires_at))
+
+            # Store initial password in history
+            history_id = f"hist_{secrets.token_hex(16)}"
+            cursor.execute("""
+                INSERT INTO password_history (history_id, user_id, password_hash, changed_at)
+                VALUES (?, ?, ?, ?)
+            """, (history_id, user_id, password_hash, created_at))
+
             conn.commit()
         except sqlite3.IntegrityError as e:
             conn.close()
@@ -324,14 +346,24 @@ class AuthService:
                 return None, f"Account locked for {self.lockout_duration_minutes} minutes due to too many failed attempts."
 
         # Successful login
-        # Reset failed attempts and update last login
+        # Check if MFA is enabled
+        cursor.execute("""
+            SELECT mfa_enabled
+            FROM users
+            WHERE user_id = ?
+        """, (user_id,))
+
+        mfa_row = cursor.fetchone()
+        mfa_enabled = bool(mfa_row[0]) if mfa_row else False
+
+        # Reset failed attempts (but don't update last_login yet if MFA is required)
         cursor.execute("""
             UPDATE users
-            SET failed_login_attempts = 0, last_login = ?
+            SET failed_login_attempts = 0
             WHERE user_id = ?
-        """, (timestamp, user_id))
+        """, (user_id,))
 
-        # Log successful attempt
+        # Log successful password verification
         cursor.execute("""
             INSERT INTO login_attempts (
                 attempt_id, username, success, ip_address, timestamp, failure_reason
@@ -352,6 +384,21 @@ class AuthService:
             is_active=bool(is_active),
             failed_login_attempts=0
         )
+
+        # If MFA is enabled, return special error to trigger MFA challenge
+        if mfa_enabled:
+            return user, "mfa_required"
+
+        # Update last_login for non-MFA users
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE users
+            SET last_login = ?
+            WHERE user_id = ?
+        """, (timestamp, user_id))
+        conn.commit()
+        conn.close()
 
         return user, None
 
@@ -570,3 +617,301 @@ class AuthService:
 
         conn.close()
         return sessions
+
+    def change_password(
+        self,
+        user_id: str,
+        old_password: str,
+        new_password: str
+    ) -> bool:
+        """
+        Change user's password with policy validation.
+
+        Args:
+            user_id: User ID
+            old_password: Current password for verification
+            new_password: New password to set
+
+        Returns:
+            True if password changed successfully
+
+        Raises:
+            ValueError: If old password incorrect or new password invalid
+        """
+        from lexecon.security.password_policy import get_default_policy
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            # Get user details
+            cursor.execute("""
+                SELECT password_hash, salt, username
+                FROM users
+                WHERE user_id = ?
+            """, (user_id,))
+
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError("User not found")
+
+            current_hash, salt, username = row
+
+            # Verify old password
+            old_hash = self._hash_password(old_password, salt)
+            if old_hash != current_hash:
+                # Log failed password change attempt
+                self._log_security_event(
+                    "password_change_failed",
+                    user_id=user_id,
+                    details={"reason": "incorrect_old_password"}
+                )
+                raise ValueError("Current password is incorrect")
+
+            # Validate new password against policy
+            policy = get_default_policy()
+            is_valid, errors = policy.validate_password(new_password)
+
+            if not is_valid:
+                raise ValueError(f"New password does not meet policy requirements: {'; '.join(errors)}")
+
+            # Check password history (last N passwords)
+            cursor.execute("""
+                SELECT password_hash
+                FROM password_history
+                WHERE user_id = ?
+                ORDER BY changed_at DESC
+                LIMIT ?
+            """, (user_id, policy.history_count))
+
+            password_history = [row[0] for row in cursor.fetchall()]
+
+            if not policy.check_password_history(new_password, salt, password_history):
+                raise ValueError(
+                    f"Password was used recently. Please choose a password you haven't used in your last {policy.history_count} passwords."
+                )
+
+            # Hash new password
+            new_hash = self._hash_password(new_password, salt)
+
+            # Calculate new expiration date
+            changed_at = datetime.now(timezone.utc).isoformat()
+            expires_at = None
+            if policy.max_age_days:
+                expires = datetime.now(timezone.utc) + timedelta(days=policy.max_age_days)
+                expires_at = expires.isoformat()
+
+            # Update password in users table
+            cursor.execute("""
+                UPDATE users
+                SET password_hash = ?,
+                    password_changed_at = ?,
+                    password_expires_at = ?,
+                    force_password_change = 0
+                WHERE user_id = ?
+            """, (new_hash, changed_at, expires_at, user_id))
+
+            # Add new password to history
+            history_id = f"hist_{secrets.token_hex(16)}"
+            cursor.execute("""
+                INSERT INTO password_history (history_id, user_id, password_hash, changed_at)
+                VALUES (?, ?, ?, ?)
+            """, (history_id, user_id, new_hash, changed_at))
+
+            # Clean up old history entries (keep only last N)
+            cursor.execute("""
+                DELETE FROM password_history
+                WHERE user_id = ?
+                AND history_id NOT IN (
+                    SELECT history_id
+                    FROM password_history
+                    WHERE user_id = ?
+                    ORDER BY changed_at DESC
+                    LIMIT ?
+                )
+            """, (user_id, user_id, policy.history_count))
+
+            conn.commit()
+
+            # Log successful password change
+            self._log_security_event(
+                "password_changed",
+                user_id=user_id,
+                details={"username": username}
+            )
+
+            return True
+
+        except Exception as e:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def get_password_status(self, user_id: str) -> dict:
+        """
+        Get password status for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Dictionary with password status information:
+            - password_changed_at: When password was last changed
+            - password_expires_at: When password expires (or None)
+            - days_until_expiration: Days until expiration (or None)
+            - is_expired: Whether password is currently expired
+            - force_password_change: Whether user must change password
+            - password_age_days: Age of current password in days
+
+        Raises:
+            ValueError: If user not found
+        """
+        from lexecon.security.password_policy import get_default_policy
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("""
+                SELECT password_changed_at, password_expires_at, force_password_change
+                FROM users
+                WHERE user_id = ?
+            """, (user_id,))
+
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError("User not found")
+
+            password_changed_at, password_expires_at, force_password_change = row
+
+            # Calculate password age
+            password_age_days = None
+            if password_changed_at:
+                try:
+                    changed_dt = datetime.fromisoformat(password_changed_at.replace('Z', '+00:00'))
+                    age = datetime.now(timezone.utc) - changed_dt
+                    password_age_days = age.days
+                except (ValueError, AttributeError):
+                    pass
+
+            # Check expiration
+            policy = get_default_policy()
+            is_expired = False
+            days_until_expiration = None
+
+            if password_changed_at:
+                is_expired = policy.is_password_expired(password_changed_at)
+                days_until_expiration = policy.days_until_expiration(password_changed_at)
+
+            return {
+                "password_changed_at": password_changed_at,
+                "password_expires_at": password_expires_at,
+                "days_until_expiration": days_until_expiration,
+                "is_expired": is_expired,
+                "force_password_change": bool(force_password_change),
+                "password_age_days": password_age_days,
+                "policy": {
+                    "min_length": policy.min_length,
+                    "max_age_days": policy.max_age_days,
+                    "history_count": policy.history_count,
+                    "require_uppercase": policy.require_uppercase,
+                    "require_lowercase": policy.require_lowercase,
+                    "require_digits": policy.require_digits,
+                    "require_special": policy.require_special,
+                }
+            }
+
+        finally:
+            conn.close()
+
+    def complete_mfa_login(
+        self,
+        user_id: str,
+        totp_code: str
+    ) -> Tuple[Optional[User], Optional[str]]:
+        """
+        Complete MFA login with TOTP code.
+
+        Args:
+            user_id: User ID
+            totp_code: 6-digit TOTP code
+
+        Returns:
+            Tuple of (user, error)
+        """
+        from lexecon.security.mfa_service import get_mfa_service
+        from lexecon.security.db_encryption import get_db_encryption
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            # Get user MFA secret
+            cursor.execute("""
+                SELECT user_id, username, email, role, full_name, created_at,
+                       last_login, is_active, mfa_secret
+                FROM users
+                WHERE user_id = ? AND mfa_enabled = 1
+            """, (user_id,))
+
+            row = cursor.fetchone()
+            if not row:
+                return None, "MFA not enabled for user"
+
+            (user_id, username, email, role_str, full_name, created_at,
+             last_login, is_active, encrypted_secret) = row
+
+            # Decrypt MFA secret
+            db_encryption = get_db_encryption()
+            secret = db_encryption.decrypt_field(encrypted_secret)
+
+            # Verify TOTP code
+            mfa_service = get_mfa_service()
+            if not mfa_service.verify_totp(secret, totp_code):
+                return None, "Invalid MFA code"
+
+            # Update last_login
+            timestamp = datetime.now(timezone.utc).isoformat()
+            cursor.execute("""
+                UPDATE users
+                SET last_login = ?
+                WHERE user_id = ?
+            """, (timestamp, user_id))
+
+            conn.commit()
+
+            user = User(
+                user_id=user_id,
+                username=username,
+                email=email,
+                role=Role(role_str),
+                full_name=full_name,
+                created_at=created_at,
+                last_login=timestamp,
+                is_active=bool(is_active),
+                failed_login_attempts=0
+            )
+
+            return user, None
+
+        except Exception as e:
+            return None, f"MFA verification failed: {str(e)}"
+
+        finally:
+            conn.close()
+
+    def get_user_mfa_status(self, user_id: str) -> dict:
+        """
+        Get MFA status for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Dictionary with MFA status
+        """
+        from lexecon.security.mfa_service import get_mfa_service
+
+        mfa_service = get_mfa_service()
+        return mfa_service.get_mfa_status(user_id)
