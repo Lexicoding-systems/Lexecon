@@ -41,7 +41,7 @@ def generate_ulid() -> str:
     Uses timestamp + random component for sortability and uniqueness.
     """
     import time
-    import random
+    import secrets
     import string
 
     # ULID encoding alphabet (Crockford's Base32)
@@ -55,8 +55,8 @@ def generate_ulid() -> str:
         timestamp_ms >>= 5
     timestamp_part = "".join(reversed(timestamp_chars))
 
-    # Random component (80 bits = 16 chars)
-    random_part = "".join(random.choices(alphabet, k=16))
+    # Random component (80 bits = 16 chars) - using secrets for cryptographic safety
+    random_part = "".join(secrets.choice(alphabet) for _ in range(16))
 
     return timestamp_part + random_part
 
