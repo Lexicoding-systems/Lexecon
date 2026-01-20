@@ -3,7 +3,7 @@ Tests for append-only storage adapter.
 """
 
 import pytest
-from src.lexecon.evidence.append_only_store import (
+from lexecon.evidence.append_only_store import (
     AppendOnlyStore,
     AppendOnlyViolationError,
     AppendOnlyEvidenceStore,
@@ -236,7 +236,7 @@ class TestAppendOnlyEvidenceStore:
         wrapper = AppendOnlyEvidenceStore(service, enabled=True)
 
         # Add artifact with correct hash
-        from src.lexecon.evidence.service import compute_sha256
+        from lexecon.evidence.service import compute_sha256
 
         content = "test content"
         correct_hash = compute_sha256(content)

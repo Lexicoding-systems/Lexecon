@@ -294,9 +294,9 @@ class TestLedgerStorage:
         conn.commit()
         conn.close()
 
-        # Integrity check should fail
-        is_valid = storage.verify_chain_integrity()
-        assert is_valid is False
+        # Integrity check should fail - storage raises ValueError on corruption
+        with pytest.raises(ValueError, match="Hash mismatch"):
+            storage.verify_chain_integrity()
 
     def test_export_to_json(self, storage, temp_db):
         """Test exporting ledger to JSON file."""
