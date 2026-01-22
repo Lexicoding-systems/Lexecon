@@ -8,7 +8,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Test Coverage](https://img.shields.io/badge/coverage-69%25-yellow.svg)](https://github.com/Lexicoding-systems/Lexecon)
+[![Test Coverage](https://img.shields.io/badge/coverage-81%25-yellow.svg)](https://github.com/Lexicoding-systems/Lexecon)
 [![GitHub stars](https://img.shields.io/github/stars/Lexicoding-systems/Lexecon?style=social)](https://github.com/Lexicoding-systems/Lexecon/stargazers)
 
 **Enterprise-grade cryptographic governance framework for AI safety, compliance, and auditability**
@@ -539,8 +539,8 @@ print(f"SHA256 Hash: {artifact.sha256_hash}")
 
 ```bash
 pytest --cov=src/lexecon --cov-report=html
-# 824 tests passing
-# 69% coverage (targeting 80%+)
+# 1000+ tests passing
+# 81% coverage (targeting 80%+)
 ```
 
 ### Modules at 100% Coverage
@@ -559,7 +559,7 @@ pytest --cov=src/lexecon --cov-report=html
 
 | Metric | Status | Target |
 |--------|--------|--------|
-| Test Coverage | 69% | 80%+ |
+| Test Coverage | 81% | 80%+ |
 | Tests Passing | 824 | All |
 | Type Coverage | 85% | 90%+ |
 | Linting | ✅ Black + Ruff | Clean |
