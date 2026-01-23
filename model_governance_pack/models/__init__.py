@@ -1,5 +1,4 @@
-"""
-Lexecon Governance Models
+"""Lexecon Governance Models
 
 Runtime bindings derived from canonical JSON schemas.
 The JSON schemas remain the authoritative source of truth.
@@ -76,28 +75,27 @@ __all__ = [
     # Actor
     "Actor",
     "ActorType",
+    # Evidence Artifact
+    "ArtifactType",
+    # Context
+    "Behavioral",
     # Compliance Control
     "ComplianceControl",
     "ComplianceFramework",
-    # Context
-    "Behavioral",
+    # Policy
+    "Constraint",
     "Context",
-    "DeploymentEnvironment",
-    "Environment",
-    "Temporal",
     # Decision
     "Decision",
     "DecisionOutcome",
+    "DeploymentEnvironment",
+    "DigitalSignature",
+    "Environment",
     # Escalation
     "Escalation",
     "EscalationPriority",
     "EscalationStatus",
     "EscalationTrigger",
-    "Resolution",
-    "ResolutionOutcome",
-    # Evidence Artifact
-    "ArtifactType",
-    "DigitalSignature",
     "EvidenceArtifact",
     # Override
     "NewOutcome",
@@ -105,14 +103,12 @@ __all__ = [
     "Override",
     "OverrideScope",
     "OverrideType",
-    # Policy
-    "Constraint",
     "Policy",
     "PolicyMode",
     "Relation",
     "RelationType",
-    "Term",
-    "TermType",
+    "Resolution",
+    "ResolutionOutcome",
     # Resource
     "Resource",
     "ResourceClassification",
@@ -122,4 +118,7 @@ __all__ = [
     "RiskDimensions",
     "RiskFactor",
     "RiskLevel",
+    "Temporal",
+    "Term",
+    "TermType",
 ]

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Migration: Add password policy support.
+"""Migration: Add password policy support.
 
 Adds password history tracking, expiration, and force change columns to the users table.
 Creates password_history table for tracking previous passwords.
@@ -8,15 +7,14 @@ Creates password_history table for tracking previous passwords.
 Run: python migrations/002_add_password_policies.py [db_path]
 """
 
+import secrets
 import sqlite3
 import sys
-import secrets
 from datetime import datetime, timezone
 
 
 def migrate(db_path="lexecon_auth.db"):
-    """
-    Apply password policy migration to database.
+    """Apply password policy migration to database.
 
     Args:
         db_path: Path to authentication database
@@ -145,8 +143,7 @@ def migrate(db_path="lexecon_auth.db"):
 
 
 def verify_migration(db_path="lexecon_auth.db"):
-    """
-    Verify migration was applied successfully.
+    """Verify migration was applied successfully.
 
     Args:
         db_path: Path to authentication database
@@ -164,7 +161,7 @@ def verify_migration(db_path="lexecon_auth.db"):
         required_columns = {
             "password_changed_at",
             "password_expires_at",
-            "force_password_change"
+            "force_password_change",
         }
 
         if required_columns.issubset(columns):

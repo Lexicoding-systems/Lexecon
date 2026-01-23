@@ -1,26 +1,24 @@
-"""
-Base adapter for model governance integration.
+"""Base adapter for model governance integration.
 
 Provides the interface for connecting foundation models to Lexecon governance.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
-import requests
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import requests
 
 
 class GovernanceAdapter(ABC):
-    """
-    Base class for model governance adapters.
+    """Base class for model governance adapters.
 
     Adapters intercept tool calls and route them through Lexecon governance
     before allowing execution.
     """
 
     def __init__(self, governance_url: str = "http://localhost:8000", actor: str = "model"):
-        """
-        Initialize the governance adapter.
+        """Initialize the governance adapter.
 
         Args:
             governance_url: Base URL of Lexecon governance API
@@ -43,11 +41,10 @@ class GovernanceAdapter(ABC):
         tool_name: str,
         tool_args: Dict[str, Any],
         user_intent: str,
-        data_classes: List[str] = None,
-        risk_level: int = 1
+        data_classes: Optional[List[str]] = None,
+        risk_level: int = 1,
     ) -> Dict[str, Any]:
-        """
-        Request governance decision for a tool call.
+        """Request governance decision for a tool call.
 
         Args:
             tool_name: Name of the tool to execute
@@ -68,14 +65,14 @@ class GovernanceAdapter(ABC):
             "risk_level": risk_level,
             "requested_output_type": "tool_action",
             "policy_mode": "strict",
-            "context": tool_args
+            "context": tool_args,
         }
 
         try:
             response = requests.post(
                 f"{self.governance_url}/decide",
                 json=request_payload,
-                timeout=10
+                timeout=10,
             )
             response.raise_for_status()
             decision = response.json()
@@ -91,8 +88,8 @@ class GovernanceAdapter(ABC):
             # Fail-safe: deny by default if governance service unavailable
             return {
                 "decision": "deny",
-                "reasoning": f"Governance service error: {str(e)}",
-                "error": True
+                "reasoning": f"Governance service error: {e!s}",
+                "error": True,
             }
 
     def is_permitted(self, decision: Dict[str, Any]) -> bool:
@@ -104,8 +101,7 @@ class GovernanceAdapter(ABC):
         return decision.get("capability_token")
 
     def verify_token(self, token_id: str, action: str, tool: str) -> bool:
-        """
-        Verify a capability token is valid for the action.
+        """Verify a capability token is valid for the action.
 
         Args:
             token_id: Token identifier
@@ -132,8 +128,7 @@ class GovernanceAdapter(ABC):
 
     @abstractmethod
     def intercept_tool_call(self, tool_name: str, tool_args: Dict[str, Any], **kwargs) -> Any:
-        """
-        Intercept and govern a tool call.
+        """Intercept and govern a tool call.
 
         Must be implemented by provider-specific adapters.
 
@@ -145,12 +140,10 @@ class GovernanceAdapter(ABC):
         Returns:
             Result of tool execution or denial message
         """
-        pass
 
     @abstractmethod
     def wrap_response(self, decision: Dict[str, Any], result: Any = None) -> Dict[str, Any]:
-        """
-        Wrap execution result in provider-specific format.
+        """Wrap execution result in provider-specific format.
 
         Args:
             decision: Governance decision
@@ -159,7 +152,6 @@ class GovernanceAdapter(ABC):
         Returns:
             Provider-specific response format
         """
-        pass
 
 
 class GovernanceError(Exception):

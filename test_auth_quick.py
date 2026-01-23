@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""
-Quick Authentication System Test.
+"""Quick Authentication System Test.
 
 Focused tests without heavy API calls to avoid timeouts.
 """
 
-import sys
 import sqlite3
+import sys
 
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -31,7 +30,6 @@ results = []
 print_section("Module Imports")
 
 try:
-    from lexecon.security.auth_service import AuthService
     results.append(print_test("AuthService imports", True))
 except Exception as e:
     results.append(print_test("AuthService imports", False, str(e)))
@@ -73,7 +71,6 @@ except Exception as e:
     results.append(print_test("RateLimiter imports", False, str(e)))
 
 try:
-    from lexecon.security.security_headers import SecurityHeadersMiddleware
     results.append(print_test("SecurityHeadersMiddleware imports", True))
 except Exception as e:
     results.append(print_test("SecurityHeadersMiddleware imports", False, str(e)))
@@ -95,7 +92,7 @@ try:
 
     # Test password strength calculation
     strength = policy.calculate_password_strength("MySecureP@ssw0rd123!")
-    results.append(print_test("Password strength calculation", strength['score'] > 70, f"Score: {strength['score']}"))
+    results.append(print_test("Password strength calculation", strength["score"] > 70, f"Score: {strength['score']}"))
 
 except Exception as e:
     results.append(print_test("Password policy functionality", False, str(e)))
@@ -166,7 +163,7 @@ try:
 
     required_tables = {
         "users", "sessions", "login_attempts", "password_history",
-        "mfa_challenges", "oidc_states", "oidc_users"
+        "mfa_challenges", "oidc_states", "oidc_users",
     }
 
     for table in required_tables:
@@ -179,14 +176,14 @@ try:
     required_columns = {
         "user_id", "username", "email", "password_hash", "role",
         "password_changed_at", "password_expires_at", "force_password_change",
-        "mfa_enabled", "mfa_secret", "mfa_backup_codes", "mfa_enrolled_at"
+        "mfa_enabled", "mfa_secret", "mfa_backup_codes", "mfa_enrolled_at",
     }
 
     missing_columns = required_columns - columns
     results.append(print_test(
         "Users table has all columns",
         len(missing_columns) == 0,
-        f"Missing: {missing_columns}" if missing_columns else "All present"
+        f"Missing: {missing_columns}" if missing_columns else "All present",
     ))
 
     # Check indexes
@@ -196,7 +193,7 @@ try:
     expected_indexes = {
         "idx_password_history_user",
         "idx_mfa_challenges_expires",
-        "idx_oidc_users_lookup"
+        "idx_oidc_users_lookup",
     }
 
     for index in expected_indexes:
@@ -231,7 +228,7 @@ except Exception as e:
 print_section("OIDC OAuth Service")
 
 try:
-    from lexecon.security.oidc_service import OIDCService, OIDCProvider
+    from lexecon.security.oidc_service import OIDCService
 
     oidc = OIDCService()
     results.append(print_test("OIDCService initialization", True))
@@ -241,7 +238,7 @@ try:
         provider_name="test",
         discovery_url="https://accounts.google.com/.well-known/openid-configuration",
         client_id="test-client",
-        client_secret="test-secret"
+        client_secret="test-secret",
     )
     results.append(print_test("OIDC provider registration", provider is not None))
 

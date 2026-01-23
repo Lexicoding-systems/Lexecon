@@ -1,23 +1,23 @@
 """Tests for risk assessment service."""
 
+
 import pytest
-from datetime import datetime
 
 from lexecon.risk.service import (
-    RiskService,
     RiskScoringEngine,
-    generate_risk_id,
+    RiskService,
     generate_evidence_id,
+    generate_risk_id,
 )
 
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
+        EvidenceArtifact,
         Risk,
         RiskDimensions,
         RiskFactor,
         RiskLevel,
-        EvidenceArtifact,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -263,13 +263,13 @@ class TestRiskService:
 
         # First decision and risk
         risk1 = service.assess_risk(
-            decision_id="dec_01JQXYZ1111111111111111111", dimensions=dimensions
+            decision_id="dec_01JQXYZ1111111111111111111", dimensions=dimensions,
         )
 
         # Second decision with updated dimensions
         dimensions2 = RiskDimensions(security=80)
         risk2 = service.assess_risk(
-            decision_id="dec_01JQXYZ2222222222222222222", dimensions=dimensions2
+            decision_id="dec_01JQXYZ2222222222222222222", dimensions=dimensions2,
         )
 
         # Both risks should exist independently
@@ -284,7 +284,7 @@ class TestRiskService:
         """Test retrieving risk by ID."""
         dimensions = RiskDimensions(security=60)
         risk = service.assess_risk(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions,
         )
 
         retrieved = service.get_risk(risk.risk_id)
@@ -314,7 +314,7 @@ class TestRiskService:
         for i in range(5):
             dimensions = RiskDimensions(security=20 * i)
             service.assess_risk(
-                decision_id=f"dec_01JQXYZ{i:022d}", dimensions=dimensions
+                decision_id=f"dec_01JQXYZ{i:022d}", dimensions=dimensions,
             )
 
         risks = service.list_risks()
@@ -359,7 +359,7 @@ class TestRiskService:
         """Test that evidence artifacts are generated for risk assessments."""
         dimensions = RiskDimensions(security=70)
         risk = service.assess_risk(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions,
         )
 
         # Evidence artifact should be created
@@ -376,7 +376,7 @@ class TestRiskService:
         """Test that evidence artifacts have SHA-256 hashes."""
         dimensions = RiskDimensions(security=70)
         service.assess_risk(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions,
         )
 
         artifacts = service.list_evidence_artifacts()
@@ -391,7 +391,7 @@ class TestRiskService:
         """Test that evidence artifacts contain risk metadata."""
         dimensions = RiskDimensions(security=85)
         risk = service.assess_risk(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions,
         )
 
         artifacts = service.list_evidence_artifacts()
@@ -407,7 +407,7 @@ class TestRiskService:
 
         dimensions = RiskDimensions(security=70)
         risk = service.assess_risk(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=dimensions,
         )
 
         # Risk should be created but no evidence
@@ -423,7 +423,7 @@ class TestRiskService:
 
         # Filter by specific decision
         artifacts = service.list_evidence_artifacts(
-            decision_id="dec_01JQXYZ1111111111111111111"
+            decision_id="dec_01JQXYZ1111111111111111111",
         )
         assert len(artifacts) == 1
         assert "dec_01JQXYZ1111111111111111111" in artifacts[0].related_decision_ids
@@ -470,7 +470,7 @@ class TestRiskServiceIntegration:
 
         # 4. Verify evidence artifact
         artifacts = service.list_evidence_artifacts(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH"
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH",
         )
         assert len(artifacts) == 1
         assert artifacts[0].is_immutable is True
@@ -487,7 +487,7 @@ class TestRiskServiceIntegration:
         )
 
         risk = service.assess_risk(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=high_risk_dims
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=high_risk_dims,
         )
 
         assert risk.overall_score >= 80
@@ -508,7 +508,7 @@ class TestRiskServiceIntegration:
         )
 
         risk = service.assess_risk(
-            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=low_risk_dims
+            decision_id="dec_01JQXYZ1234567890ABCDEFGH", dimensions=low_risk_dims,
         )
 
         assert risk.overall_score < 30

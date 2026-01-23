@@ -1,5 +1,4 @@
-"""
-This model is a derived runtime binding of the canonical governance JSON schema.
+"""This model is a derived runtime binding of the canonical governance JSON schema.
 The JSON schema remains the authoritative source of truth.
 This file exists solely to enforce contract correctness at runtime.
 
@@ -26,8 +25,7 @@ class ActionCategory(str, Enum):
 
 
 class Action(BaseModel):
-    """
-    Lexecon Action
+    """Lexecon Action
 
     Discrete, auditable operation that an actor may request to perform.
     """

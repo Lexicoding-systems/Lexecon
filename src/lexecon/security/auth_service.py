@@ -1,5 +1,4 @@
-"""
-Authentication and Authorization Service.
+"""Authentication and Authorization Service.
 
 Provides:
 - User management with password hashing
@@ -12,11 +11,10 @@ Provides:
 import hashlib
 import secrets
 import sqlite3
-import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Optional, Dict, List, Tuple
-from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 
 class Role(str, Enum):
@@ -104,7 +102,7 @@ class AuthService:
         self.lockout_duration_minutes = 30
         self._init_database()
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize authentication database."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -160,10 +158,10 @@ class AuthService:
     def _hash_password(self, password: str, salt: str) -> str:
         """Hash password with salt using PBKDF2."""
         return hashlib.pbkdf2_hmac(
-            'sha256',
-            password.encode('utf-8'),
-            salt.encode('utf-8'),
-            100000  # iterations
+            "sha256",
+            password.encode("utf-8"),
+            salt.encode("utf-8"),
+            100000,  # iterations
         ).hex()
 
     def create_user(
@@ -172,7 +170,7 @@ class AuthService:
         email: str,
         password: str,
         role: Role,
-        full_name: str
+        full_name: str,
     ) -> User:
         """Create a new user with password policy validation."""
         # Validate password against policy (Phase 1C)
@@ -226,17 +224,16 @@ class AuthService:
             email=email,
             role=role,
             full_name=full_name,
-            created_at=created_at
+            created_at=created_at,
         )
 
     def authenticate(
         self,
         username: str,
         password: str,
-        ip_address: Optional[str] = None
+        ip_address: Optional[str] = None,
     ) -> Tuple[Optional[User], Optional[str]]:
-        """
-        Authenticate user and return (User, error_message).
+        """Authenticate user and return (User, error_message).
 
         Returns:
             (User, None) on success
@@ -271,12 +268,12 @@ class AuthService:
             return None, "Invalid username or password"
 
         (user_id, username, email, password_hash, salt, role_str,
-         full_name, created_at, last_login, is_active,
+         full_name, created_at, _last_login, is_active,
          failed_attempts, locked_until) = row
 
         # Check if account is locked
         if locked_until:
-            lock_time = datetime.fromisoformat(locked_until.replace('Z', '+00:00'))
+            lock_time = datetime.fromisoformat(locked_until.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) < lock_time:
                 remaining = (lock_time - datetime.now(timezone.utc)).seconds // 60
                 cursor.execute("""
@@ -287,14 +284,13 @@ class AuthService:
                 conn.commit()
                 conn.close()
                 return None, f"Account locked. Try again in {remaining} minutes."
-            else:
-                # Unlock account
-                cursor.execute("""
+            # Unlock account
+            cursor.execute("""
                     UPDATE users
                     SET locked_until = NULL, failed_login_attempts = 0
                     WHERE user_id = ?
                 """, (user_id,))
-                conn.commit()
+            conn.commit()
 
         # Check if account is active
         if not is_active:
@@ -342,8 +338,7 @@ class AuthService:
             remaining_attempts = self.max_failed_attempts - new_failed_attempts
             if remaining_attempts > 0:
                 return None, f"Invalid password. {remaining_attempts} attempts remaining."
-            else:
-                return None, f"Account locked for {self.lockout_duration_minutes} minutes due to too many failed attempts."
+            return None, f"Account locked for {self.lockout_duration_minutes} minutes due to too many failed attempts."
 
         # Successful login
         # Check if MFA is enabled
@@ -382,7 +377,7 @@ class AuthService:
             created_at=created_at,
             last_login=timestamp,
             is_active=bool(is_active),
-            failed_login_attempts=0
+            failed_login_attempts=0,
         )
 
         # If MFA is enabled, return special error to trigger MFA challenge
@@ -405,7 +400,7 @@ class AuthService:
     def create_session(
         self,
         user: User,
-        ip_address: Optional[str] = None
+        ip_address: Optional[str] = None,
     ) -> Session:
         """Create a new session for authenticated user."""
         session_id = secrets.token_urlsafe(32)
@@ -433,12 +428,11 @@ class AuthService:
             created_at=now.isoformat(),
             expires_at=expires_at.isoformat(),
             last_activity=now.isoformat(),
-            ip_address=ip_address
+            ip_address=ip_address,
         )
 
     def validate_session(self, session_id: str) -> Tuple[Optional[Session], Optional[str]]:
-        """
-        Validate session and return (Session, error_message).
+        """Validate session and return (Session, error_message).
 
         Returns:
             (Session, None) if valid
@@ -462,7 +456,7 @@ class AuthService:
             conn.close()
             return None, "Invalid session"
 
-        (sid, user_id, created_at, expires_at, last_activity,
+        (sid, user_id, created_at, expires_at, _last_activity,
          ip_address, revoked, username, role_str) = row
 
         if revoked:
@@ -470,7 +464,7 @@ class AuthService:
             return None, "Session revoked"
 
         # Check expiration
-        expires = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        expires = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
         if datetime.now(timezone.utc) > expires:
             conn.close()
             return None, "Session expired"
@@ -496,7 +490,7 @@ class AuthService:
             created_at=created_at,
             expires_at=new_expires.isoformat(),
             last_activity=now.isoformat(),
-            ip_address=ip_address
+            ip_address=ip_address,
         ), None
 
     def revoke_session(self, session_id: str):
@@ -545,7 +539,7 @@ class AuthService:
             last_login=row[6],
             is_active=bool(row[7]),
             failed_login_attempts=row[8],
-            locked_until=row[9]
+            locked_until=row[9],
         )
 
     def list_users(self) -> List[User]:
@@ -572,7 +566,7 @@ class AuthService:
                 last_login=row[6],
                 is_active=bool(row[7]),
                 failed_login_attempts=row[8],
-                locked_until=row[9]
+                locked_until=row[9],
             ))
 
         conn.close()
@@ -612,7 +606,7 @@ class AuthService:
                 last_activity=row[4],
                 ip_address=row[5],
                 username=row[6],
-                role=Role(row[7])
+                role=Role(row[7]),
             ))
 
         conn.close()
@@ -622,10 +616,9 @@ class AuthService:
         self,
         user_id: str,
         old_password: str,
-        new_password: str
+        new_password: str,
     ) -> bool:
-        """
-        Change user's password with policy validation.
+        """Change user's password with policy validation.
 
         Args:
             user_id: User ID
@@ -664,7 +657,7 @@ class AuthService:
                 self._log_security_event(
                     "password_change_failed",
                     user_id=user_id,
-                    details={"reason": "incorrect_old_password"}
+                    details={"reason": "incorrect_old_password"},
                 )
                 raise ValueError("Current password is incorrect")
 
@@ -688,7 +681,7 @@ class AuthService:
 
             if not policy.check_password_history(new_password, salt, password_history):
                 raise ValueError(
-                    f"Password was used recently. Please choose a password you haven't used in your last {policy.history_count} passwords."
+                    f"Password was used recently. Please choose a password you haven't used in your last {policy.history_count} passwords.",
                 )
 
             # Hash new password
@@ -737,20 +730,19 @@ class AuthService:
             self._log_security_event(
                 "password_changed",
                 user_id=user_id,
-                details={"username": username}
+                details={"username": username},
             )
 
             return True
 
-        except Exception as e:
+        except Exception:
             conn.rollback()
             raise
         finally:
             conn.close()
 
     def get_password_status(self, user_id: str) -> dict:
-        """
-        Get password status for a user.
+        """Get password status for a user.
 
         Args:
             user_id: User ID
@@ -789,7 +781,7 @@ class AuthService:
             password_age_days = None
             if password_changed_at:
                 try:
-                    changed_dt = datetime.fromisoformat(password_changed_at.replace('Z', '+00:00'))
+                    changed_dt = datetime.fromisoformat(password_changed_at.replace("Z", "+00:00"))
                     age = datetime.now(timezone.utc) - changed_dt
                     password_age_days = age.days
                 except (ValueError, AttributeError):
@@ -819,7 +811,7 @@ class AuthService:
                     "require_lowercase": policy.require_lowercase,
                     "require_digits": policy.require_digits,
                     "require_special": policy.require_special,
-                }
+                },
             }
 
         finally:
@@ -828,10 +820,9 @@ class AuthService:
     def complete_mfa_login(
         self,
         user_id: str,
-        totp_code: str
+        totp_code: str,
     ) -> Tuple[Optional[User], Optional[str]]:
-        """
-        Complete MFA login with TOTP code.
+        """Complete MFA login with TOTP code.
 
         Args:
             user_id: User ID
@@ -840,8 +831,8 @@ class AuthService:
         Returns:
             Tuple of (user, error)
         """
-        from lexecon.security.mfa_service import get_mfa_service
         from lexecon.security.db_encryption import get_db_encryption
+        from lexecon.security.mfa_service import get_mfa_service
 
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -860,7 +851,7 @@ class AuthService:
                 return None, "MFA not enabled for user"
 
             (user_id, username, email, role_str, full_name, created_at,
-             last_login, is_active, encrypted_secret) = row
+             _last_login, is_active, encrypted_secret) = row
 
             # Decrypt MFA secret
             db_encryption = get_db_encryption()
@@ -890,20 +881,19 @@ class AuthService:
                 created_at=created_at,
                 last_login=timestamp,
                 is_active=bool(is_active),
-                failed_login_attempts=0
+                failed_login_attempts=0,
             )
 
             return user, None
 
         except Exception as e:
-            return None, f"MFA verification failed: {str(e)}"
+            return None, f"MFA verification failed: {e!s}"
 
         finally:
             conn.close()
 
     def get_user_mfa_status(self, user_id: str) -> dict:
-        """
-        Get MFA status for a user.
+        """Get MFA status for a user.
 
         Args:
             user_id: User ID

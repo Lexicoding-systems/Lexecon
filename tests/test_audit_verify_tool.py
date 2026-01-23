@@ -4,18 +4,15 @@ Tests for audit verification tool (tools/audit_verify.py).
 Ensures comprehensive coverage of the audit packet verification functionality.
 """
 
-import pytest
+import hashlib
 import json
 import tempfile
-import hashlib
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from lexecon.tools.audit_verify import (
-    AuditVerifier,
-    AuditVerificationError,
-    main
-)
+import pytest
+
+from lexecon.tools.audit_verify import AuditVerifier, main
 
 
 @pytest.fixture
@@ -36,20 +33,20 @@ def valid_manifest():
         "scope": {
             "start_date": "2024-01-01",
             "end_date": "2024-12-31",
-            "scope_type": "FULL"
+            "scope_type": "FULL",
         },
         "contents": {
             "decision_count": 100,
             "evidence_count": 50,
             "risk_count": 25,
             "escalation_count": 10,
-            "override_count": 5
+            "override_count": 5,
         },
         "integrity": {
             "root_checksum": "abc123def456",
             "algorithm": "SHA-256",
-            "artifact_checksums": {}
-        }
+            "artifact_checksums": {},
+        },
     }
 
 
@@ -61,7 +58,7 @@ def valid_single_file_packet(temp_dir, valid_manifest):
         "manifest": valid_manifest,
         "decisions": [],
         "evidence": [],
-        "risks": []
+        "risks": [],
     }
 
     # Compute actual root checksum
@@ -122,7 +119,7 @@ class TestAuditVerifier:
         """Test verification passes for valid single-file packet."""
         verifier = AuditVerifier(str(valid_single_file_packet))
 
-        result = verifier.verify()
+        verifier.verify()
 
         # May have warnings but no errors
         assert len(verifier.errors) == 0
@@ -131,7 +128,7 @@ class TestAuditVerifier:
         """Test verification passes for valid directory packet."""
         verifier = AuditVerifier(str(valid_directory_packet))
 
-        result = verifier.verify()
+        verifier.verify()
 
         # Should succeed with possible warnings
         assert len(verifier.errors) == 0
@@ -208,9 +205,9 @@ class TestAuditVerifier:
             "scope": {},
             "contents": {},
             "integrity": {
-                "algorithm": "SHA-256"
+                "algorithm": "SHA-256",
                 # Missing root_checksum
-            }
+            },
         }
         with open(packet_file, "w") as f:
             json.dump({"manifest": manifest}, f)
@@ -232,9 +229,9 @@ class TestAuditVerifier:
             "scope": {},
             "contents": {},
             "integrity": {
-                "root_checksum": "abc123"
+                "root_checksum": "abc123",
                 # Missing algorithm
-            }
+            },
         }
         with open(packet_file, "w") as f:
             json.dump({"manifest": manifest}, f)
@@ -298,7 +295,7 @@ class TestAuditVerifier:
     def test_verify_artifact_checksums_single_file_skipped(self, valid_single_file_packet, valid_manifest):
         """Test artifact checksum verification skipped for single files."""
         # Modify to add artifact checksums
-        with open(valid_single_file_packet, "r") as f:
+        with open(valid_single_file_packet) as f:
             data = json.load(f)
         data["manifest"]["integrity"]["artifact_checksums"] = {"artifact_1": "hash123"}
         with open(valid_single_file_packet, "w") as f:
@@ -345,7 +342,7 @@ class TestAuditVerifier:
         data_hash = verifier._compute_json_hash(test_data)
 
         expected_hash = hashlib.sha256(
-            json.dumps(test_data, sort_keys=True).encode()
+            json.dumps(test_data, sort_keys=True).encode(),
         ).hexdigest()
         assert data_hash == expected_hash
 
@@ -434,14 +431,13 @@ class TestCLIMain:
 
     def test_main_no_arguments(self):
         """Test CLI with no arguments."""
-        with patch("sys.argv", ["audit_verify"]):
-            with pytest.raises(SystemExit):
-                main()
+        with patch("sys.argv", ["audit_verify"]), pytest.raises(SystemExit):
+            main()
 
     def test_main_multiple_packets(self, valid_single_file_packet, temp_dir):
         """Test CLI with multiple packet paths."""
         packet2 = temp_dir / "packet2.json"
-        with open(valid_single_file_packet, "r") as f:
+        with open(valid_single_file_packet) as f:
             data = json.load(f)
         with open(packet2, "w") as f:
             json.dump(data, f)
@@ -471,7 +467,7 @@ class TestEdgeCases:
         valid_manifest["contents"]["decision_count"] = 1000000
         data = {
             "manifest": valid_manifest,
-            "decisions": [{"id": f"dec_{i}"} for i in range(100)]  # Sample
+            "decisions": [{"id": f"dec_{i}"} for i in range(100)],  # Sample
         }
         with open(packet_file, "w") as f:
             json.dump(data, f)
@@ -527,8 +523,8 @@ class TestEdgeCases:
         verifier1 = AuditVerifier(str(valid_single_file_packet))
         verifier2 = AuditVerifier(str(valid_single_file_packet))
 
-        result1 = verifier1.verify()
-        result2 = verifier2.verify()
+        verifier1.verify()
+        verifier2.verify()
 
         # Both should succeed independently
         assert len(verifier1.errors) == 0

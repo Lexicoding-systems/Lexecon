@@ -1,5 +1,4 @@
-"""
-Article 12 - Record-Keeping Compliance Layer
+"""Article 12 - Record-Keeping Compliance Layer
 
 Transforms existing audit ledger into Article 12 compliant format with
 automatic log retention policies.
@@ -12,10 +11,10 @@ EU AI Act Article 12 Requirements:
 """
 
 import json
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, asdict
 
 from lexecon.ledger.chain import LedgerChain, LedgerEntry
 
@@ -61,8 +60,7 @@ class ComplianceRecord:
 
 
 class RecordKeepingSystem:
-    """
-    Article 12 compliance layer for Lexecon audit ledger.
+    """Article 12 compliance layer for Lexecon audit ledger.
 
     Manages retention, legal holds, anonymization, and regulatory export.
     """
@@ -78,27 +76,26 @@ class RecordKeepingSystem:
                 retention_days=3650,  # 10 years
                 auto_anonymize=True,
                 legal_basis="EU AI Act Article 12 - high-risk system monitoring",
-                data_subject_rights=False  # Exception for regulatory compliance
+                data_subject_rights=False,  # Exception for regulatory compliance
             ),
             RetentionClass.STANDARD: RetentionPolicy(
                 classification=RetentionClass.STANDARD,
                 retention_days=180,  # 6 months
                 auto_anonymize=True,
                 legal_basis="Legitimate interest - security monitoring",
-                data_subject_rights=True
+                data_subject_rights=True,
             ),
             RetentionClass.GDPR_INTERSECT: RetentionPolicy(
                 classification=RetentionClass.GDPR_INTERSECT,
                 retention_days=90,  # 90 days default
                 auto_anonymize=True,
                 legal_basis="Consent - user data processing",
-                data_subject_rights=True
-            )
+                data_subject_rights=True,
+            ),
         }
 
     def classify_entry(self, entry: LedgerEntry) -> RetentionClass:
-        """
-        Classify ledger entry for retention purposes.
+        """Classify ledger entry for retention purposes.
 
         High-risk determinations:
         - Decisions involving PII
@@ -135,7 +132,7 @@ class RecordKeepingSystem:
         """Check if data contains personal information."""
         personal_indicators = [
             "email", "name", "user_id", "ip_address",
-            "phone", "address", "ssn", "passport"
+            "phone", "address", "ssn", "passport",
         ]
         data_str = json.dumps(data).lower()
         return any(indicator in data_str for indicator in personal_indicators)
@@ -145,7 +142,7 @@ class RecordKeepingSystem:
         classification = self.classify_entry(entry)
         policy = self.policies[classification]
 
-        created_at = datetime.fromisoformat(entry.timestamp.replace('Z', '+00:00'))
+        created_at = datetime.fromisoformat(entry.timestamp.replace("Z", "+00:00"))
         expires_at = created_at + timedelta(days=policy.retention_days)
 
         # Check if under legal hold
@@ -163,7 +160,7 @@ class RecordKeepingSystem:
             created_at=entry.timestamp,
             expires_at=expires_at.isoformat(),
             status=status,
-            legal_holds=legal_holds
+            legal_holds=legal_holds,
         )
 
     def get_retention_status(self) -> Dict[str, Any]:
@@ -171,8 +168,8 @@ class RecordKeepingSystem:
         records = [self.wrap_entry(e) for e in self.ledger.entries]
 
         total = len(records)
-        by_class = {cls: 0 for cls in RetentionClass}
-        by_status = {status: 0 for status in RecordStatus}
+        by_class = dict.fromkeys(RetentionClass, 0)
+        by_status = dict.fromkeys(RecordStatus, 0)
         expiring_soon = 0
 
         now = datetime.utcnow()
@@ -181,7 +178,7 @@ class RecordKeepingSystem:
             by_class[record.retention_class] += 1
             by_status[record.status] += 1
 
-            expires = datetime.fromisoformat(record.expires_at.replace('Z', '+00:00'))
+            expires = datetime.fromisoformat(record.expires_at.replace("Z", "+00:00"))
             if (expires - now).days <= 30:
                 expiring_soon += 1
 
@@ -196,7 +193,7 @@ class RecordKeepingSystem:
             "expiring_within_30_days": expiring_soon,
             "legal_holds_active": len(self.legal_holds),
             "oldest_record": self.ledger.entries[0].timestamp if self.ledger.entries else None,
-            "newest_record": self.ledger.entries[-1].timestamp if self.ledger.entries else None
+            "newest_record": self.ledger.entries[-1].timestamp if self.ledger.entries else None,
         }
 
     def apply_legal_hold(
@@ -204,10 +201,9 @@ class RecordKeepingSystem:
         hold_id: str,
         entry_ids: Optional[List[str]] = None,
         reason: str = "",
-        requester: str = "system"
+        requester: str = "system",
     ) -> Dict[str, Any]:
-        """
-        Apply legal hold to records.
+        """Apply legal hold to records.
 
         Legal holds freeze deletion and anonymization for investigations.
         """
@@ -221,13 +217,13 @@ class RecordKeepingSystem:
             "applied_at": datetime.utcnow().isoformat(),
             "requester": requester,
             "entry_ids": entry_ids,
-            "status": "active"
+            "status": "active",
         }
 
         return {
             "hold_id": hold_id,
             "records_affected": len(entry_ids),
-            "status": "applied"
+            "status": "applied",
         }
 
     def release_legal_hold(self, hold_id: str, releaser: str = "system") -> Dict[str, Any]:
@@ -245,25 +241,24 @@ class RecordKeepingSystem:
         return {
             "hold_id": hold_id,
             "records_affected": affected_count,
-            "status": "released"
+            "status": "released",
         }
 
     def _record_to_dict(self, record: ComplianceRecord) -> Dict[str, Any]:
         """Convert ComplianceRecord to dict with enum values as strings."""
         record_dict = asdict(record)
         # Convert enums to their string values
-        record_dict['retention_class'] = record.retention_class.value
-        record_dict['status'] = record.status.value
+        record_dict["retention_class"] = record.retention_class.value
+        record_dict["status"] = record.status.value
         return record_dict
 
     def generate_regulatory_package(
         self,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        entry_types: Optional[List[str]] = None
+        entry_types: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """
-        Generate complete package for regulatory requests.
+        """Generate complete package for regulatory requests.
 
         One-click generation of everything a regulator would ask for.
         """
@@ -294,24 +289,24 @@ class RecordKeepingSystem:
             decision = rec.original_entry["data"].get("decision", "unknown")
             decision_outcomes[decision] = decision_outcomes.get(decision, 0) + 1
 
-        package = {
+        return {
             "package_type": "EU_AI_ACT_ARTICLE_12_REGULATORY_RESPONSE",
             "generated_at": datetime.utcnow().isoformat(),
             "period": {
                 "start": start_date or "inception",
-                "end": end_date or "present"
+                "end": end_date or "present",
             },
             "summary": {
                 "total_records": len(records),
                 "decisions": len(decisions),
                 "policy_changes": len(policy_changes),
                 "decision_outcomes": decision_outcomes,
-                "retention_status": self.get_retention_status()
+                "retention_status": self.get_retention_status(),
             },
             "integrity_verification": {
                 "ledger_valid": self.ledger.verify_integrity()["valid"],
                 "chain_intact": self.ledger.verify_integrity()["chain_intact"],
-                "root_hash": self.ledger.entries[-1].entry_hash if self.ledger.entries else None
+                "root_hash": self.ledger.entries[-1].entry_hash if self.ledger.entries else None,
             },
             "records": [self._record_to_dict(r) for r in records],
             "compliance_attestation": {
@@ -319,19 +314,17 @@ class RecordKeepingSystem:
                 "retention_policies_applied": True,
                 "audit_trail_integrity": True,
                 "legal_holds_documented": len(self.legal_holds) > 0,
-                "generated_by": "Lexecon Compliance System"
-            }
+                "generated_by": "Lexecon Compliance System",
+            },
         }
 
-        return package
 
     def export_for_regulator(
         self,
         format: str = "json",
-        **kwargs
+        **kwargs,
     ) -> str:
-        """
-        Export regulatory package in requested format.
+        """Export regulatory package in requested format.
 
         Formats: json, markdown, csv
         """
@@ -340,18 +333,17 @@ class RecordKeepingSystem:
         if format == "json":
             return json.dumps(package, indent=2, sort_keys=True)
 
-        elif format == "markdown":
+        if format == "markdown":
             return self._format_markdown_package(package)
 
-        elif format == "csv":
+        if format == "csv":
             return self._format_csv_package(package)
 
-        else:
-            raise ValueError(f"Unsupported format: {format}")
+        raise ValueError(f"Unsupported format: {format}")
 
     def _format_markdown_package(self, package: Dict[str, Any]) -> str:
         """Format regulatory package as Markdown."""
-        md = f"""# EU AI Act Article 12 - Regulatory Response Package
+        return f"""# EU AI Act Article 12 - Regulatory Response Package
 
 **Package Type:** {package['package_type']}
 **Generated:** {package['generated_at']}
@@ -393,7 +385,6 @@ We attest that this package complies with EU AI Act Article 12 requirements:
 
 *For detailed record data, request JSON format export.*
 """
-        return md
 
     def _format_csv_package(self, package: Dict[str, Any]) -> str:
         """Format records as CSV."""
@@ -401,39 +392,38 @@ We attest that this package complies with EU AI Act Article 12 requirements:
         import io
 
         output = io.StringIO()
-        if not package['records']:
+        if not package["records"]:
             return "No records found"
 
         # CSV headers
         fieldnames = [
             "record_id", "event_type", "timestamp", "retention_class",
-            "expires_at", "status", "decision", "actor", "action"
+            "expires_at", "status", "decision", "actor", "action",
         ]
 
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
 
-        for record in package['records']:
-            entry = record['original_entry']
-            data = entry.get('data', {})
+        for record in package["records"]:
+            entry = record["original_entry"]
+            data = entry.get("data", {})
 
             writer.writerow({
-                "record_id": record['record_id'],
-                "event_type": entry['event_type'],
-                "timestamp": record['created_at'],
-                "retention_class": record['retention_class'],  # Already converted to string
-                "expires_at": record['expires_at'],
-                "status": record['status'],  # Already converted to string
-                "decision": data.get('decision', ''),
-                "actor": data.get('actor', ''),
-                "action": data.get('action', '')
+                "record_id": record["record_id"],
+                "event_type": entry["event_type"],
+                "timestamp": record["created_at"],
+                "retention_class": record["retention_class"],  # Already converted to string
+                "expires_at": record["expires_at"],
+                "status": record["status"],  # Already converted to string
+                "decision": data.get("decision", ""),
+                "actor": data.get("actor", ""),
+                "action": data.get("action", ""),
             })
 
         return output.getvalue()
 
     def anonymize_record(self, entry_id: str) -> Dict[str, Any]:
-        """
-        Anonymize personal data in a record.
+        """Anonymize personal data in a record.
 
         Called automatically after retention period expires (if policy allows).
         """
@@ -453,18 +443,18 @@ We attest that this package complies with EU AI Act Article 12 requirements:
             return {
                 "error": "Cannot anonymize - under legal hold",
                 "entry_id": entry_id,
-                "legal_holds": record.legal_holds
+                "legal_holds": record.legal_holds,
             }
 
         # Anonymize personal data fields
-        anonymized_data = self._anonymize_data(entry.data)
+        self._anonymize_data(entry.data)
 
         return {
             "entry_id": entry_id,
             "status": "anonymized",
             "anonymized_at": datetime.utcnow().isoformat(),
             "original_hash": entry.entry_hash,
-            "note": "Personal data removed, decision metadata retained for compliance"
+            "note": "Personal data removed, decision metadata retained for compliance",
         }
 
     def _anonymize_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -474,7 +464,7 @@ We attest that this package complies with EU AI Act Article 12 requirements:
         # Fields to anonymize
         personal_fields = [
             "actor", "user_intent", "request_id",
-            "email", "name", "user_id", "ip_address"
+            "email", "name", "user_id", "ip_address",
         ]
 
         for field in personal_fields:

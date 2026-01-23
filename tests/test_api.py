@@ -45,7 +45,7 @@ def example_policy():
                 "target": "action:search",
                 "conditions": [],
                 "metadata": {},
-            }
+            },
         ],
     }
 
@@ -238,7 +238,7 @@ class TestDecisionEndpoints:
     def test_verify_decision_missing_hash(self, client):
         """Test verification without ledger hash."""
         response = client.post(
-            "/decide/verify", json={"decision": "permit"}  # No ledger_entry_hash
+            "/decide/verify", json={"decision": "permit"},  # No ledger_entry_hash
         )
         assert response.status_code == 400
 
@@ -421,7 +421,7 @@ class TestIntegrationWorkflows:
                 "target": "action:read",
                 "conditions": [],
                 "metadata": {},
-            }
+            },
         )
 
         # Reload policy
@@ -495,8 +495,8 @@ class TestAuthEndpoints:
                 "email": "test@example.com",
                 "password": "SecurePass123!",
                 "role": "viewer",
-                "full_name": "Test User"
-            }
+                "full_name": "Test User",
+            },
         )
         # May succeed, require auth, or fail depending on setup
         assert response.status_code in [200, 201, 401, 403, 500]
@@ -524,9 +524,9 @@ class TestGovernanceRiskEndpoints:
                 "decision_id": "dec_test_123",
                 "risk_factors": {
                     "data_sensitivity": "high",
-                    "action_reversibility": "low"
-                }
-            }
+                    "action_reversibility": "low",
+                },
+            },
         )
         # Endpoint may not be fully functional without setup, or require validation
         assert response.status_code in [200, 201, 404, 422, 500]
@@ -543,8 +543,8 @@ class TestGovernanceEvidenceEndpoints:
                 "artifact_type": "decision_log",
                 "content": {"test": "data"},
                 "source": "test_source",
-                "decision_id": "dec_test"
-            }
+                "decision_id": "dec_test",
+            },
         )
         # Endpoint behavior depends on setup
         assert response.status_code in [200, 201, 422, 500]
@@ -587,7 +587,7 @@ class TestErrorHandling:
     def test_invalid_json(self, client):
         """Test handling of invalid JSON."""
         response = client.post(
-            "/policies/load", data="invalid json", headers={"Content-Type": "application/json"}
+            "/policies/load", data="invalid json", headers={"Content-Type": "application/json"},
         )
         assert response.status_code == 422
 

@@ -1,18 +1,16 @@
-"""
-OpenAI adapter for Lexecon governance.
+"""OpenAI adapter for Lexecon governance.
 
 Integrates with OpenAI's function/tool calling API to govern tool executions.
 """
 
-from typing import Dict, Any, Callable, Optional, List
 import json
+from typing import Any, Callable, Dict, List, Optional
 
-from .base import GovernanceAdapter, GovernanceError
+from .base import GovernanceAdapter
 
 
 class OpenAIGovernanceAdapter(GovernanceAdapter):
-    """
-    Adapter for OpenAI models with governance-gated tool execution.
+    """Adapter for OpenAI models with governance-gated tool execution.
 
     This adapter intercepts OpenAI function/tool calls and routes them
     through Lexecon governance before execution.
@@ -22,10 +20,9 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
         self,
         governance_url: str = "http://localhost:8000",
         actor: str = "model",
-        tools: Dict[str, Callable] = None
+        tools: Optional[Dict[str, Callable]] = None,
     ):
-        """
-        Initialize OpenAI governance adapter.
+        """Initialize OpenAI governance adapter.
 
         Args:
             governance_url: Lexecon governance API URL
@@ -45,10 +42,9 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
         tool_args: Dict[str, Any],
         user_intent: str = "",
         risk_level: int = 1,
-        execute_if_permitted: bool = True
+        execute_if_permitted: bool = True,
     ) -> Dict[str, Any]:
-        """
-        Intercept and govern an OpenAI tool call.
+        """Intercept and govern an OpenAI tool call.
 
         Args:
             tool_name: Name of the tool from function calling
@@ -65,7 +61,7 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
             tool_name=tool_name,
             tool_args=tool_args,
             user_intent=user_intent,
-            risk_level=risk_level
+            risk_level=risk_level,
         )
 
         # If denied, return denial
@@ -80,7 +76,7 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
                 return {
                     "error": True,
                     "message": f"Tool '{tool_name}' not registered",
-                    "decision": decision
+                    "decision": decision,
                 }
 
             try:
@@ -88,8 +84,8 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
             except Exception as e:
                 return {
                     "error": True,
-                    "message": f"Tool execution failed: {str(e)}",
-                    "decision": decision
+                    "message": f"Tool execution failed: {e!s}",
+                    "decision": decision,
                 }
 
         return self.wrap_response(decision, result)
@@ -97,10 +93,9 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
     def wrap_response(
         self,
         decision: Dict[str, Any],
-        result: Any = None
+        result: Any = None,
     ) -> Dict[str, Any]:
-        """
-        Wrap in OpenAI-compatible format.
+        """Wrap in OpenAI-compatible format.
 
         Returns a response suitable for OpenAI function call results.
         """
@@ -110,9 +105,9 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
                 "content": json.dumps({
                     "status": "denied",
                     "reasoning": decision.get("reasoning"),
-                    "policy_version": decision.get("policy_version_hash")
+                    "policy_version": decision.get("policy_version_hash"),
                 }),
-                "governance_decision": decision
+                "governance_decision": decision,
             }
 
         return {
@@ -121,18 +116,17 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
                 "status": "success",
                 "result": result,
                 "capability_token": decision.get("capability_token", {}).get("token_id"),
-                "policy_version": decision.get("policy_version_hash")
+                "policy_version": decision.get("policy_version_hash"),
             }),
-            "governance_decision": decision
+            "governance_decision": decision,
         }
 
     def process_tool_calls(
         self,
         tool_calls: List[Dict[str, Any]],
-        user_intent: str = ""
+        user_intent: str = "",
     ) -> List[Dict[str, Any]]:
-        """
-        Process multiple tool calls from OpenAI response.
+        """Process multiple tool calls from OpenAI response.
 
         Args:
             tool_calls: List of tool_call objects from OpenAI
@@ -151,7 +145,7 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
             result = self.intercept_tool_call(
                 tool_name=tool_name,
                 tool_args=tool_args,
-                user_intent=user_intent
+                user_intent=user_intent,
             )
 
             # Add OpenAI-specific fields
@@ -169,10 +163,9 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
         messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
         user_intent: str = "",
-        **kwargs
+        **kwargs,
     ):
-        """
-        Create a governed OpenAI chat completion.
+        """Create a governed OpenAI chat completion.
 
         Automatically intercepts and governs any tool calls.
 
@@ -190,7 +183,7 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
         response = client.chat.completions.create(
             messages=messages,
             tools=tools,
-            **kwargs
+            **kwargs,
         )
 
         message = response.choices[0].message
@@ -202,7 +195,7 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
         # Process tool calls through governance
         tool_results = self.process_tool_calls(
             message.tool_calls,
-            user_intent=user_intent
+            user_intent=user_intent,
         )
 
         # Add results to conversation
@@ -211,17 +204,16 @@ class OpenAIGovernanceAdapter(GovernanceAdapter):
             messages.append({
                 "role": "tool",
                 "tool_call_id": result.get("tool_call_id"),
-                "content": result.get("content")
+                "content": result.get("content"),
             })
 
         # Get final response
-        final_response = client.chat.completions.create(
+        return client.chat.completions.create(
             messages=messages,
             tools=tools,
-            **kwargs
+            **kwargs,
         )
 
-        return final_response
 
 
 # Example usage
@@ -233,7 +225,7 @@ if __name__ == "__main__":
 
     # Create adapter
     adapter = OpenAIGovernanceAdapter(
-        governance_url="http://localhost:8000"
+        governance_url="http://localhost:8000",
     )
 
     # Register tools
@@ -243,7 +235,7 @@ if __name__ == "__main__":
     result = adapter.intercept_tool_call(
         tool_name="search_web",
         tool_args={"query": "AI governance", "max_results": 5},
-        user_intent="Research AI safety frameworks"
+        user_intent="Research AI safety frameworks",
     )
 
     print(json.dumps(result, indent=2))

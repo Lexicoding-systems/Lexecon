@@ -1,5 +1,4 @@
-"""
-OpenID Connect (OIDC) OAuth Authentication Service.
+"""OpenID Connect (OIDC) OAuth Authentication Service.
 
 Provides generic OIDC support for SSO with any compliant provider:
 - Google, Azure AD, Okta, Auth0, Keycloak, etc.
@@ -13,21 +12,20 @@ Architecture:
 - OIDCService: Multi-provider management and database integration
 """
 
-import secrets
 import hashlib
-import base64
 import json
-import requests
-import jwt
-from typing import Optional, Dict, List, Tuple, Any
-from datetime import datetime, timedelta, timezone
-from urllib.parse import urlencode
+import secrets
 import sqlite3
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urlencode
+
+import jwt
+import requests
 
 
 class OIDCProvider:
-    """
-    Individual OIDC provider configuration and operations.
+    """Individual OIDC provider configuration and operations.
 
     Handles discovery, authorization, token exchange, and verification for one provider.
     """
@@ -39,10 +37,9 @@ class OIDCProvider:
         client_id: str,
         client_secret: str,
         redirect_uri: str,
-        scopes: Optional[List[str]] = None
+        scopes: Optional[List[str]] = None,
     ):
-        """
-        Initialize OIDC provider.
+        """Initialize OIDC provider.
 
         Args:
             provider_name: Unique provider identifier (e.g., 'google', 'azure')
@@ -57,15 +54,14 @@ class OIDCProvider:
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
-        self.scopes = scopes or ['openid', 'profile', 'email']
+        self.scopes = scopes or ["openid", "profile", "email"]
 
         # Cached discovery data
         self._discovery_data: Optional[Dict[str, Any]] = None
         self._jwks_data: Optional[Dict[str, Any]] = None
 
     def get_discovery_data(self) -> Dict[str, Any]:
-        """
-        Fetch OpenID Connect discovery document.
+        """Fetch OpenID Connect discovery document.
 
         Returns:
             Discovery data with endpoints and capabilities
@@ -82,8 +78,7 @@ class OIDCProvider:
             raise ValueError(f"Failed to fetch OIDC discovery document: {e}")
 
     def get_jwks(self) -> Dict[str, Any]:
-        """
-        Fetch JSON Web Key Set (JWKS) for token verification.
+        """Fetch JSON Web Key Set (JWKS) for token verification.
 
         Returns:
             JWKS data
@@ -92,7 +87,7 @@ class OIDCProvider:
             return self._jwks_data
 
         discovery = self.get_discovery_data()
-        jwks_uri = discovery.get('jwks_uri')
+        jwks_uri = discovery.get("jwks_uri")
 
         if not jwks_uri:
             raise ValueError("JWKS URI not found in discovery document")
@@ -106,8 +101,7 @@ class OIDCProvider:
             raise ValueError(f"Failed to fetch JWKS: {e}")
 
     def get_authorization_url(self, state: str, nonce: str) -> str:
-        """
-        Generate authorization URL for OAuth flow.
+        """Generate authorization URL for OAuth flow.
 
         Args:
             state: CSRF protection token
@@ -117,25 +111,24 @@ class OIDCProvider:
             Authorization URL to redirect user to
         """
         discovery = self.get_discovery_data()
-        auth_endpoint = discovery.get('authorization_endpoint')
+        auth_endpoint = discovery.get("authorization_endpoint")
 
         if not auth_endpoint:
             raise ValueError("Authorization endpoint not found in discovery document")
 
         params = {
-            'client_id': self.client_id,
-            'response_type': 'code',
-            'scope': ' '.join(self.scopes),
-            'redirect_uri': self.redirect_uri,
-            'state': state,
-            'nonce': nonce,
+            "client_id": self.client_id,
+            "response_type": "code",
+            "scope": " ".join(self.scopes),
+            "redirect_uri": self.redirect_uri,
+            "state": state,
+            "nonce": nonce,
         }
 
         return f"{auth_endpoint}?{urlencode(params)}"
 
     def exchange_code_for_tokens(self, code: str) -> Dict[str, Any]:
-        """
-        Exchange authorization code for tokens.
+        """Exchange authorization code for tokens.
 
         Args:
             code: Authorization code from callback
@@ -144,17 +137,17 @@ class OIDCProvider:
             Token response with access_token, id_token, etc.
         """
         discovery = self.get_discovery_data()
-        token_endpoint = discovery.get('token_endpoint')
+        token_endpoint = discovery.get("token_endpoint")
 
         if not token_endpoint:
             raise ValueError("Token endpoint not found in discovery document")
 
         data = {
-            'grant_type': 'authorization_code',
-            'code': code,
-            'redirect_uri': self.redirect_uri,
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": self.redirect_uri,
+            "client_id": self.client_id,
+            "client_secret": self.client_secret,
         }
 
         try:
@@ -165,8 +158,7 @@ class OIDCProvider:
             raise ValueError(f"Token exchange failed: {e}")
 
     def verify_id_token(self, id_token: str, nonce: str) -> Dict[str, Any]:
-        """
-        Verify and decode ID token.
+        """Verify and decode ID token.
 
         Args:
             id_token: JWT ID token
@@ -178,14 +170,14 @@ class OIDCProvider:
         try:
             # Decode header to get key ID
             header = jwt.get_unverified_header(id_token)
-            kid = header.get('kid')
+            kid = header.get("kid")
 
             # Get signing key from JWKS
             jwks = self.get_jwks()
             signing_key = None
 
-            for key in jwks.get('keys', []):
-                if key.get('kid') == kid:
+            for key in jwks.get("keys", []):
+                if key.get("kid") == kid:
                     signing_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
                     break
 
@@ -194,24 +186,24 @@ class OIDCProvider:
 
             # Verify and decode token
             discovery = self.get_discovery_data()
-            issuer = discovery.get('issuer')
+            issuer = discovery.get("issuer")
 
             claims = jwt.decode(
                 id_token,
                 signing_key,
-                algorithms=['RS256'],
+                algorithms=["RS256"],
                 audience=self.client_id,
                 issuer=issuer,
                 options={
-                    'verify_signature': True,
-                    'verify_aud': True,
-                    'verify_iss': True,
-                    'verify_exp': True,
-                }
+                    "verify_signature": True,
+                    "verify_aud": True,
+                    "verify_iss": True,
+                    "verify_exp": True,
+                },
             )
 
             # Verify nonce
-            if claims.get('nonce') != nonce:
+            if claims.get("nonce") != nonce:
                 raise ValueError("Nonce mismatch")
 
             return claims
@@ -224,8 +216,7 @@ class OIDCProvider:
             raise ValueError(f"ID token verification failed: {e}")
 
     def get_userinfo(self, access_token: str) -> Dict[str, Any]:
-        """
-        Fetch user information from userinfo endpoint.
+        """Fetch user information from userinfo endpoint.
 
         Args:
             access_token: OAuth access token
@@ -234,14 +225,14 @@ class OIDCProvider:
             User information
         """
         discovery = self.get_discovery_data()
-        userinfo_endpoint = discovery.get('userinfo_endpoint')
+        userinfo_endpoint = discovery.get("userinfo_endpoint")
 
         if not userinfo_endpoint:
             # Some providers don't have userinfo endpoint, return empty
             return {}
 
         try:
-            headers = {'Authorization': f'Bearer {access_token}'}
+            headers = {"Authorization": f"Bearer {access_token}"}
             response = requests.get(userinfo_endpoint, headers=headers, timeout=10)
             response.raise_for_status()
             return response.json()
@@ -252,15 +243,13 @@ class OIDCProvider:
 
 
 class OIDCService:
-    """
-    Multi-provider OIDC service with database integration.
+    """Multi-provider OIDC service with database integration.
 
     Manages multiple OIDC providers, state/nonce storage, and user provisioning.
     """
 
     def __init__(self, db_path: str = "lexecon_auth.db", base_url: str = "http://localhost:8000"):
-        """
-        Initialize OIDC service.
+        """Initialize OIDC service.
 
         Args:
             db_path: Path to authentication database
@@ -276,10 +265,9 @@ class OIDCService:
         discovery_url: str,
         client_id: str,
         client_secret: str,
-        scopes: Optional[List[str]] = None
+        scopes: Optional[List[str]] = None,
     ) -> OIDCProvider:
-        """
-        Register an OIDC provider.
+        """Register an OIDC provider.
 
         Args:
             provider_name: Unique provider identifier
@@ -299,7 +287,7 @@ class OIDCService:
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
-            scopes=scopes
+            scopes=scopes,
         )
 
         self.providers[provider_name] = provider
@@ -313,15 +301,14 @@ class OIDCService:
         """List all registered providers."""
         return [
             {
-                'name': name,
-                'display_name': name.title(),
+                "name": name,
+                "display_name": name.title(),
             }
-            for name in self.providers.keys()
+            for name in self.providers
         ]
 
     def initiate_login(self, provider_name: str) -> Tuple[str, str]:
-        """
-        Initiate OAuth login flow.
+        """Initiate OAuth login flow.
 
         Args:
             provider_name: Provider to use
@@ -364,10 +351,9 @@ class OIDCService:
         self,
         provider_name: str,
         code: str,
-        state: str
+        state: str,
     ) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Handle OAuth callback.
+        """Handle OAuth callback.
 
         Args:
             provider_name: Provider that sent callback
@@ -399,7 +385,7 @@ class OIDCService:
             nonce, expires_at = row
 
             # Check expiration
-            expires_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            expires_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expires_dt:
                 return None, "State has expired"
 
@@ -414,22 +400,22 @@ class OIDCService:
         try:
             tokens = provider.exchange_code_for_tokens(code)
         except Exception as e:
-            return None, f"Token exchange failed: {str(e)}"
+            return None, f"Token exchange failed: {e!s}"
 
         # Verify ID token
-        id_token = tokens.get('id_token')
+        id_token = tokens.get("id_token")
         if not id_token:
             return None, "No ID token in response"
 
         try:
             claims = provider.verify_id_token(id_token, nonce)
         except Exception as e:
-            return None, f"ID token verification failed: {str(e)}"
+            return None, f"ID token verification failed: {e!s}"
 
         # Extract user information
-        provider_user_id = claims.get('sub')
-        email = claims.get('email')
-        name = claims.get('name', email)
+        provider_user_id = claims.get("sub")
+        email = claims.get("email")
+        name = claims.get("name", email)
 
         if not provider_user_id:
             return None, "No subject (sub) in ID token"
@@ -439,7 +425,7 @@ class OIDCService:
             provider_name=provider_name,
             provider_user_id=provider_user_id,
             email=email,
-            name=name
+            name=name,
         )
 
         return user_id, None
@@ -449,10 +435,9 @@ class OIDCService:
         provider_name: str,
         provider_user_id: str,
         email: Optional[str],
-        name: Optional[str]
+        name: Optional[str],
     ) -> str:
-        """
-        Provision or link user account.
+        """Provision or link user account.
 
         Args:
             provider_name: OIDC provider name
@@ -501,7 +486,7 @@ class OIDCService:
 
             # Create new user
             user_id = f"user_{secrets.token_hex(16)}"
-            username = email.split('@')[0] if email else f"{provider_name}_{provider_user_id[:8]}"
+            username = email.split("@")[0] if email else f"{provider_name}_{provider_user_id[:8]}"
 
             # Ensure unique username
             cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", (username,))
@@ -512,10 +497,10 @@ class OIDCService:
             random_password = secrets.token_urlsafe(32)
             salt = secrets.token_hex(32)
             password_hash = hashlib.pbkdf2_hmac(
-                'sha256',
-                random_password.encode('utf-8'),
-                salt.encode('utf-8'),
-                100000
+                "sha256",
+                random_password.encode("utf-8"),
+                salt.encode("utf-8"),
+                100000,
             ).hex()
 
             created_at = datetime.now(timezone.utc).isoformat()
@@ -525,7 +510,7 @@ class OIDCService:
                     user_id, username, email, password_hash, salt,
                     role, full_name, created_at, is_active
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-            """, (user_id, username, email or '', password_hash, salt,
+            """, (user_id, username, email or "", password_hash, salt,
                   Role.VIEWER.value, name or username, created_at))
 
             # Link OIDC
@@ -543,8 +528,8 @@ class OIDCService:
         user_id: str,
         provider_name: str,
         provider_user_id: str,
-        email: Optional[str]
-    ):
+        email: Optional[str],
+    ) -> None:
         """Link OIDC provider to user account."""
         mapping_id = f"oidc_{secrets.token_hex(16)}"
         linked_at = datetime.now(timezone.utc).isoformat()
@@ -572,10 +557,10 @@ class OIDCService:
             providers = []
             for row in cursor.fetchall():
                 providers.append({
-                    'provider_name': row[0],
-                    'provider_email': row[1],
-                    'linked_at': row[2],
-                    'last_login': row[3]
+                    "provider_name": row[0],
+                    "provider_email": row[1],
+                    "linked_at": row[2],
+                    "last_login": row[3],
                 })
 
             return providers
@@ -630,7 +615,7 @@ def get_oidc_service() -> OIDCService:
 
     if _oidc_service is None:
         import os
-        base_url = os.getenv('LEXECON_BASE_URL', 'http://localhost:8000')
+        base_url = os.getenv("LEXECON_BASE_URL", "http://localhost:8000")
         _oidc_service = OIDCService(base_url=base_url)
 
     return _oidc_service

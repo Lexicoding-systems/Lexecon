@@ -1,5 +1,4 @@
-"""
-Lexecon - Lexical Governance Protocol
+"""Lexecon - Lexical Governance Protocol
 
 A unified cryptographic governance system for AI safety, compliance, and auditability.
 """
@@ -16,11 +15,11 @@ from lexecon.policy.relations import PolicyRelation
 from lexecon.policy.terms import PolicyTerm
 
 __all__ = [
-    "PolicyTerm",
-    "PolicyRelation",
-    "PolicyEngine",
-    "DecisionService",
     "CapabilityToken",
-    "LedgerChain",
+    "DecisionService",
     "KeyManager",
+    "LedgerChain",
+    "PolicyEngine",
+    "PolicyRelation",
+    "PolicyTerm",
 ]

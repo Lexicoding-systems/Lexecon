@@ -1,14 +1,15 @@
-"""
-Example: Governed OpenAI Integration
+"""Example: Governed OpenAI Integration
 
 This example shows how to use Lexecon governance with OpenAI models.
 """
 
 import os
-from openai import OpenAI
 
 # Import the governance adapter
 import sys
+
+from openai import OpenAI
+
 sys.path.insert(0, "../adapters")
 from openai_adapter import OpenAIGovernanceAdapter
 
@@ -20,9 +21,9 @@ def search_web(query: str, max_results: int = 10):
     return {
         "results": [
             {"title": f"Result about {query}", "url": "https://example.com/1"},
-            {"title": f"More about {query}", "url": "https://example.com/2"}
+            {"title": f"More about {query}", "url": "https://example.com/2"},
         ],
-        "count": max_results
+        "count": max_results,
     }
 
 
@@ -31,7 +32,7 @@ def read_file(filepath: str):
     # Simulate file read
     return {
         "content": f"Contents of {filepath}",
-        "size": 1024
+        "size": 1024,
     }
 
 
@@ -40,7 +41,7 @@ def execute_code(code: str, language: str = "python"):
     # This would execute in actual sandbox
     return {
         "output": f"Executed {language} code",
-        "status": "success"
+        "status": "success",
     }
 
 
@@ -50,7 +51,7 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 # Create governance adapter
 adapter = OpenAIGovernanceAdapter(
     governance_url="http://localhost:8000",
-    actor="model"
+    actor="model",
 )
 
 # Register tools with the adapter
@@ -70,17 +71,17 @@ tools = [
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "Search query"
+                        "description": "Search query",
                     },
                     "max_results": {
                         "type": "integer",
                         "description": "Maximum number of results",
-                        "default": 10
-                    }
+                        "default": 10,
+                    },
                 },
-                "required": ["query"]
-            }
-        }
+                "required": ["query"],
+            },
+        },
     },
     {
         "type": "function",
@@ -92,13 +93,13 @@ tools = [
                 "properties": {
                     "filepath": {
                         "type": "string",
-                        "description": "Path to the file"
-                    }
+                        "description": "Path to the file",
+                    },
                 },
-                "required": ["filepath"]
-            }
-        }
-    }
+                "required": ["filepath"],
+            },
+        },
+    },
 ]
 
 
@@ -118,7 +119,7 @@ def main():
 
     messages = [
         {"role": "system", "content": "You operate under Lexecon governance. All tool calls require approval."},
-        {"role": "user", "content": user_message}
+        {"role": "user", "content": user_message},
     ]
 
     print(f"User: {user_message}\n")
@@ -131,13 +132,13 @@ def main():
             tools=tools,
             user_intent="Research AI governance",
             model="gpt-4",
-            max_tokens=500
+            max_tokens=500,
         )
 
         print(f"Assistant: {response.choices[0].message.content}\n")
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error: {e!s}")
 
 
 def manual_tool_call_example():
@@ -149,20 +150,20 @@ def manual_tool_call_example():
         tool_name="search_web",
         tool_args={"query": "AI safety", "max_results": 5},
         user_intent="Research AI safety best practices",
-        risk_level=1
+        risk_level=1,
     )
 
     print("Governance Decision:")
     print(f"  Status: {result['governance_decision']['decision']}")
     print(f"  Reasoning: {result['governance_decision']['reasoning']}")
 
-    if result['governance_decision']['decision'] == 'permit':
-        token = result['governance_decision'].get('capability_token', {})
+    if result["governance_decision"]["decision"] == "permit":
+        token = result["governance_decision"].get("capability_token", {})
         print(f"  Token ID: {token.get('token_id')}")
         print(f"  Expires: {token.get('expiry')}")
         print(f"\nTool Result: {result['content']}")
     else:
-        print(f"\n❌ Tool call was denied")
+        print("\n❌ Tool call was denied")
 
 
 if __name__ == "__main__":

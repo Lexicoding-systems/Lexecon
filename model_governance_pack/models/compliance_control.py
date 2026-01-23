@@ -1,5 +1,4 @@
-"""
-This model is a derived runtime binding of the canonical governance JSON schema.
+"""This model is a derived runtime binding of the canonical governance JSON schema.
 The JSON schema remains the authoritative source of truth.
 This file exists solely to enforce contract correctness at runtime.
 
@@ -27,8 +26,7 @@ class ComplianceFramework(str, Enum):
 
 
 class ComplianceControl(BaseModel):
-    """
-    Lexecon Compliance Control
+    """Lexecon Compliance Control
 
     Governance requirement derived from regulatory frameworks.
     """

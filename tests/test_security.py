@@ -6,8 +6,9 @@ digital signatures, and audit logging.
 """
 
 import os
-import tempfile
 import shutil
+import tempfile
+
 import pytest
 
 from lexecon.security.auth_service import AuthService, Role
@@ -119,7 +120,7 @@ class TestAuthService:
 
         session = auth_service.create_session(
             user=user,
-            ip_address="192.168.1.1"
+            ip_address="192.168.1.1",
         )
 
         assert session is not None
@@ -167,7 +168,7 @@ class TestAuthService:
         auth_service.revoke_session(session.session_id)
 
         # Session should no longer be valid
-        validated, error = auth_service.validate_session(session.session_id)
+        validated, _error = auth_service.validate_session(session.session_id)
         assert validated is None
 
     def test_has_permission(self, auth_service):
@@ -296,7 +297,7 @@ class TestSignatureService:
         enriched["data"]["key"] = "tampered_value"
 
         # Verify should fail
-        is_valid, message = signature_service.verify_packet_signature(enriched)
+        is_valid, _message = signature_service.verify_packet_signature(enriched)
 
         assert is_valid is False
 
@@ -361,9 +362,9 @@ class TestSignatureService:
             "request_id": "req_123",
             "data": {},
             "signature_info": {
-                "algorithm": "RSA-PSS-SHA256"
+                "algorithm": "RSA-PSS-SHA256",
                 # Missing "signature" field
-            }
+            },
         }
 
         is_valid, message = signature_service.verify_packet_signature(packet_data)

@@ -1,5 +1,4 @@
-"""
-Rate Limiting Middleware for FastAPI.
+"""Rate Limiting Middleware for FastAPI.
 
 Provides HTTP-level rate limiting with automatic 429 responses.
 Integrates with RateLimiter for token bucket-based rate limiting.
@@ -11,15 +10,16 @@ Features:
 - Graceful bypass for internal endpoints
 """
 
-from fastapi import Request, HTTPException, status, Response
-from fastapi.responses import JSONResponse
 from typing import Callable, Optional
+
+from fastapi import Request, Response, status
+from fastapi.responses import JSONResponse
+
 from lexecon.security.rate_limiter import get_rate_limiter
 
 
 class RateLimitMiddleware:
-    """
-    FastAPI middleware for rate limiting.
+    """FastAPI middleware for rate limiting.
 
     Applies rate limits based on client IP and request endpoint.
     Returns HTTP 429 with Retry-After header when limits exceeded.
@@ -35,12 +35,11 @@ class RateLimitMiddleware:
             "/docs",
             "/openapi.json",
             "/redoc",
-            "/metrics"
+            "/metrics",
         }
 
     async def __call__(self, request: Request, call_next: Callable) -> Response:
-        """
-        Process request with rate limiting.
+        """Process request with rate limiting.
 
         Args:
             request: FastAPI request object
@@ -59,13 +58,13 @@ class RateLimitMiddleware:
         # Apply global per-IP rate limit
         allowed, retry_after = self.rate_limiter.check_rate_limit(
             f"ip:{ip_address}",
-            "global_per_ip"
+            "global_per_ip",
         )
 
         if not allowed:
             return self._rate_limit_response(
                 "Too many requests from your IP address",
-                retry_after
+                retry_after,
             )
 
         # Apply endpoint-specific rate limits
@@ -76,13 +75,13 @@ class RateLimitMiddleware:
 
             allowed, retry_after = self.rate_limiter.check_rate_limit(
                 key,
-                endpoint_limit_type
+                endpoint_limit_type,
             )
 
             if not allowed:
                 return self._rate_limit_response(
                     f"Too many requests to {request.url.path}",
-                    retry_after
+                    retry_after,
                 )
 
             # Consume token for this endpoint
@@ -98,8 +97,7 @@ class RateLimitMiddleware:
         return response
 
     def _get_client_ip(self, request: Request) -> str:
-        """
-        Extract client IP address from request.
+        """Extract client IP address from request.
 
         Handles X-Forwarded-For and X-Real-IP headers for proxied requests.
 
@@ -127,8 +125,7 @@ class RateLimitMiddleware:
         return "unknown"
 
     def _should_bypass(self, request: Request) -> bool:
-        """
-        Check if endpoint should bypass rate limiting.
+        """Check if endpoint should bypass rate limiting.
 
         Args:
             request: FastAPI request object
@@ -143,15 +140,10 @@ class RateLimitMiddleware:
             return True
 
         # Check prefix match
-        for bypass_path in self.bypass_endpoints:
-            if path.startswith(bypass_path):
-                return True
-
-        return False
+        return any(path.startswith(bypass_path) for bypass_path in self.bypass_endpoints)
 
     def _get_endpoint_limit_type(self, request: Request) -> Optional[str]:
-        """
-        Determine rate limit type based on endpoint.
+        """Determine rate limit type based on endpoint.
 
         Args:
             request: FastAPI request object
@@ -166,9 +158,8 @@ class RateLimitMiddleware:
         if path == "/auth/login":
             return "auth_login_per_ip"
 
-        if path.startswith("/auth/mfa/"):
-            if "verify" in path:
-                return "auth_mfa_per_challenge"
+        if path.startswith("/auth/mfa/") and "verify" in path:
+            return "auth_mfa_per_challenge"
 
         if path == "/auth/users" and method == "POST":
             return "auth_register_per_ip"
@@ -188,8 +179,7 @@ class RateLimitMiddleware:
         return None
 
     def _get_rate_limit_key(self, request: Request, limit_type: str) -> str:
-        """
-        Generate rate limit key for request.
+        """Generate rate limit key for request.
 
         Args:
             request: FastAPI request object
@@ -206,9 +196,8 @@ class RateLimitMiddleware:
             # Try to get user from request state (set by AuthMiddleware)
             if hasattr(request.state, "user_id"):
                 return f"user:{request.state.user_id}"
-            else:
-                # Fall back to IP if user not authenticated
-                return f"ip:{ip_address}"
+            # Fall back to IP if user not authenticated
+            return f"ip:{ip_address}"
 
         # Per-challenge limits (MFA)
         if "per_challenge" in limit_type:
@@ -226,8 +215,7 @@ class RateLimitMiddleware:
         return f"ip:{ip_address}:{path}"
 
     def _rate_limit_response(self, message: str, retry_after: Optional[int]) -> JSONResponse:
-        """
-        Create rate limit error response.
+        """Create rate limit error response.
 
         Args:
             message: Error message
@@ -243,19 +231,18 @@ class RateLimitMiddleware:
             content={
                 "error": "rate_limit_exceeded",
                 "message": message,
-                "retry_after": retry_after
+                "retry_after": retry_after,
             },
-            headers={"Retry-After": str(retry_after)}
+            headers={"Retry-After": str(retry_after)},
         )
 
     def _add_rate_limit_headers(
         self,
         response: Response,
         ip_address: str,
-        endpoint_limit_type: Optional[str]
-    ):
-        """
-        Add rate limit information to response headers.
+        endpoint_limit_type: Optional[str],
+    ) -> None:
+        """Add rate limit information to response headers.
 
         Args:
             response: FastAPI response object
@@ -265,7 +252,7 @@ class RateLimitMiddleware:
         # Add global rate limit headers
         remaining = self.rate_limiter.get_remaining(
             f"ip:{ip_address}",
-            "global_per_ip"
+            "global_per_ip",
         )
 
         if remaining >= 0:
@@ -280,8 +267,7 @@ class RateLimitMiddleware:
 
 
 def create_rate_limit_middleware() -> RateLimitMiddleware:
-    """
-    Create rate limiting middleware instance.
+    """Create rate limiting middleware instance.
 
     Returns:
         Configured RateLimitMiddleware

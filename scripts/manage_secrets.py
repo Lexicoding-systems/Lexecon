@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Secrets Management CLI.
+"""Secrets Management CLI.
 
 Command-line tool for managing Lexecon secrets:
 - Generate new secrets and keys
@@ -25,13 +24,12 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from lexecon.security.secrets_manager import SecretsManager
 from lexecon.security.db_encryption import DatabaseEncryption
+from lexecon.security.secrets_manager import SecretsManager
 
 
 def generate_secrets(output_dir: str = "./secrets"):
-    """
-    Generate all required secrets for Lexecon.
+    """Generate all required secrets for Lexecon.
 
     Args:
         output_dir: Directory to write secret files
@@ -52,7 +50,7 @@ def generate_secrets(output_dir: str = "./secrets"):
 
     for filename, value in secrets_to_generate.items():
         filepath = output_path / filename
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             f.write(value)
         print(f"✓ Generated {filename}")
 
@@ -63,8 +61,8 @@ def generate_secrets(output_dir: str = "./secrets"):
     print(f"  2. Update docker-compose.yml to reference files in {output_dir}/")
     print("\nEnvironment Variables Setup:")
     print("  1. Add to .env or export as environment variables:")
-    for filename in secrets_to_generate.keys():
-        env_var = filename.replace('.txt', '').upper()
+    for filename in secrets_to_generate:
+        env_var = filename.replace(".txt", "").upper()
         print(f"     {env_var}=$(cat {output_dir}/{filename})")
     print("\nSecurity Note:")
     print("  • Keep these files secure and never commit to git")
@@ -73,8 +71,7 @@ def generate_secrets(output_dir: str = "./secrets"):
 
 
 def encrypt_env(input_path: str, output_path: str = ".env.encrypted"):
-    """
-    Encrypt a .env file.
+    """Encrypt a .env file.
 
     Args:
         input_path: Path to plaintext .env file
@@ -98,15 +95,14 @@ def encrypt_env(input_path: str, output_path: str = ".env.encrypted"):
     print("\nUsage:")
     print("  1. Set LEXECON_MASTER_KEY environment variable")
     print("  2. SecretsManager will automatically load secrets from encrypted file")
-    print(f"\nSecurity Note:")
+    print("\nSecurity Note:")
     print(f"  • Delete plaintext {input_path} after verifying encrypted file works")
     print(f"  • Keep {output_path} in version control (safe with master key)")
-    print(f"  • Never commit LEXECON_MASTER_KEY to git")
+    print("  • Never commit LEXECON_MASTER_KEY to git")
 
 
 def decrypt_env(input_path: str = ".env.encrypted", output_path: str = ".env"):
-    """
-    Decrypt an encrypted .env file.
+    """Decrypt an encrypted .env file.
 
     Args:
         input_path: Path to encrypted file
@@ -124,8 +120,8 @@ def decrypt_env(input_path: str = ".env.encrypted", output_path: str = ".env"):
 
     print(f"\n✓ Decrypted .env file created: {output_path}")
     print(f"\nWarning: {output_path} contains plaintext secrets!")
-    print(f"  • Do not commit to git")
-    print(f"  • Delete after use in development")
+    print("  • Do not commit to git")
+    print("  • Delete after use in development")
 
 
 def verify_secrets():
@@ -176,13 +172,13 @@ def verify_secrets():
         secrets_count = len(list(docker_secrets_dir.glob("*")))
         print(f"  • Docker Secrets: {secrets_count} files in /run/secrets/")
     else:
-        print(f"  • Docker Secrets: Not available")
+        print("  • Docker Secrets: Not available")
 
     env_encrypted = Path(".env.encrypted")
     if env_encrypted.exists():
         print(f"  • Encrypted .env: {env_encrypted} ({env_encrypted.stat().st_size} bytes)")
     else:
-        print(f"  • Encrypted .env: Not found")
+        print("  • Encrypted .env: Not found")
 
     print("\nEnvironment Variables:")
     env_vars = ["DB_ENCRYPTION_KEY", "RSA_KEY_PASSWORD", "SESSION_SECRET", "LEXECON_MASTER_KEY"]
@@ -205,8 +201,7 @@ def verify_secrets():
 
 
 def rotate_rsa_password(key_path: str = "keys/private_key.pem"):
-    """
-    Rotate RSA private key password.
+    """Rotate RSA private key password.
 
     Args:
         key_path: Path to RSA private key
@@ -224,7 +219,7 @@ def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Lexecon Secrets Management CLI",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
@@ -234,7 +229,7 @@ def main():
     generate_parser.add_argument(
         "--output",
         default="./secrets",
-        help="Output directory for secret files (default: ./secrets)"
+        help="Output directory for secret files (default: ./secrets)",
     )
 
     # Encrypt command
@@ -242,12 +237,12 @@ def main():
     encrypt_parser.add_argument(
         "--input",
         required=True,
-        help="Path to plaintext .env file"
+        help="Path to plaintext .env file",
     )
     encrypt_parser.add_argument(
         "--output",
         default=".env.encrypted",
-        help="Path to write encrypted file (default: .env.encrypted)"
+        help="Path to write encrypted file (default: .env.encrypted)",
     )
 
     # Decrypt command
@@ -255,12 +250,12 @@ def main():
     decrypt_parser.add_argument(
         "--input",
         default=".env.encrypted",
-        help="Path to encrypted file (default: .env.encrypted)"
+        help="Path to encrypted file (default: .env.encrypted)",
     )
     decrypt_parser.add_argument(
         "--output",
         default=".env",
-        help="Path to write decrypted file (default: .env)"
+        help="Path to write decrypted file (default: .env)",
     )
 
     # Verify command
@@ -269,12 +264,12 @@ def main():
     # Rotate RSA password command
     rotate_parser = subparsers.add_parser(
         "rotate-rsa-password",
-        help="Rotate RSA private key password"
+        help="Rotate RSA private key password",
     )
     rotate_parser.add_argument(
         "--key-path",
         default="keys/private_key.pem",
-        help="Path to RSA private key (default: keys/private_key.pem)"
+        help="Path to RSA private key (default: keys/private_key.pem)",
     )
 
     args = parser.parse_args()

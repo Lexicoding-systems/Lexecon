@@ -1,28 +1,28 @@
 """Tests for escalation service."""
 
+from datetime import datetime, timezone
+
 import pytest
-from datetime import datetime, timedelta, timezone
 
 from lexecon.escalation.service import (
-    EscalationService,
     EscalationConfig,
+    EscalationService,
     generate_escalation_id,
-    NotificationEvent,
 )
 
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
         Escalation,
-        EscalationTrigger,
-        EscalationStatus,
         EscalationPriority,
+        EscalationStatus,
+        EscalationTrigger,
+        EvidenceArtifact,
         Resolution,
         ResolutionOutcome,
         Risk,
         RiskDimensions,
         RiskLevel,
-        EvidenceArtifact,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -215,7 +215,7 @@ class TestEscalationService:
         )
 
         artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
+            escalation_id=escalation.escalation_id,
         )
         assert len(artifacts) >= 1
         assert any(
@@ -603,7 +603,7 @@ class TestEvidenceArtifacts:
         )
 
         artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
+            escalation_id=escalation.escalation_id,
         )
 
         created_artifacts = [
@@ -640,7 +640,7 @@ class TestEvidenceArtifacts:
 
         # Check artifacts
         artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
+            escalation_id=escalation.escalation_id,
         )
 
         event_types = {a.metadata.get("event_type") for a in artifacts}
@@ -678,7 +678,7 @@ class TestEvidenceArtifacts:
         # Escalation should exist but no evidence
         assert escalation is not None
         artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
+            escalation_id=escalation.escalation_id,
         )
         assert len(artifacts) == 0
 
@@ -726,7 +726,7 @@ class TestIntegrationWorkflows:
 
         # 4. Verify evidence trail
         artifacts = service.get_evidence_artifacts(
-            escalation_id=escalation.escalation_id
+            escalation_id=escalation.escalation_id,
         )
         assert len(artifacts) >= 3  # Created, acknowledged, resolved
 
@@ -761,6 +761,6 @@ class TestIntegrationWorkflows:
 
         # Verify notifications
         notifications = service.get_notifications(
-            escalation_id=escalation.escalation_id
+            escalation_id=escalation.escalation_id,
         )
         assert len(notifications) >= 1

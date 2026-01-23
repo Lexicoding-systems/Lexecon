@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Comprehensive Authentication System Test Suite.
+"""Comprehensive Authentication System Test Suite.
 
 Tests all Phase 1 authentication features:
 - Phase 1A: Rate limiting
@@ -12,9 +11,9 @@ Tests all Phase 1 authentication features:
 """
 
 import sys
-import requests
 import time
-from typing import Dict, Any, Tuple
+
+import requests
 
 # Color codes for output
 GREEN = "\033[92m"
@@ -63,7 +62,7 @@ def test_rate_limiting():
         print_test(
             "Health endpoint responds",
             response.status_code == 200,
-            f"Status: {response.status_code}"
+            f"Status: {response.status_code}",
         )
 
         # Test rate limiting on login endpoint
@@ -73,13 +72,13 @@ def test_rate_limiting():
             response = requests.post(
                 f"{BASE_URL}/auth/login",
                 json={"username": "ratelimit_test", "password": "wrong"},
-                timeout=5
+                timeout=5,
             )
             if response.status_code == 429:
                 print_test(
                     f"Rate limit triggered after {i} attempts",
                     True,
-                    "HTTP 429 Too Many Requests"
+                    "HTTP 429 Too Many Requests",
                 )
                 break
             failed_attempts += 1
@@ -90,11 +89,11 @@ def test_rate_limiting():
             print_test(
                 "Rate limiting configured",
                 True,
-                "No 429 in 7 attempts (may need more requests)"
+                "No 429 in 7 attempts (may need more requests)",
             )
 
     except Exception as e:
-        print_test("Rate limiting test", False, f"Error: {str(e)}")
+        print_test("Rate limiting test", False, f"Error: {e!s}")
 
 
 # ============================================================================
@@ -126,7 +125,7 @@ def test_security_headers():
             print_test(
                 f"{description} ({header})",
                 present,
-                f"Value: {value}..." if value else "Not present"
+                f"Value: {value}..." if value else "Not present",
             )
 
         # HSTS is only in production
@@ -136,7 +135,7 @@ def test_security_headers():
             print_info("HSTS header not present (development mode)")
 
     except Exception as e:
-        print_test("Security headers test", False, f"Error: {str(e)}")
+        print_test("Security headers test", False, f"Error: {e!s}")
 
 
 # ============================================================================
@@ -154,7 +153,7 @@ def test_password_policies():
         print_test(
             "Password policy endpoint accessible",
             response.status_code == 200,
-            f"Status: {response.status_code}"
+            f"Status: {response.status_code}",
         )
 
         if response.status_code == 200:
@@ -179,19 +178,19 @@ def test_password_policies():
                     "email": f"test_{int(time.time())}@example.com",
                     "password": weak_pwd,
                     "role": "viewer",
-                    "full_name": "Test User"
+                    "full_name": "Test User",
                 },
-                timeout=5
+                timeout=5,
             )
             # Should fail without authentication, but test the password validation
             print_test(
                 f"Weak password rejected: '{weak_pwd}'",
                 response.status_code in [400, 401],  # 400 for policy, 401 for auth
-                f"Status: {response.status_code}"
+                f"Status: {response.status_code}",
             )
 
     except Exception as e:
-        print_test("Password policy test", False, f"Error: {str(e)}")
+        print_test("Password policy test", False, f"Error: {e!s}")
 
 
 # ============================================================================
@@ -203,27 +202,26 @@ def test_secrets_management():
     """Test secrets management system."""
     print_section("Phase 1D: Secrets Management")
 
-    import os
     import subprocess
 
     try:
         # Test secrets management CLI
         result = subprocess.run(
             ["python3", "scripts/manage_secrets.py", "--help"],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
         )
         print_test(
             "Secrets management CLI available",
             result.returncode == 0,
-            "manage_secrets.py --help works"
+            "manage_secrets.py --help works",
         )
 
         # Check if secrets manager module can be imported
         try:
-            from lexecon.security.secrets_manager import SecretsManager
             from lexecon.security.db_encryption import DatabaseEncryption
+            from lexecon.security.secrets_manager import SecretsManager
             print_test("Secrets manager module imports", True, "No import errors")
         except ImportError as e:
             print_test("Secrets manager module imports", False, f"Import error: {e}")
@@ -235,13 +233,13 @@ def test_secrets_management():
             print_test(
                 "Encryption key generation",
                 len(key) == 64,  # 32 bytes hex = 64 chars
-                f"Generated {len(key)}-char hex key"
+                f"Generated {len(key)}-char hex key",
             )
         except Exception as e:
             print_test("Encryption key generation", False, f"Error: {e}")
 
     except Exception as e:
-        print_test("Secrets management test", False, f"Error: {str(e)}")
+        print_test("Secrets management test", False, f"Error: {e!s}")
 
 
 # ============================================================================
@@ -265,7 +263,7 @@ def test_mfa_functionality():
             print_test(
                 "TOTP secret generation",
                 len(secret) > 0 and isinstance(secret, str),
-                f"Generated {len(secret)}-char secret"
+                f"Generated {len(secret)}-char secret",
             )
 
             # Test backup code generation
@@ -273,7 +271,7 @@ def test_mfa_functionality():
             print_test(
                 "Backup code generation",
                 len(codes) == 10 and all(len(code) == 8 for code in codes),
-                f"Generated {len(codes)} codes of 8 chars each"
+                f"Generated {len(codes)} codes of 8 chars each",
             )
 
             # Test QR code generation
@@ -281,7 +279,7 @@ def test_mfa_functionality():
             print_test(
                 "QR code generation",
                 len(qr_bytes) > 0,
-                f"Generated {len(qr_bytes)} bytes PNG"
+                f"Generated {len(qr_bytes)} bytes PNG",
             )
 
             # Test TOTP verification (should fail with random code)
@@ -289,7 +287,7 @@ def test_mfa_functionality():
             print_test(
                 "TOTP verification (invalid code)",
                 not is_valid,
-                "Correctly rejected invalid code"
+                "Correctly rejected invalid code",
             )
 
         except ImportError as e:
@@ -307,7 +305,7 @@ def test_mfa_functionality():
         print_test(
             "MFA columns in users table",
             mfa_columns.issubset(columns),
-            f"Found: {', '.join(mfa_columns & columns)}"
+            f"Found: {', '.join(mfa_columns & columns)}",
         )
 
         # Check mfa_challenges table exists
@@ -318,13 +316,13 @@ def test_mfa_functionality():
         print_test(
             "MFA challenges table exists",
             cursor.fetchone() is not None,
-            "Table found in database"
+            "Table found in database",
         )
 
         conn.close()
 
     except Exception as e:
-        print_test("MFA functionality test", False, f"Error: {str(e)}")
+        print_test("MFA functionality test", False, f"Error: {e!s}")
 
 
 # ============================================================================
@@ -339,8 +337,8 @@ def test_oidc_oauth():
     try:
         # Test OIDC service imports
         try:
-            from lexecon.security.oidc_service import OIDCService, OIDCProvider
-            oidc_service = OIDCService()
+            from lexecon.security.oidc_service import OIDCProvider, OIDCService
+            OIDCService()
             print_test("OIDC service imports", True, "No import errors")
         except ImportError as e:
             print_test("OIDC service imports", False, f"Import error: {e}")
@@ -350,7 +348,7 @@ def test_oidc_oauth():
         print_test(
             "OIDC providers endpoint accessible",
             response.status_code == 200,
-            f"Status: {response.status_code}"
+            f"Status: {response.status_code}",
         )
 
         if response.status_code == 200:
@@ -375,7 +373,7 @@ def test_oidc_oauth():
         print_test(
             "OIDC states table exists",
             cursor.fetchone() is not None,
-            "Table found in database"
+            "Table found in database",
         )
 
         # Check oidc_users table exists
@@ -386,13 +384,13 @@ def test_oidc_oauth():
         print_test(
             "OIDC users table exists",
             cursor.fetchone() is not None,
-            "Table found in database"
+            "Table found in database",
         )
 
         conn.close()
 
     except Exception as e:
-        print_test("OIDC OAuth test", False, f"Error: {str(e)}")
+        print_test("OIDC OAuth test", False, f"Error: {e!s}")
 
 
 # ============================================================================
@@ -431,7 +429,7 @@ def test_database_migrations():
             print_test(
                 f"Table '{table}' exists",
                 table in tables,
-                "Present" if table in tables else "Missing"
+                "Present" if table in tables else "Missing",
             )
 
         # Check for indexes
@@ -452,13 +450,13 @@ def test_database_migrations():
             print_test(
                 f"Index '{index}' exists",
                 index in indexes,
-                "Present" if index in indexes else "Missing"
+                "Present" if index in indexes else "Missing",
             )
 
         conn.close()
 
     except Exception as e:
-        print_test("Database migrations test", False, f"Error: {str(e)}")
+        print_test("Database migrations test", False, f"Error: {e!s}")
 
 
 # ============================================================================
@@ -475,12 +473,12 @@ def test_authentication_flow():
         response = requests.post(
             f"{BASE_URL}/auth/login",
             json={"username": "", "password": ""},
-            timeout=5
+            timeout=5,
         )
         print_test(
             "Login endpoint accessible",
             response.status_code in [200, 400, 401],
-            f"Status: {response.status_code}"
+            f"Status: {response.status_code}",
         )
 
         # Test /auth/me without authentication
@@ -488,7 +486,7 @@ def test_authentication_flow():
         print_test(
             "Protected endpoint requires authentication",
             response.status_code == 401,
-            f"Status: {response.status_code} (expected 401)"
+            f"Status: {response.status_code} (expected 401)",
         )
 
         # Test logout endpoint
@@ -496,11 +494,11 @@ def test_authentication_flow():
         print_test(
             "Logout endpoint accessible",
             response.status_code == 200,
-            f"Status: {response.status_code}"
+            f"Status: {response.status_code}",
         )
 
     except Exception as e:
-        print_test("Authentication flow test", False, f"Error: {str(e)}")
+        print_test("Authentication flow test", False, f"Error: {e!s}")
 
 
 # ============================================================================
@@ -527,8 +525,8 @@ def main():
         print_test("Server is running", False, "Cannot connect to server")
         print(f"\n{RED}ERROR: Server is not running!{RESET}")
         print(f"{YELLOW}Start the server with:{RESET}")
-        print(f"  cd /Users/air/Lexecon")
-        print(f"  uvicorn lexecon.api.server:app --reload")
+        print("  cd /Users/air/Lexecon")
+        print("  uvicorn lexecon.api.server:app --reload")
         return 1
 
     # Run all test suites
@@ -562,11 +560,10 @@ def main():
         print(f"{GREEN}🎉 ALL TESTS PASSED! Authentication system is working correctly.{RESET}")
         print(f"{GREEN}{'=' * 70}{RESET}\n")
         return 0
-    else:
-        print(f"\n{YELLOW}{'=' * 70}{RESET}")
-        print(f"{YELLOW}⚠️  Some tests failed. Review the output above for details.{RESET}")
-        print(f"{YELLOW}{'=' * 70}{RESET}\n")
-        return 1
+    print(f"\n{YELLOW}{'=' * 70}{RESET}")
+    print(f"{YELLOW}⚠️  Some tests failed. Review the output above for details.{RESET}")
+    print(f"{YELLOW}{'=' * 70}{RESET}\n")
+    return 1
 
 
 if __name__ == "__main__":

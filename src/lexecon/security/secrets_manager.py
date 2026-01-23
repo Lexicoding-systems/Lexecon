@@ -1,5 +1,4 @@
-"""
-Secrets Management System.
+"""Secrets Management System.
 
 Provides secure storage and retrieval of secrets with multiple backend support:
 1. Docker Secrets (production) - /run/secrets/*
@@ -15,18 +14,17 @@ Features:
 - Automatic source detection
 """
 
-import os
-import json
-from typing import Optional, Dict, Any
-from pathlib import Path
-from cryptography.fernet import Fernet
 import base64
-import hashlib
+import json
+import os
+from pathlib import Path
+from typing import Dict, Optional
+
+from cryptography.fernet import Fernet
 
 
 class SecretsManager:
-    """
-    Secure secrets management with multiple backend support.
+    """Secure secrets management with multiple backend support.
 
     Priority order for secret retrieval:
     1. Docker Secrets (/run/secrets/*)
@@ -38,10 +36,9 @@ class SecretsManager:
         self,
         secrets_dir: str = "/run/secrets",
         env_encrypted_path: Optional[str] = None,
-        master_key: Optional[str] = None
+        master_key: Optional[str] = None,
     ):
-        """
-        Initialize secrets manager.
+        """Initialize secrets manager.
 
         Args:
             secrets_dir: Directory for Docker secrets
@@ -60,8 +57,7 @@ class SecretsManager:
             self._load_encrypted_env()
 
     def get_secret(self, secret_name: str, default: Optional[str] = None) -> Optional[str]:
-        """
-        Get secret value from available sources.
+        """Get secret value from available sources.
 
         Priority:
         1. Docker Secrets file
@@ -83,7 +79,7 @@ class SecretsManager:
         secret_file = self.secrets_dir / secret_name
         if secret_file.exists() and secret_file.is_file():
             try:
-                with open(secret_file, 'r') as f:
+                with open(secret_file) as f:
                     value = f.read().strip()
                     self._cache[secret_name] = value
                     return value
@@ -95,7 +91,7 @@ class SecretsManager:
         file_path = os.getenv(env_file_var)
         if file_path and os.path.exists(file_path):
             try:
-                with open(file_path, 'r') as f:
+                with open(file_path) as f:
                     value = f.read().strip()
                     self._cache[secret_name] = value
                     return value
@@ -112,7 +108,7 @@ class SecretsManager:
         # Return default
         return default
 
-    def _load_encrypted_env(self):
+    def _load_encrypted_env(self) -> None:
         """Load secrets from encrypted .env file into cache."""
         if not self.master_key:
             return
@@ -120,11 +116,11 @@ class SecretsManager:
         try:
             fernet = self._get_fernet()
 
-            with open(self.env_encrypted_path, 'rb') as f:
+            with open(self.env_encrypted_path, "rb") as f:
                 encrypted_data = f.read()
 
             decrypted_data = fernet.decrypt(encrypted_data)
-            secrets = json.loads(decrypted_data.decode('utf-8'))
+            secrets = json.loads(decrypted_data.decode("utf-8"))
 
             # Load into cache
             self._cache.update(secrets)
@@ -133,8 +129,7 @@ class SecretsManager:
             print(f"Warning: Failed to load encrypted .env file: {e}")
 
     def _get_fernet(self) -> Fernet:
-        """
-        Get Fernet cipher instance.
+        """Get Fernet cipher instance.
 
         Returns:
             Fernet cipher
@@ -153,15 +148,14 @@ class SecretsManager:
                 key_b64 = base64.urlsafe_b64encode(key_bytes)
             else:
                 # Assume it's already base64
-                key_b64 = self.master_key.encode('utf-8')
+                key_b64 = self.master_key.encode("utf-8")
 
             return Fernet(key_b64)
         except Exception as e:
             raise ValueError(f"Invalid master key format: {e}")
 
     def encrypt_env_file(self, env_path: str, output_path: Optional[str] = None):
-        """
-        Encrypt a .env file.
+        """Encrypt a .env file.
 
         Args:
             env_path: Path to plaintext .env file
@@ -177,29 +171,28 @@ class SecretsManager:
 
         # Parse .env file
         secrets = {}
-        with open(env_path, 'r') as f:
+        with open(env_path) as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
                     # Remove quotes if present
                     value = value.strip('"').strip("'")
                     secrets[key] = value
 
         # Encrypt
         fernet = self._get_fernet()
-        json_data = json.dumps(secrets).encode('utf-8')
+        json_data = json.dumps(secrets).encode("utf-8")
         encrypted_data = fernet.encrypt(json_data)
 
         # Write encrypted file
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             f.write(encrypted_data)
 
         print(f"✓ Encrypted {len(secrets)} secrets to {output_path}")
 
     def decrypt_env_file(self, encrypted_path: Optional[str] = None, output_path: str = ".env"):
-        """
-        Decrypt an encrypted .env file.
+        """Decrypt an encrypted .env file.
 
         Args:
             encrypted_path: Path to encrypted file (default: .env.encrypted)
@@ -216,14 +209,14 @@ class SecretsManager:
         # Decrypt
         fernet = self._get_fernet()
 
-        with open(encrypted_path, 'rb') as f:
+        with open(encrypted_path, "rb") as f:
             encrypted_data = f.read()
 
         decrypted_data = fernet.decrypt(encrypted_data)
-        secrets = json.loads(decrypted_data.decode('utf-8'))
+        secrets = json.loads(decrypted_data.decode("utf-8"))
 
         # Write .env file
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             for key, value in secrets.items():
                 f.write(f'{key}="{value}"\n')
 
@@ -231,8 +224,7 @@ class SecretsManager:
 
     @staticmethod
     def generate_master_key() -> str:
-        """
-        Generate a new master encryption key.
+        """Generate a new master encryption key.
 
         Returns:
             32-byte hex-encoded key
@@ -244,8 +236,7 @@ class SecretsManager:
 
     @staticmethod
     def generate_secret(length: int = 32) -> str:
-        """
-        Generate a random secret.
+        """Generate a random secret.
 
         Args:
             length: Length in bytes
@@ -262,8 +253,7 @@ _secrets_manager: Optional[SecretsManager] = None
 
 
 def get_secrets_manager() -> SecretsManager:
-    """
-    Get global secrets manager instance.
+    """Get global secrets manager instance.
 
     Returns:
         SecretsManager instance
@@ -277,8 +267,7 @@ def get_secrets_manager() -> SecretsManager:
 
 
 def get_secret(secret_name: str, default: Optional[str] = None) -> Optional[str]:
-    """
-    Convenience function to get a secret.
+    """Convenience function to get a secret.
 
     Args:
         secret_name: Name of the secret

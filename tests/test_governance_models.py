@@ -17,28 +17,27 @@ from model_governance_pack.models import (
     # Actor
     Actor,
     ActorType,
+    # Evidence Artifact
+    ArtifactType,
+    # Context
+    Behavioral,
     # Compliance Control
     ComplianceControl,
     ComplianceFramework,
-    # Context
-    Behavioral,
+    # Policy
+    Constraint,
     Context,
-    DeploymentEnvironment,
-    Environment,
-    Temporal,
     # Decision
     Decision,
     DecisionOutcome,
+    DeploymentEnvironment,
+    DigitalSignature,
+    Environment,
     # Escalation
     Escalation,
     EscalationPriority,
     EscalationStatus,
     EscalationTrigger,
-    Resolution,
-    ResolutionOutcome,
-    # Evidence Artifact
-    ArtifactType,
-    DigitalSignature,
     EvidenceArtifact,
     # Override
     NewOutcome,
@@ -46,14 +45,12 @@ from model_governance_pack.models import (
     Override,
     OverrideScope,
     OverrideType,
-    # Policy
-    Constraint,
     Policy,
     PolicyMode,
     Relation,
     RelationType,
-    Term,
-    TermType,
+    Resolution,
+    ResolutionOutcome,
     # Resource
     Resource,
     ResourceClassification,
@@ -63,8 +60,10 @@ from model_governance_pack.models import (
     RiskDimensions,
     RiskFactor,
     RiskLevel,
+    Temporal,
+    Term,
+    TermType,
 )
-
 
 # =============================================================================
 # Decision Model Tests
@@ -311,7 +310,7 @@ class TestPolicy:
                         type=RelationType.PERMITS,
                         subject="actor:user",
                         action="action:read",
-                    )
+                    ),
                 ],
             )
         assert "policy_id" in str(exc_info.value)
@@ -330,7 +329,7 @@ class TestPolicy:
                         type=RelationType.PERMITS,
                         subject="actor:user",
                         action="action:read",
-                    )
+                    ),
                 ],
             )
         assert "version" in str(exc_info.value)
@@ -349,7 +348,7 @@ class TestPolicy:
                         type=RelationType.PERMITS,
                         subject="actor:user",
                         action="action:read",
-                    )
+                    ),
                 ],
             )
         assert "name" in str(exc_info.value)
@@ -368,7 +367,7 @@ class TestPolicy:
                         type=RelationType.PERMITS,
                         subject="actor:user",
                         action="action:read",
-                    )
+                    ),
                 ],
             )
         assert "name" in str(exc_info.value)
@@ -1168,7 +1167,7 @@ class TestSerialization:
                     type=RelationType.PERMITS,
                     subject="actor:user",
                     action="action:read",
-                )
+                ),
             ],
         )
         data = original.model_dump()

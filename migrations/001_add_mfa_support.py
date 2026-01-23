@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Migration: Add MFA (Multi-Factor Authentication) support.
+"""Migration: Add MFA (Multi-Factor Authentication) support.
 
 Adds MFA columns to users table and creates mfa_challenges table for
 TOTP-based two-factor authentication.
@@ -10,12 +9,10 @@ Run: python migrations/001_add_mfa_support.py [db_path]
 
 import sqlite3
 import sys
-from datetime import datetime, timezone
 
 
 def migrate(db_path="lexecon_auth.db"):
-    """
-    Apply MFA migration to database.
+    """Apply MFA migration to database.
 
     Args:
         db_path: Path to authentication database
@@ -117,8 +114,7 @@ def migrate(db_path="lexecon_auth.db"):
 
 
 def verify_migration(db_path="lexecon_auth.db"):
-    """
-    Verify migration was applied successfully.
+    """Verify migration was applied successfully.
 
     Args:
         db_path: Path to authentication database
@@ -137,7 +133,7 @@ def verify_migration(db_path="lexecon_auth.db"):
             "mfa_enabled",
             "mfa_secret",
             "mfa_backup_codes",
-            "mfa_enrolled_at"
+            "mfa_enrolled_at",
         }
 
         if required_columns.issubset(columns):

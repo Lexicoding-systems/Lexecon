@@ -1,5 +1,4 @@
-"""
-Password Policy Enforcement.
+"""Password Policy Enforcement.
 
 Implements comprehensive password security policies including:
 - Complexity requirements (length, character types)
@@ -11,15 +10,14 @@ Implements comprehensive password security policies including:
 Configurable policies for different security requirements.
 """
 
-import re
 import hashlib
-from typing import List, Tuple, Optional
+import re
 from datetime import datetime, timedelta, timezone
+from typing import List, Optional, Tuple
 
 
 class PasswordPolicy:
-    """
-    Configurable password policy enforcement.
+    """Configurable password policy enforcement.
 
     Validates passwords against complexity, history, and quality rules.
     Supports password expiration and forced password changes.
@@ -37,8 +35,7 @@ class PasswordPolicy:
         history_count: int = 5,  # Remember last N passwords
         min_unique_chars: int = 8,  # Minimum unique characters
     ):
-        """
-        Initialize password policy.
+        """Initialize password policy.
 
         Args:
             min_length: Minimum password length
@@ -65,8 +62,7 @@ class PasswordPolicy:
         self.weak_passwords = self._load_weak_passwords()
 
     def validate_password(self, password: str) -> Tuple[bool, List[str]]:
-        """
-        Validate password against all policy rules.
+        """Validate password against all policy rules.
 
         Args:
             password: Password to validate
@@ -81,21 +77,20 @@ class PasswordPolicy:
             errors.append(f"Password must be at least {self.min_length} characters long")
 
         # Check uppercase
-        if self.require_uppercase and not re.search(r'[A-Z]', password):
+        if self.require_uppercase and not re.search(r"[A-Z]", password):
             errors.append("Password must contain at least one uppercase letter (A-Z)")
 
         # Check lowercase
-        if self.require_lowercase and not re.search(r'[a-z]', password):
+        if self.require_lowercase and not re.search(r"[a-z]", password):
             errors.append("Password must contain at least one lowercase letter (a-z)")
 
         # Check digits
-        if self.require_digits and not re.search(r'\d', password):
+        if self.require_digits and not re.search(r"\d", password):
             errors.append("Password must contain at least one digit (0-9)")
 
         # Check special characters
-        if self.require_special:
-            if not any(c in self.special_chars for c in password):
-                errors.append(f"Password must contain at least one special character ({self.special_chars})")
+        if self.require_special and not any(c in self.special_chars for c in password):
+            errors.append(f"Password must contain at least one special character ({self.special_chars})")
 
         # Check minimum unique characters
         unique_chars = len(set(password))
@@ -125,8 +120,7 @@ class PasswordPolicy:
         return len(errors) == 0, errors
 
     def _load_weak_passwords(self) -> set:
-        """
-        Load list of common weak passwords.
+        """Load list of common weak passwords.
 
         Returns:
             Set of weak passwords (lowercase)
@@ -140,19 +134,18 @@ class PasswordPolicy:
             "solo", "pass", "test", "guest", "123qwe", "zxcvbnm", "football",
             "baseball", "superman", "batman", "trustno1", "111111", "666666",
             "123321", "654321", "555555", "lovely", "7777777", "888888",
-            "adobe123", "photoshop", "1234", "shadow", "sunshine", "12345678910",
+            "adobe123", "photoshop", "1234", "shadow", "12345678910",
             "password123", "qwertyuiop", "asdfghjkl", "zxcvbn", "michael",
             "jennifer", "jordan", "michelle", "thomas", "hunter", "ranger",
             "buster", "soccer", "harley", "hockey", "tennis", "mercedes",
             "mustang", "maverick", "cookie", "bigdog", "access", "master1",
             "changeme", "demo", "temp", "temporary", "default", "admin123",
             "root", "toor", "administrator", "user", "test123", "welcome1",
-            "Password1!", "P@ssw0rd", "P@ssword", "Passw0rd!", "Password1"
+            "Password1!", "P@ssw0rd", "P@ssword", "Passw0rd!", "Password1",
         }
 
     def _has_keyboard_pattern(self, password: str) -> bool:
-        """
-        Check for common keyboard patterns.
+        """Check for common keyboard patterns.
 
         Args:
             password: Password to check
@@ -162,19 +155,14 @@ class PasswordPolicy:
         """
         keyboard_patterns = [
             "qwerty", "asdfgh", "zxcvbn", "qwertyuiop", "asdfghjkl", "zxcvbnm",
-            "1qaz2wsx", "!qaz@wsx", "1234qwer", "qazwsx", "qweasd", "qweasdzxc"
+            "1qaz2wsx", "!qaz@wsx", "1234qwer", "qazwsx", "qweasd", "qweasdzxc",
         ]
 
         password_lower = password.lower()
-        for pattern in keyboard_patterns:
-            if pattern in password_lower:
-                return True
-
-        return False
+        return any(pattern in password_lower for pattern in keyboard_patterns)
 
     def _has_sequential_chars(self, password: str, length: int = 3) -> bool:
-        """
-        Check for sequential characters.
+        """Check for sequential characters.
 
         Args:
             password: Password to check
@@ -211,8 +199,7 @@ class PasswordPolicy:
         return False
 
     def _has_repeated_chars(self, password: str, max_repeat: int = 3) -> bool:
-        """
-        Check for repeated characters.
+        """Check for repeated characters.
 
         Args:
             password: Password to check
@@ -221,15 +208,10 @@ class PasswordPolicy:
         Returns:
             True if has too many repeated characters
         """
-        for i in range(len(password) - max_repeat + 1):
-            if len(set(password[i:i+max_repeat])) == 1:
-                return True
-
-        return False
+        return any(len(set(password[i:i + max_repeat])) == 1 for i in range(len(password) - max_repeat + 1))
 
     def _contains_dictionary_word(self, password: str) -> bool:
-        """
-        Check if password contains common dictionary words.
+        """Check if password contains common dictionary words.
 
         Args:
             password: Password to check
@@ -242,7 +224,7 @@ class PasswordPolicy:
             "password", "welcome", "admin", "user", "login", "access",
             "system", "computer", "internet", "security", "database",
             "server", "network", "manager", "account", "company", "business",
-            "hello", "world", "test", "demo", "sample", "example"
+            "hello", "world", "test", "demo", "sample", "example",
         }
 
         password_lower = password.lower()
@@ -252,20 +234,15 @@ class PasswordPolicy:
             return True
 
         # Check if password contains dictionary words
-        for word in common_words:
-            if len(word) >= 5 and word in password_lower:
-                return True
-
-        return False
+        return any(len(word) >= 5 and word in password_lower for word in common_words)
 
     def check_password_history(
         self,
         new_password: str,
         salt: str,
-        password_history: List[str]
+        password_history: List[str],
     ) -> bool:
-        """
-        Check if password was used recently.
+        """Check if password was used recently.
 
         Args:
             new_password: New password to check
@@ -279,8 +256,7 @@ class PasswordPolicy:
         return new_hash not in password_history
 
     def _hash_password(self, password: str, salt: str) -> str:
-        """
-        Hash password using PBKDF2-HMAC-SHA256.
+        """Hash password using PBKDF2-HMAC-SHA256.
 
         Uses same algorithm as AuthService for consistency.
 
@@ -292,15 +268,14 @@ class PasswordPolicy:
             Hex-encoded password hash
         """
         return hashlib.pbkdf2_hmac(
-            'sha256',
-            password.encode('utf-8'),
-            salt.encode('utf-8'),
-            100000  # Same iteration count as AuthService
+            "sha256",
+            password.encode("utf-8"),
+            salt.encode("utf-8"),
+            100000,  # Same iteration count as AuthService
         ).hex()
 
     def is_password_expired(self, last_changed: str) -> bool:
-        """
-        Check if password has expired.
+        """Check if password has expired.
 
         Args:
             last_changed: ISO 8601 timestamp of last password change
@@ -312,7 +287,7 @@ class PasswordPolicy:
             return False
 
         try:
-            last_changed_dt = datetime.fromisoformat(last_changed.replace('Z', '+00:00'))
+            last_changed_dt = datetime.fromisoformat(last_changed.replace("Z", "+00:00"))
             age = datetime.now(timezone.utc) - last_changed_dt
             return age.days > self.max_age_days
         except (ValueError, AttributeError):
@@ -320,8 +295,7 @@ class PasswordPolicy:
             return True
 
     def days_until_expiration(self, last_changed: str) -> Optional[int]:
-        """
-        Calculate days until password expires.
+        """Calculate days until password expires.
 
         Args:
             last_changed: ISO 8601 timestamp of last password change
@@ -333,7 +307,7 @@ class PasswordPolicy:
             return None
 
         try:
-            last_changed_dt = datetime.fromisoformat(last_changed.replace('Z', '+00:00'))
+            last_changed_dt = datetime.fromisoformat(last_changed.replace("Z", "+00:00"))
             expires_at = last_changed_dt + timedelta(days=self.max_age_days)
             remaining = expires_at - datetime.now(timezone.utc)
             return max(0, remaining.days)
@@ -341,8 +315,7 @@ class PasswordPolicy:
             return 0
 
     def calculate_password_strength(self, password: str) -> dict:
-        """
-        Calculate password strength score and feedback.
+        """Calculate password strength score and feedback.
 
         Args:
             password: Password to analyze
@@ -362,9 +335,9 @@ class PasswordPolicy:
             feedback.append("Length could be longer")
 
         # Character diversity score (max 40 points)
-        has_upper = bool(re.search(r'[A-Z]', password))
-        has_lower = bool(re.search(r'[a-z]', password))
-        has_digit = bool(re.search(r'\d', password))
+        has_upper = bool(re.search(r"[A-Z]", password))
+        has_lower = bool(re.search(r"[a-z]", password))
+        has_digit = bool(re.search(r"\d", password))
         has_special = any(c in self.special_chars for c in password)
 
         char_types = sum([has_upper, has_lower, has_digit, has_special])
@@ -414,7 +387,7 @@ class PasswordPolicy:
         return {
             "score": score,
             "strength": strength,
-            "feedback": feedback
+            "feedback": feedback,
         }
 
 
@@ -423,8 +396,7 @@ _default_policy: Optional[PasswordPolicy] = None
 
 
 def get_default_policy() -> PasswordPolicy:
-    """
-    Get default password policy instance.
+    """Get default password policy instance.
 
     Returns:
         Default PasswordPolicy

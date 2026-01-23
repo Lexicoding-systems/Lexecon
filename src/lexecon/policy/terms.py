@@ -1,5 +1,4 @@
-"""
-Policy Terms - Nodes in the policy graph.
+"""Policy Terms - Nodes in the policy graph.
 
 Terms represent entities, actions, data classes, and other policy primitives.
 """
@@ -21,8 +20,7 @@ class TermType(Enum):
 
 @dataclass
 class PolicyTerm:
-    """
-    A policy term represents a node in the policy graph.
+    """A policy term represents a node in the policy graph.
 
     Terms can represent actions, actors, data classes, resources, or contexts.
     """

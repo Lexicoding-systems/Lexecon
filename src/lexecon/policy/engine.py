@@ -1,5 +1,4 @@
-"""
-Policy Engine - Evaluates policies and makes authorization decisions.
+"""Policy Engine - Evaluates policies and makes authorization decisions.
 
 The engine loads terms and relations, and evaluates decision requests against the policy graph.
 """
@@ -29,18 +28,17 @@ class PolicyDecision:
         """Support dictionary-style access for backwards compatibility."""
         if key == "permitted":
             return self.permitted
-        elif key == "allowed":
+        if key == "allowed":
             return self.allowed
-        elif key == "reason":
+        if key == "reason":
             return self.reason
-        elif key == "reasoning":
+        if key == "reasoning":
             return self.reasoning
-        elif hasattr(self, key):
+        if hasattr(self, key):
             return getattr(self, key)
-        elif key in self._extra:
+        if key in self._extra:
             return self._extra[key]
-        else:
-            raise KeyError(key)
+        raise KeyError(key)
 
     def get(self, key: str, default=None):
         """Support dict.get() for backwards compatibility."""
@@ -59,8 +57,7 @@ class PolicyMode(Enum):
 
 
 class PolicyEngine:
-    """
-    Policy engine for evaluating governance decisions.
+    """Policy engine for evaluating governance decisions.
 
     Maintains the policy graph (terms + relations) and evaluates requests.
     """
@@ -120,8 +117,7 @@ class PolicyEngine:
             self.add_relation(relation)
 
     def get_policy_hash(self) -> str:
-        """
-        Get deterministic hash of current policy version.
+        """Get deterministic hash of current policy version.
 
         Uses canonical JSON serialization for stable hashing.
         """
@@ -138,12 +134,11 @@ class PolicyEngine:
         actor: str,
         action: str,
         resource: Optional[str] = None,
-        data_classes: List[str] = None,
+        data_classes: Optional[List[str]] = None,
         risk_level: int = 1,
-        context: Dict[str, Any] = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """
-        Evaluate a decision request against the policy.
+        """Evaluate a decision request against the policy.
 
         Returns a decision with permitted/denied status and reasoning.
         """
@@ -178,7 +173,7 @@ class PolicyEngine:
         )
 
     def _find_relations(
-        self, relation_type: RelationType, actor: str, action: str, data_classes: List[str] = None
+        self, relation_type: RelationType, actor: str, action: str, data_classes: Optional[List[str]] = None,
     ) -> List[PolicyRelation]:
         """Find relations matching the given criteria.
 
@@ -234,13 +229,10 @@ class PolicyEngine:
             return True
 
         # Substring match for backwards compatibility (e.g., "model" in "actor:model")
-        if value in term_id:
-            return True
-
-        return False
+        return value in term_id
 
     def _generate_reasoning(
-        self, decision: bool, permits: List[PolicyRelation], forbids: List[PolicyRelation]
+        self, decision: bool, permits: List[PolicyRelation], forbids: List[PolicyRelation],
     ) -> str:
         """Generate human-readable reasoning for the decision."""
         if decision:
@@ -251,17 +243,15 @@ class PolicyEngine:
             if reasons:
                 return f"Permitted: {'; '.join(reasons)}"
             return f"Permitted by {len(permits)} rule(s), no conflicts"
-        else:
-            if len(forbids) > 0:
-                reasons = []
-                for forbid in forbids[:3]:  # Show up to 3 reasons
-                    if "justification" in forbid.metadata:
-                        reasons.append(forbid.metadata["justification"])
-                if reasons:
-                    return f"Denied: {'; '.join(reasons)}"
-                return f"Denied by {len(forbids)} prohibition(s)"
-            else:
-                return "Action not explicitly permitted"
+        if len(forbids) > 0:
+            reasons = []
+            for forbid in forbids[:3]:  # Show up to 3 reasons
+                if "justification" in forbid.metadata:
+                    reasons.append(forbid.metadata["justification"])
+            if reasons:
+                return f"Denied: {'; '.join(reasons)}"
+            return f"Denied by {len(forbids)} prohibition(s)"
+        return "Action not explicitly permitted"
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize policy to dictionary."""

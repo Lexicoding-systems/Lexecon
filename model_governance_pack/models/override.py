@@ -1,5 +1,4 @@
-"""
-This model is a derived runtime binding of the canonical governance JSON schema.
+"""This model is a derived runtime binding of the canonical governance JSON schema.
 The JSON schema remains the authoritative source of truth.
 This file exists solely to enforce contract correctness at runtime.
 
@@ -66,8 +65,7 @@ class OverrideScope(BaseModel):
 
 
 class Override(BaseModel):
-    """
-    Lexecon Override
+    """Lexecon Override
 
     Authorized exception to normal policy evaluation.
     """

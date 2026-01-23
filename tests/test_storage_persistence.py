@@ -3,7 +3,6 @@
 import os
 import tempfile
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 
@@ -36,7 +35,7 @@ def sample_entry():
         event_type="test_event",
         data={"key": "value"},
         previous_hash="prev_hash_abc",
-        timestamp=datetime.now(timezone.utc).isoformat()
+        timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
 
@@ -45,7 +44,7 @@ class TestLedgerStorage:
 
     def test_init_creates_database(self, temp_db):
         """Test storage initialization creates database."""
-        storage = LedgerStorage(db_path=temp_db)
+        LedgerStorage(db_path=temp_db)
 
         # Database file should exist
         assert os.path.exists(temp_db)
@@ -91,7 +90,7 @@ class TestLedgerStorage:
                 event_type="test",
                 data={"index": i},
                 previous_hash=f"prev_{i}",
-                timestamp=datetime.now(timezone.utc).isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
             storage.save_entry(entry)
 
@@ -108,21 +107,21 @@ class TestLedgerStorage:
             event_type="decision",
             data={},
             previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat(),
         ))
         storage.save_entry(LedgerEntry(
             entry_id="e2",
             event_type="policy",
             data={},
             previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat(),
         ))
         storage.save_entry(LedgerEntry(
             entry_id="e3",
             event_type="decision",
             data={},
             previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat(),
         ))
 
         decisions = storage.get_entries_by_type("decision")
@@ -141,7 +140,7 @@ class TestLedgerStorage:
                 event_type="test",
                 data={},
                 previous_hash="prev",
-                timestamp=datetime.now(timezone.utc).isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat(),
             ))
 
         assert storage.get_entry_count() == 5
@@ -172,7 +171,7 @@ class TestLedgerStorage:
                 event_type="test" if i % 2 == 0 else "other",
                 data={},
                 previous_hash="prev",
-                timestamp=datetime.now(timezone.utc).isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat(),
             ))
 
         stats = storage.get_statistics()
@@ -216,7 +215,7 @@ class TestLedgerStorage:
             event_type="test",
             data={"test": "data"},
             previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
         # Save entry normally
@@ -247,7 +246,7 @@ class TestLedgerStorage:
             event_type="testtype",
             data={"test": "data"},
             previous_hash="prev",
-            timestamp=datetime.now(timezone.utc).isoformat()
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
         # Save entry normally
@@ -279,7 +278,7 @@ class TestLedgerStorage:
                 event_type="test",
                 data={"index": i},
                 previous_hash=f"prev_{i}",
-                timestamp=datetime.now(timezone.utc).isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
             storage.save_entry(entry)
 
@@ -310,7 +309,7 @@ class TestLedgerStorage:
                 event_type="test",
                 data={"index": i},
                 previous_hash=f"prev_{i}",
-                timestamp=datetime.now(timezone.utc).isoformat()
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
             storage.save_entry(entry)
 
@@ -321,7 +320,7 @@ class TestLedgerStorage:
         # Verify export file exists and has correct structure
         assert os.path.exists(output_path)
 
-        with open(output_path, 'r') as f:
+        with open(output_path) as f:
             data = json.load(f)
 
         assert "exported_at" in data

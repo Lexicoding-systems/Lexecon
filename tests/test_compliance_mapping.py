@@ -5,11 +5,12 @@ Tests regulatory alignment and control mapping functionality.
 """
 
 import pytest
+
 from lexecon.compliance_mapping.service import (
     ComplianceMappingService,
-    RegulatoryFramework,
-    GovernancePrimitive,
     ControlStatus,
+    GovernancePrimitive,
+    RegulatoryFramework,
 )
 
 
@@ -36,7 +37,7 @@ class TestComplianceMappingService:
         mapping = compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
             primitive_id="rsk_dec_test_001",
-            framework=RegulatoryFramework.SOC2
+            framework=RegulatoryFramework.SOC2,
         )
 
         assert mapping is not None
@@ -51,7 +52,7 @@ class TestComplianceMappingService:
         mapping = compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.ESCALATION,
             primitive_id="esc_test_001",
-            framework=RegulatoryFramework.ISO27001
+            framework=RegulatoryFramework.ISO27001,
         )
 
         assert mapping is not None
@@ -66,7 +67,7 @@ class TestComplianceMappingService:
         mapping = compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.OVERRIDE,
             primitive_id="ovr_test_001",
-            framework=RegulatoryFramework.GDPR
+            framework=RegulatoryFramework.GDPR,
         )
 
         assert mapping is not None
@@ -79,7 +80,7 @@ class TestComplianceMappingService:
         result = compliance_service.link_evidence_to_control(
             control_id="CC6.1",
             framework=RegulatoryFramework.SOC2,
-            evidence_artifact_id="evd_decisionlog_abc123"
+            evidence_artifact_id="evd_decisionlog_abc123",
         )
 
         assert result is True
@@ -94,7 +95,7 @@ class TestComplianceMappingService:
         result = compliance_service.link_evidence_to_control(
             control_id="INVALID",
             framework=RegulatoryFramework.SOC2,
-            evidence_artifact_id="evd_test_123"
+            evidence_artifact_id="evd_test_123",
         )
 
         assert result is False
@@ -104,7 +105,7 @@ class TestComplianceMappingService:
         result = compliance_service.verify_control(
             control_id="CC7.2",
             framework=RegulatoryFramework.SOC2,
-            notes="Verified through risk assessment process"
+            notes="Verified through risk assessment process",
         )
 
         assert result is True
@@ -120,7 +121,7 @@ class TestComplianceMappingService:
         """Test verifying non-existent control."""
         result = compliance_service.verify_control(
             control_id="INVALID",
-            framework=RegulatoryFramework.SOC2
+            framework=RegulatoryFramework.SOC2,
         )
 
         assert result is False
@@ -150,7 +151,7 @@ class TestComplianceMappingService:
         # List verified controls
         verified = compliance_service.list_controls(
             RegulatoryFramework.SOC2,
-            status=ControlStatus.VERIFIED
+            status=ControlStatus.VERIFIED,
         )
 
         assert len(verified) == 1
@@ -159,7 +160,7 @@ class TestComplianceMappingService:
         # List not implemented controls
         not_implemented = compliance_service.list_controls(
             RegulatoryFramework.SOC2,
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         )
 
         assert len(not_implemented) == 2  # Remaining controls
@@ -169,7 +170,7 @@ class TestComplianceMappingService:
         # All SOC 2 controls we defined are in "Common Criteria" category
         controls = compliance_service.list_controls(
             RegulatoryFramework.SOC2,
-            category="Common Criteria"
+            category="Common Criteria",
         )
 
         assert len(controls) == 3
@@ -238,13 +239,13 @@ class TestComplianceMappingService:
         compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
             primitive_id="rsk_test_123",
-            framework=RegulatoryFramework.SOC2
+            framework=RegulatoryFramework.SOC2,
         )
 
         compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
             primitive_id="rsk_test_123",
-            framework=RegulatoryFramework.ISO27001
+            framework=RegulatoryFramework.ISO27001,
         )
 
         # Get mappings
@@ -254,7 +255,7 @@ class TestComplianceMappingService:
         assert all(m.primitive_id == "rsk_test_123" for m in mappings)
         assert {m.framework for m in mappings} == {
             RegulatoryFramework.SOC2,
-            RegulatoryFramework.ISO27001
+            RegulatoryFramework.ISO27001,
         }
 
     def test_get_statistics(self, compliance_service):
@@ -263,13 +264,13 @@ class TestComplianceMappingService:
         compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
             primitive_id="rsk_test_001",
-            framework=RegulatoryFramework.SOC2
+            framework=RegulatoryFramework.SOC2,
         )
 
         compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.ESCALATION,
             primitive_id="esc_test_001",
-            framework=RegulatoryFramework.ISO27001
+            framework=RegulatoryFramework.ISO27001,
         )
 
         stats = compliance_service.get_statistics()
@@ -285,7 +286,7 @@ class TestComplianceMappingService:
         for framework in [
             RegulatoryFramework.SOC2,
             RegulatoryFramework.ISO27001,
-            RegulatoryFramework.GDPR
+            RegulatoryFramework.GDPR,
         ]:
             controls = compliance_service.list_controls(framework)
             assert len(controls) > 0, f"No controls defined for {framework.value}"
@@ -331,19 +332,19 @@ class TestComplianceMappingService:
         soc2_mapping = compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
             primitive_id="rsk_multi_test",
-            framework=RegulatoryFramework.SOC2
+            framework=RegulatoryFramework.SOC2,
         )
 
         iso_mapping = compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
             primitive_id="rsk_multi_test",
-            framework=RegulatoryFramework.ISO27001
+            framework=RegulatoryFramework.ISO27001,
         )
 
         gdpr_mapping = compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
             primitive_id="rsk_multi_test",
-            framework=RegulatoryFramework.GDPR
+            framework=RegulatoryFramework.GDPR,
         )
 
         assert len(soc2_mapping.control_ids) > 0
@@ -370,7 +371,7 @@ class TestComplianceMappingEdgeCases:
         result = compliance_service.link_evidence_to_control(
             control_id="fake_control",
             framework=FakeFramework.FAKE,
-            evidence_artifact_id="art_fake"
+            evidence_artifact_id="art_fake",
         )
         assert result is False
 
@@ -383,7 +384,7 @@ class TestComplianceMappingEdgeCases:
 
         result = compliance_service.verify_control(
             control_id="fake_control",
-            framework=FakeFramework.FAKE
+            framework=FakeFramework.FAKE,
         )
         assert result is False
 
@@ -396,7 +397,7 @@ class TestComplianceMappingEdgeCases:
 
         result = compliance_service.get_control_status(
             control_id="fake_control",
-            framework=FakeFramework.FAKE
+            framework=FakeFramework.FAKE,
         )
         assert result is None
 
@@ -442,13 +443,17 @@ class TestComplianceMappingEdgeCases:
 
     def test_generate_report_with_non_compliant_controls(self, compliance_service):
         """Test report generation recommendations for non-compliant controls."""
-        from lexecon.compliance_mapping.service import RegulatoryFramework, GovernancePrimitive, ControlStatus
+        from lexecon.compliance_mapping.service import (
+            ControlStatus,
+            GovernancePrimitive,
+            RegulatoryFramework,
+        )
 
         # Map a primitive
         compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.RISK_ASSESSMENT,
             primitive_id="rsk_test_123",
-            framework=RegulatoryFramework.SOC2
+            framework=RegulatoryFramework.SOC2,
         )
 
         # Get a control and mark it as non-compliant
@@ -466,13 +471,17 @@ class TestComplianceMappingEdgeCases:
 
     def test_generate_report_with_unverified_controls(self, compliance_service):
         """Test report generation recommendations for unverified controls."""
-        from lexecon.compliance_mapping.service import RegulatoryFramework, GovernancePrimitive, ControlStatus
+        from lexecon.compliance_mapping.service import (
+            ControlStatus,
+            GovernancePrimitive,
+            RegulatoryFramework,
+        )
 
         # Map a primitive
         compliance_service.map_primitive_to_controls(
             primitive_type=GovernancePrimitive.ESCALATION,
             primitive_id="esc_verify_test",
-            framework=RegulatoryFramework.ISO27001
+            framework=RegulatoryFramework.ISO27001,
         )
 
         # Get controls and mark some as implemented but not verified

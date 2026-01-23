@@ -1,30 +1,26 @@
-"""
-Persistent Storage for Responsibility Records
+"""Persistent Storage for Responsibility Records
 
 Stores responsibility tracking data in SQLite for long-term accountability
 and EU AI Act compliance (Article 14 - 10 year retention).
 """
 
-import json
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
-from .tracker import ResponsibilityRecord, DecisionMaker, ResponsibilityLevel
+from .tracker import DecisionMaker, ResponsibilityLevel, ResponsibilityRecord
 
 
 class ResponsibilityStorage:
-    """
-    Persistent storage for responsibility records using SQLite.
+    """Persistent storage for responsibility records using SQLite.
 
     Ensures accountability data survives system restarts and is
     available for long-term audits and legal proceedings.
     """
 
     def __init__(self, db_path: str = "lexecon_responsibility.db"):
-        """
-        Initialize storage.
+        """Initialize storage.
 
         Args:
             db_path: Path to SQLite database file
@@ -32,7 +28,7 @@ class ResponsibilityStorage:
         self.db_path = db_path
         self._init_database()
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Create tables and indexes if they don't exist."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -97,8 +93,7 @@ class ResponsibilityStorage:
         conn.close()
 
     def save_record(self, record: ResponsibilityRecord) -> None:
-        """
-        Save a single responsibility record.
+        """Save a single responsibility record.
 
         Args:
             record: ResponsibilityRecord to save
@@ -134,15 +129,14 @@ class ResponsibilityStorage:
             record.reviewed_at,
             1 if record.liability_accepted else 0,
             record.liability_signature,
-            datetime.utcnow().isoformat()
+            datetime.utcnow().isoformat(),
         ))
 
         conn.commit()
         conn.close()
 
     def load_all_records(self) -> List[ResponsibilityRecord]:
-        """
-        Load all responsibility records in chronological order.
+        """Load all responsibility records in chronological order.
 
         Returns:
             List of ResponsibilityRecord objects
@@ -182,7 +176,7 @@ class ResponsibilityStorage:
                 reviewed_by=row[14],
                 reviewed_at=row[15],
                 liability_accepted=bool(row[16]),
-                liability_signature=row[17]
+                liability_signature=row[17],
             )
             records.append(record)
 
@@ -190,8 +184,7 @@ class ResponsibilityStorage:
         return records
 
     def update_record(self, record_id: str, **updates) -> bool:
-        """
-        Update specific fields of a responsibility record.
+        """Update specific fields of a responsibility record.
 
         Args:
             record_id: ID of record to update
@@ -208,7 +201,7 @@ class ResponsibilityStorage:
         values = []
 
         for key, value in updates.items():
-            if key in ['reviewed_by', 'reviewed_at']:
+            if key in ["reviewed_by", "reviewed_at"]:
                 update_fields.append(f"{key} = ?")
                 values.append(value)
 
@@ -232,8 +225,7 @@ class ResponsibilityStorage:
         return success
 
     def get_statistics(self) -> dict:
-        """
-        Get storage statistics.
+        """Get storage statistics.
 
         Returns:
             Dict with storage statistics
@@ -283,12 +275,11 @@ class ResponsibilityStorage:
             "oldest_record": oldest,
             "newest_record": newest,
             "by_decision_maker": by_maker,
-            "override_count": overrides
+            "override_count": overrides,
         }
 
     def get_by_decision_id(self, decision_id: str) -> List[ResponsibilityRecord]:
-        """
-        Get all responsibility records for a specific decision.
+        """Get all responsibility records for a specific decision.
 
         Args:
             decision_id: Decision ID to query
@@ -332,7 +323,7 @@ class ResponsibilityStorage:
                 reviewed_by=row[14],
                 reviewed_at=row[15],
                 liability_accepted=bool(row[16]),
-                liability_signature=row[17]
+                liability_signature=row[17],
             )
             records.append(record)
 

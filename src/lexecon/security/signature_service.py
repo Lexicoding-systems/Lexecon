@@ -1,5 +1,4 @@
-"""
-Digital Signature Service for Audit Packets.
+"""Digital Signature Service for Audit Packets.
 
 Provides:
 - RSA key generation and management
@@ -10,14 +9,15 @@ Provides:
 
 import hashlib
 import json
+import logging
 import os
 from datetime import datetime, timezone
-from typing import Dict, Any, Tuple, Optional
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.backends import default_backend
+from typing import Any, Dict, Tuple
+
 from cryptography.exceptions import InvalidSignature
-import logging
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,7 @@ class SignatureService:
     """Digital signature service for audit packets."""
 
     def __init__(self, keys_dir: str = "lexecon_keys"):
-        """
-        Initialize signature service.
+        """Initialize signature service.
 
         Args:
             keys_dir: Directory to store public/private keys
@@ -51,13 +50,13 @@ class SignatureService:
         """Check if keys already exist."""
         return os.path.exists(self.private_key_path) and os.path.exists(self.public_key_path)
 
-    def _generate_keys(self):
+    def _generate_keys(self) -> None:
         """Generate new RSA key pair."""
         # Generate private key (4096 bits for high security)
         self.private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=4096,
-            backend=default_backend()
+            backend=default_backend(),
         )
 
         # Derive public key
@@ -67,43 +66,42 @@ class SignatureService:
         private_pem = self.private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption()  # For demo; use BestAvailableEncryption in production
+            encryption_algorithm=serialization.NoEncryption(),  # For demo; use BestAvailableEncryption in production
         )
 
-        with open(self.private_key_path, 'wb') as f:
+        with open(self.private_key_path, "wb") as f:
             f.write(private_pem)
 
         # Save public key
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
-        with open(self.public_key_path, 'wb') as f:
+        with open(self.public_key_path, "wb") as f:
             f.write(public_pem)
 
         # Set restrictive permissions
         os.chmod(self.private_key_path, 0o600)  # Owner read/write only
         os.chmod(self.public_key_path, 0o644)  # World-readable
 
-    def _load_keys(self):
+    def _load_keys(self) -> None:
         """Load existing keys from disk."""
-        with open(self.private_key_path, 'rb') as f:
+        with open(self.private_key_path, "rb") as f:
             self.private_key = serialization.load_pem_private_key(
                 f.read(),
                 password=None,  # Use password in production
-                backend=default_backend()
+                backend=default_backend(),
             )
 
-        with open(self.public_key_path, 'rb') as f:
+        with open(self.public_key_path, "rb") as f:
             self.public_key = serialization.load_pem_public_key(
                 f.read(),
-                backend=default_backend()
+                backend=default_backend(),
             )
 
     def sign_packet(self, packet_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Sign an audit packet with digital signature.
+        """Sign an audit packet with digital signature.
 
         Args:
             packet_data: The audit packet to sign
@@ -123,9 +121,9 @@ class SignatureService:
             packet_hash.encode(),
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
-                salt_length=padding.PSS.MAX_LENGTH
+                salt_length=padding.PSS.MAX_LENGTH,
             ),
-            hashes.SHA256()
+            hashes.SHA256(),
         )
 
         # Encode signature as hex
@@ -134,12 +132,12 @@ class SignatureService:
         # Get public key fingerprint
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
         public_key_fingerprint = hashlib.sha256(public_pem).hexdigest()[:16]
 
         # Create signature metadata
-        signature_info = {
+        return {
             "signature_version": "1.0",
             "algorithm": "RSA-PSS-SHA256",
             "key_size": 4096,
@@ -148,18 +146,16 @@ class SignatureService:
             "public_key_fingerprint": public_key_fingerprint,
             "signed_at": datetime.now(timezone.utc).isoformat(),
             "signed_by": "Lexecon Governance System",
-            "verification_instructions": "Use /compliance/verify-signature endpoint with packet and signature"
+            "verification_instructions": "Use /compliance/verify-signature endpoint with packet and signature",
         }
 
-        return signature_info
 
     def verify_signature(
         self,
         packet_data: Dict[str, Any],
-        signature_hex: str
+        signature_hex: str,
     ) -> Tuple[bool, str]:
-        """
-        Verify a signature on an audit packet.
+        """Verify a signature on an audit packet.
 
         Args:
             packet_data: The audit packet (without signature_info)
@@ -185,16 +181,16 @@ class SignatureService:
                 packet_hash.encode(),
                 padding.PSS(
                     mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.MAX_LENGTH
+                    salt_length=padding.PSS.MAX_LENGTH,
                 ),
-                hashes.SHA256()
+                hashes.SHA256(),
             )
 
             return True, "Signature is valid"
 
         except InvalidSignature:
             return False, "Signature verification failed - packet may have been tampered with"
-        except Exception as e:
+        except Exception:
             # Log detailed error on the server, but return a generic message to the client
             logger.exception("Unexpected error during signature verification")
             return False, "Internal verification error"
@@ -206,10 +202,10 @@ class SignatureService:
 
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
-        return public_pem.decode('utf-8')
+        return public_pem.decode("utf-8")
 
     def get_public_key_fingerprint(self) -> str:
         """Get SHA-256 fingerprint of public key."""
@@ -218,14 +214,13 @@ class SignatureService:
 
         public_pem = self.public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
         return hashlib.sha256(public_pem).hexdigest()
 
     def sign_and_enrich_packet(self, packet_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Sign packet and add signature to the packet itself.
+        """Sign packet and add signature to the packet itself.
 
         Args:
             packet_data: The audit packet to sign
@@ -234,22 +229,20 @@ class SignatureService:
             Enriched packet with signature_info field
         """
         # Create a copy without signature_info (if it exists)
-        packet_to_sign = {k: v for k, v in packet_data.items() if k != 'signature_info'}
+        packet_to_sign = {k: v for k, v in packet_data.items() if k != "signature_info"}
 
         # Generate signature
         signature_info = self.sign_packet(packet_to_sign)
 
         # Add signature to packet
-        enriched_packet = {
+        return {
             **packet_data,
-            "signature_info": signature_info
+            "signature_info": signature_info,
         }
 
-        return enriched_packet
 
     def verify_packet_signature(self, packet_data: Dict[str, Any]) -> Tuple[bool, str]:
-        """
-        Verify signature embedded in packet.
+        """Verify signature embedded in packet.
 
         Args:
             packet_data: Complete packet with signature_info
@@ -266,7 +259,7 @@ class SignatureService:
             return False, "No signature found in signature_info"
 
         # Extract packet without signature
-        packet_to_verify = {k: v for k, v in packet_data.items() if k != 'signature_info'}
+        packet_to_verify = {k: v for k, v in packet_data.items() if k != "signature_info"}
 
         # Verify
         return self.verify_signature(packet_to_verify, signature_info["signature"])

@@ -1,5 +1,4 @@
-"""
-Audit Export Service - Comprehensive governance data export pipeline.
+"""Audit Export Service - Comprehensive governance data export pipeline.
 
 Provides regulatory-ready audit packages that integrate:
 - Risk assessments (Phase 1)
@@ -11,15 +10,15 @@ Provides regulatory-ready audit packages that integrate:
 - Cryptographic verification
 """
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
-from enum import Enum
-from typing import Any, Dict, List, Optional, Set
-import json
 import csv
-import io
-import uuid
 import hashlib
+import io
+import json
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ExportFormat(Enum):
@@ -98,8 +97,7 @@ class ExportStatistics:
 
 
 class AuditExportService:
-    """
-    Service for exporting comprehensive governance audit data.
+    """Service for exporting comprehensive governance audit data.
 
     Integrates data from all governance services and generates
     regulatory-ready audit packages with cryptographic verification.
@@ -119,10 +117,9 @@ class AuditExportService:
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None,
         include_deleted: bool = False,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ExportRequest:
-        """
-        Create a new export request.
+        """Create a new export request.
 
         Args:
             requester: User or system requesting export
@@ -148,7 +145,7 @@ class AuditExportService:
             start_date=start_date,
             end_date=end_date,
             include_deleted=include_deleted,
-            metadata=metadata
+            metadata=metadata,
         )
 
         self._requests[export_id] = request
@@ -162,10 +159,9 @@ class AuditExportService:
         override_service=None,
         evidence_service=None,
         compliance_service=None,
-        ledger=None
+        ledger=None,
     ) -> ExportPackage:
-        """
-        Generate audit export package from governance services.
+        """Generate audit export package from governance services.
 
         Args:
             request: Export request
@@ -193,8 +189,8 @@ class AuditExportService:
                 "date_range": {
                     "start": request.start_date.isoformat() if request.start_date else None,
                     "end": request.end_date.isoformat() if request.end_date else None,
-                }
-            }
+                },
+            },
         }
 
         # Collect risk assessments
@@ -248,7 +244,7 @@ class AuditExportService:
             checksum=checksum,
             size_bytes=len(content.encode()),
             record_count=self._count_records(data),
-            metadata=request.metadata
+            metadata=request.metadata,
         )
 
         request.status = ExportStatus.COMPLETED
@@ -260,13 +256,13 @@ class AuditExportService:
         self,
         risk_service,
         start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        end_date: Optional[datetime],
     ) -> List[Dict[str, Any]]:
         """Collect risk assessments from service."""
         risks = []
 
         # Get all risks from service
-        all_risks = risk_service.list_risks() if hasattr(risk_service, 'list_risks') else []
+        all_risks = risk_service.list_risks() if hasattr(risk_service, "list_risks") else []
 
         for risk in all_risks:
             # Filter by date if specified
@@ -298,13 +294,13 @@ class AuditExportService:
         self,
         escalation_service,
         start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        end_date: Optional[datetime],
     ) -> List[Dict[str, Any]]:
         """Collect escalations from service."""
         escalations = []
 
         # Get all escalations
-        all_escalations = escalation_service.list_escalations() if hasattr(escalation_service, 'list_escalations') else []
+        all_escalations = escalation_service.list_escalations() if hasattr(escalation_service, "list_escalations") else []
 
         for esc in all_escalations:
             # Filter by date
@@ -324,13 +320,13 @@ class AuditExportService:
             }
 
             # Add optional fields if they exist
-            if hasattr(esc, 'sla_deadline') and esc.sla_deadline:
+            if hasattr(esc, "sla_deadline") and esc.sla_deadline:
                 esc_data["sla_deadline"] = esc.sla_deadline.isoformat()
-            if hasattr(esc, 'resolved_at') and esc.resolved_at:
+            if hasattr(esc, "resolved_at") and esc.resolved_at:
                 esc_data["resolved_at"] = esc.resolved_at.isoformat()
-            if hasattr(esc, 'resolved_by'):
+            if hasattr(esc, "resolved_by"):
                 esc_data["resolved_by"] = esc.resolved_by
-            if hasattr(esc, 'outcome'):
+            if hasattr(esc, "outcome"):
                 esc_data["outcome"] = esc.outcome
 
             escalations.append(esc_data)
@@ -341,13 +337,13 @@ class AuditExportService:
         self,
         override_service,
         start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        end_date: Optional[datetime],
     ) -> List[Dict[str, Any]]:
         """Collect overrides from service."""
         overrides = []
 
         # Get all overrides
-        all_overrides = override_service.list_overrides() if hasattr(override_service, 'list_overrides') else []
+        all_overrides = override_service.list_overrides() if hasattr(override_service, "list_overrides") else []
 
         for ovr in all_overrides:
             # Filter by date
@@ -375,13 +371,13 @@ class AuditExportService:
         self,
         evidence_service,
         start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        end_date: Optional[datetime],
     ) -> List[Dict[str, Any]]:
         """Collect evidence artifacts from service."""
         evidence = []
 
         # Get all artifacts
-        all_artifacts = evidence_service.list_artifacts() if hasattr(evidence_service, 'list_artifacts') else []
+        all_artifacts = evidence_service.list_artifacts() if hasattr(evidence_service, "list_artifacts") else []
 
         for artifact in all_artifacts:
             # Filter by date
@@ -411,7 +407,7 @@ class AuditExportService:
         """Collect compliance mappings from service."""
         compliance_data = {
             "statistics": compliance_service.get_statistics(),
-            "frameworks": {}
+            "frameworks": {},
         }
 
         # Get data for each framework
@@ -444,7 +440,7 @@ class AuditExportService:
         self,
         ledger,
         start_date: Optional[datetime],
-        end_date: Optional[datetime]
+        end_date: Optional[datetime],
     ) -> List[Dict[str, Any]]:
         """Collect decision log from ledger."""
         decisions = []
@@ -456,7 +452,7 @@ class AuditExportService:
 
             # Parse timestamp
             try:
-                entry_time = datetime.fromisoformat(entry.timestamp.replace('Z', '+00:00'))
+                entry_time = datetime.fromisoformat(entry.timestamp.replace("Z", "+00:00"))
                 if entry_time.tzinfo is None:
                     entry_time = entry_time.replace(tzinfo=timezone.utc)
             except:
@@ -511,14 +507,13 @@ class AuditExportService:
         """Format data according to requested format."""
         if format == ExportFormat.JSON:
             return self._format_json(data)
-        elif format == ExportFormat.CSV:
+        if format == ExportFormat.CSV:
             return self._format_csv(data)
-        elif format == ExportFormat.MARKDOWN:
+        if format == ExportFormat.MARKDOWN:
             return self._format_markdown(data)
-        elif format == ExportFormat.HTML:
+        if format == ExportFormat.HTML:
             return self._format_html(data)
-        else:
-            return json.dumps(data, indent=2, default=str)
+        return json.dumps(data, indent=2, default=str)
 
     def _format_json(self, data: Dict[str, Any]) -> str:
         """Format as JSON."""
@@ -529,11 +524,11 @@ class AuditExportService:
         output = io.StringIO()
 
         # Risks section
-        if "risks" in data and data["risks"]:
+        if data.get("risks"):
             output.write("=== RISK ASSESSMENTS ===\n")
             writer = csv.DictWriter(
                 output,
-                fieldnames=["risk_id", "decision_id", "overall_score", "risk_level", "timestamp"]
+                fieldnames=["risk_id", "decision_id", "overall_score", "risk_level", "timestamp"],
             )
             writer.writeheader()
             for risk in data["risks"]:
@@ -547,11 +542,11 @@ class AuditExportService:
             output.write("\n")
 
         # Escalations section
-        if "escalations" in data and data["escalations"]:
+        if data.get("escalations"):
             output.write("=== ESCALATIONS ===\n")
             writer = csv.DictWriter(
                 output,
-                fieldnames=["escalation_id", "decision_id", "status", "priority", "created_at"]
+                fieldnames=["escalation_id", "decision_id", "status", "priority", "created_at"],
             )
             writer.writeheader()
             for esc in data["escalations"]:
@@ -565,11 +560,11 @@ class AuditExportService:
             output.write("\n")
 
         # Overrides section
-        if "overrides" in data and data["overrides"]:
+        if data.get("overrides"):
             output.write("=== OVERRIDES ===\n")
             writer = csv.DictWriter(
                 output,
-                fieldnames=["override_id", "decision_id", "override_type", "authorized_by", "timestamp"]
+                fieldnames=["override_id", "decision_id", "override_type", "authorized_by", "timestamp"],
             )
             writer.writeheader()
             for ovr in data["overrides"]:
@@ -611,7 +606,7 @@ class AuditExportService:
             lines.append("")
 
         # Risks
-        if "risks" in data and data["risks"]:
+        if data.get("risks"):
             lines.append("## Risk Assessments")
             lines.append("")
             for risk in data["risks"][:10]:  # Limit to first 10
@@ -623,7 +618,7 @@ class AuditExportService:
                 lines.append("")
 
         # Escalations
-        if "escalations" in data and data["escalations"]:
+        if data.get("escalations"):
             lines.append("## Escalations")
             lines.append("")
             for esc in data["escalations"][:10]:
@@ -690,7 +685,7 @@ class AuditExportService:
     def list_exports(
         self,
         requester: Optional[str] = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[ExportPackage]:
         """List export packages with optional filtering."""
         exports = list(self._exports.values())

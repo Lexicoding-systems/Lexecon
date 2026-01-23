@@ -1,12 +1,11 @@
-"""
-Policy Relations - Edges in the policy graph.
+"""Policy Relations - Edges in the policy graph.
 
 Relations define permissions, prohibitions, requirements, and other connections between terms.
 """
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 class RelationType(Enum):
@@ -21,8 +20,7 @@ class RelationType(Enum):
 
 @dataclass
 class PolicyRelation:
-    """
-    A policy relation represents an edge in the policy graph.
+    """A policy relation represents an edge in the policy graph.
 
     Relations connect terms and define the governance rules.
     """
@@ -41,7 +39,7 @@ class PolicyRelation:
             self.metadata = {}
 
     @classmethod
-    def permits(cls, source: str, target: str, conditions: List[str] = None) -> "PolicyRelation":
+    def permits(cls, source: str, target: str, conditions: Optional[List[str]] = None) -> "PolicyRelation":
         """Create a permission relation."""
         relation_id = f"permits:{source}:{target}"
         return cls(
@@ -53,7 +51,7 @@ class PolicyRelation:
         )
 
     @classmethod
-    def forbids(cls, source: str, target: str, conditions: List[str] = None) -> "PolicyRelation":
+    def forbids(cls, source: str, target: str, conditions: Optional[List[str]] = None) -> "PolicyRelation":
         """Create a prohibition relation."""
         relation_id = f"forbids:{source}:{target}"
         return cls(
@@ -65,7 +63,7 @@ class PolicyRelation:
         )
 
     @classmethod
-    def requires(cls, source: str, target: str, conditions: List[str] = None) -> "PolicyRelation":
+    def requires(cls, source: str, target: str, conditions: Optional[List[str]] = None) -> "PolicyRelation":
         """Create a requirement relation."""
         relation_id = f"requires:{source}:{target}"
         return cls(

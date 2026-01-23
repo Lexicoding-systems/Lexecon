@@ -3,10 +3,11 @@ Tests for append-only storage adapter.
 """
 
 import pytest
+
 from src.lexecon.evidence.append_only_store import (
+    AppendOnlyEvidenceStore,
     AppendOnlyStore,
     AppendOnlyViolationError,
-    AppendOnlyEvidenceStore,
 )
 
 
@@ -248,7 +249,7 @@ class TestAppendOnlyEvidenceStore:
         # Add artifact with incorrect hash
         service._artifacts._store["artifact2"] = MockArtifact(
             "different content",
-            "0" * 64  # Wrong hash
+            "0" * 64,  # Wrong hash
         )
 
         # Integrity should fail

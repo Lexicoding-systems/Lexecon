@@ -1,5 +1,4 @@
-"""
-Export Audit Logging Service.
+"""Export Audit Logging Service.
 
 Provides:
 - Immutable audit trail of all export requests
@@ -11,10 +10,10 @@ Provides:
 import hashlib
 import json
 import sqlite3
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
 
 class ExportStatus(str, Enum):
@@ -93,7 +92,7 @@ class AuditService:
         self.db_path = db_path
         self._init_database()
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Initialize audit database."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -197,9 +196,8 @@ class AuditService:
 
         if row:
             return row[0]
-        else:
-            # Genesis hash
-            return "0" * 64
+        # Genesis hash
+        return "0" * 64
 
     def log_export_request(
         self,
@@ -221,10 +219,9 @@ class AuditService:
         attestation_ip_address: Optional[str],
         approval_required: bool,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ) -> ExportRequest:
-        """
-        Log an export request to the audit trail.
+        """Log an export request to the audit trail.
 
         Returns ExportRequest with computed hash chain.
         """
@@ -241,7 +238,7 @@ class AuditService:
             "time_window": time_window,
             "formats": sorted(formats),
             "attestation_accepted": attestation_accepted,
-            "previous_hash": previous_hash
+            "previous_hash": previous_hash,
         }
         entry_hash = self._compute_hash(hash_data)
 
@@ -273,7 +270,7 @@ class AuditService:
             int(approval_required), None, None, None, None,
             ExportStatus.PENDING.value if approval_required else ExportStatus.APPROVED.value,
             None, None, None,
-            previous_hash, entry_hash, ip_address, user_agent
+            previous_hash, entry_hash, ip_address, user_agent,
         ))
 
         conn.commit()
@@ -311,7 +308,7 @@ class AuditService:
             previous_hash=previous_hash,
             entry_hash=entry_hash,
             ip_address=ip_address,
-            user_agent=user_agent
+            user_agent=user_agent,
         )
 
     def approve_export(
@@ -319,7 +316,7 @@ class AuditService:
         request_id: str,
         approver_user_id: str,
         approver_username: str,
-        reason: Optional[str] = None
+        reason: Optional[str] = None,
     ):
         """Approve an export request."""
         now = datetime.now(timezone.utc).isoformat()
@@ -357,7 +354,7 @@ class AuditService:
         request_id: str,
         reviewer_user_id: str,
         reviewer_username: str,
-        reason: str
+        reason: str,
     ):
         """Reject an export request."""
         now = datetime.now(timezone.utc).isoformat()
@@ -391,7 +388,7 @@ class AuditService:
         self,
         request_id: str,
         packet_hashes: Dict[str, str],
-        packet_size_bytes: int
+        packet_size_bytes: int,
     ):
         """Mark export as completed."""
         now = datetime.now(timezone.utc).isoformat()
@@ -414,7 +411,7 @@ class AuditService:
 
     def fail_export(self, request_id: str, error_message: str):
         """Mark export as failed."""
-        now = datetime.now(timezone.utc).isoformat()
+        datetime.now(timezone.utc).isoformat()
 
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -451,7 +448,7 @@ class AuditService:
         self,
         user_id: Optional[str] = None,
         status: Optional[ExportStatus] = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> List[ExportRequest]:
         """List export requests with optional filters."""
         conn = sqlite3.connect(self.db_path)
@@ -516,7 +513,7 @@ class AuditService:
             previous_hash=row[29],
             entry_hash=row[30],
             ip_address=row[31],
-            user_agent=row[32]
+            user_agent=row[32],
         )
 
     def log_access(
@@ -527,7 +524,7 @@ class AuditService:
         user_id: Optional[str] = None,
         username: Optional[str] = None,
         ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
     ):
         """Log API access for security monitoring."""
         import secrets
@@ -577,7 +574,7 @@ class AuditService:
                     "request_id": request_id,
                     "reason": "broken_chain",
                     "expected_prev_hash": prev_hash,
-                    "actual_prev_hash": stored_prev_hash
+                    "actual_prev_hash": stored_prev_hash,
                 })
 
             # Verify entry hash is correct
@@ -590,7 +587,7 @@ class AuditService:
                 "time_window": row[5],
                 "formats": sorted(json.loads(row[6])),
                 "attestation_accepted": bool(row[7]),
-                "previous_hash": row[8]
+                "previous_hash": row[8],
             }
             computed_hash = self._compute_hash(hash_data)
 
@@ -600,7 +597,7 @@ class AuditService:
                     "request_id": request_id,
                     "reason": "hash_mismatch",
                     "expected_hash": computed_hash,
-                    "actual_hash": stored_entry_hash
+                    "actual_hash": stored_entry_hash,
                 })
 
             prev_hash = stored_entry_hash
@@ -610,5 +607,5 @@ class AuditService:
         return {
             "valid": valid,
             "invalid_entries": invalid_entries,
-            "message": "Audit chain is valid" if valid else f"Found {len(invalid_entries)} invalid entries"
+            "message": "Audit chain is valid" if valid else f"Found {len(invalid_entries)} invalid entries",
         }

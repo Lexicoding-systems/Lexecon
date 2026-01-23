@@ -4,12 +4,10 @@ Additional API tests to boost coverage to 80%+.
 Focuses on error paths, edge cases, and untested endpoints.
 """
 
+from unittest.mock import patch
+
 import pytest
-import os
-import tempfile
-from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
 
 from lexecon.api.server import app
 
@@ -25,14 +23,14 @@ class TestErrorPaths:
 
     def test_dashboard_not_found(self, client):
         """Test dashboard endpoint when file doesn't exist."""
-        with patch('os.path.exists', return_value=False):
+        with patch("os.path.exists", return_value=False):
             response = client.get("/dashboard")
             assert response.status_code == 404
             assert "Dashboard not found" in response.json()["detail"]
 
     def test_governance_dashboard_not_found(self, client):
         """Test governance dashboard endpoint when file doesn't exist."""
-        with patch('os.path.exists', return_value=False):
+        with patch("os.path.exists", return_value=False):
             response = client.get("/dashboard/governance")
             assert response.status_code == 404
             assert "Governance dashboard not found" in response.json()["detail"]
@@ -41,7 +39,7 @@ class TestErrorPaths:
         """Test policy loading with invalid format."""
         response = client.post(
             "/policies/load",
-            json={"policy": {"invalid": "structure", "missing": "required_fields"}}
+            json={"policy": {"invalid": "structure", "missing": "required_fields"}},
         )
         # Should fail gracefully
         assert response.status_code in [400, 422, 500]
@@ -50,7 +48,7 @@ class TestErrorPaths:
         """Test decision verification with non-existent hash."""
         response = client.post(
             "/decide/verify",
-            json={"ledger_entry_hash": "nonexistent_hash_12345"}
+            json={"ledger_entry_hash": "nonexistent_hash_12345"},
         )
         assert response.status_code == 404
 
@@ -116,8 +114,8 @@ class TestEUAIActArticle12:
             json={
                 "reason": "Regulatory investigation",
                 "authority": "Data Protection Authority",
-                "case_reference": "CASE-2024-001"
-            }
+                "case_reference": "CASE-2024-001",
+            },
         )
         assert response.status_code == 200
         data = response.json()
@@ -138,8 +136,8 @@ class TestEUAIActArticle14:
                 "intervention_type": "override",
                 "reason": "Safety concern detected",
                 "outcome": "decision_overridden",
-                "notes": "Model suggested risky action, manually prevented"
-            }
+                "notes": "Model suggested risky action, manually prevented",
+            },
         )
         assert response.status_code == 200
         data = response.json()
@@ -156,8 +154,8 @@ class TestEUAIActArticle14:
                 "human_actor": "operator_bob",
                 "intervention_type": "monitoring",
                 "reason": "Routine check",
-                "outcome": "decision_confirmed"
-            }
+                "outcome": "decision_confirmed",
+            },
         )
 
         # Now get effectiveness metrics
@@ -177,15 +175,15 @@ class TestEUAIActArticle14:
                 "decision_id": "dec_test_125",
                 "human_actor": "operator_charlie",
                 "intervention_type": "override",
-                "reason": "Testing"
-            }
+                "reason": "Testing",
+            },
         )
         intervention_id = create_response.json()["intervention_id"]
 
         # Verify it
         response = client.post(
             "/compliance/eu-ai-act/article-14/verify",
-            json={"intervention_id": intervention_id}
+            json={"intervention_id": intervention_id},
         )
         assert response.status_code == 200
         data = response.json()
@@ -200,8 +198,8 @@ class TestEUAIActArticle14:
                 "decision_id": "dec_test_126",
                 "human_actor": "operator_diana",
                 "intervention_type": "monitoring",
-                "reason": "Compliance check"
-            }
+                "reason": "Compliance check",
+            },
         )
 
         response = client.get("/compliance/eu-ai-act/article-14/evidence-package?format=json")
@@ -217,8 +215,8 @@ class TestEUAIActArticle14:
             json={
                 "decision_id": "dec_test_127",
                 "trigger": "high_risk_threshold_exceeded",
-                "priority": "high"
-            }
+                "priority": "high",
+            },
         )
         assert response.status_code == 200
         data = response.json()
@@ -294,11 +292,11 @@ class TestResponsibilityTracking:
             "version": "1.0",
             "terms": [
                 {"term_id": "t1", "term_type": "actor", "value": "model"},
-                {"term_id": "t2", "term_type": "action", "value": "test_action"}
+                {"term_id": "t2", "term_type": "action", "value": "test_action"},
             ],
             "relations": [
-                {"subject": "t1", "relation_type": "permits", "object": "t2"}
-            ]
+                {"subject": "t1", "relation_type": "permits", "object": "t2"},
+            ],
         }
         client.post("/policies/load", json={"policy": policy})
 
@@ -308,8 +306,8 @@ class TestResponsibilityTracking:
                 "actor": "model",
                 "proposed_action": "test_action",
                 "tool": "test_tool",
-                "user_intent": "testing responsibility tracking"
-            }
+                "user_intent": "testing responsibility tracking",
+            },
         )
 
         if decision_response.status_code == 200:
@@ -378,8 +376,8 @@ class TestAuthEndpoints:
             json={
                 "username": "newuser",
                 "password": "password123",
-                "role": "viewer"
-            }
+                "role": "viewer",
+            },
         )
         assert response.status_code in [401, 403]
 
@@ -394,8 +392,8 @@ class TestComplianceMapping:
             json={
                 "primitive_type": "DECISION_LOGGING",
                 "primitive_id": "dec_test_123",
-                "framework": "EU_AI_ACT"
-            }
+                "framework": "EU_AI_ACT",
+            },
         )
         assert response.status_code == 200
         data = response.json()
@@ -422,8 +420,8 @@ class TestComplianceMapping:
             json={
                 "evidence_ids": ["ev_123"],
                 "verifier_id": "auditor_1",
-                "verification_notes": "All requirements met"
-            }
+                "verification_notes": "All requirements met",
+            },
         )
         assert response.status_code == 200
 
@@ -433,8 +431,8 @@ class TestComplianceMapping:
             "/api/governance/compliance/EU_AI_ACT/Article_12/link-evidence",
             json={
                 "evidence_id": "ev_123",
-                "link_type": "satisfies"
-            }
+                "link_type": "satisfies",
+            },
         )
         assert response.status_code == 200
 
@@ -487,8 +485,8 @@ class TestAuditExport:
                 "export_scope": "FULL",
                 "purpose": "Annual compliance audit",
                 "start_date": "2024-01-01T00:00:00Z",
-                "end_date": "2024-12-31T23:59:59Z"
-            }
+                "end_date": "2024-12-31T23:59:59Z",
+            },
         )
         assert response.status_code == 200
         data = response.json()
@@ -539,8 +537,8 @@ class TestSignatureVerification:
             json={
                 "data": {"test": "data"},
                 "signature": "mock_signature",
-                "signer_id": "sys_test"
-            }
+                "signer_id": "sys_test",
+            },
         )
         # Will fail verification but should handle gracefully
         assert response.status_code in [200, 400]

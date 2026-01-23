@@ -33,8 +33,8 @@ class TestTracingManager:
         manager = TracingManager()
 
         assert manager is not None
-        assert hasattr(manager, 'enabled')
-        assert hasattr(manager, 'tracer')
+        assert hasattr(manager, "enabled")
+        assert hasattr(manager, "tracer")
 
     def test_enabled_status(self):
         """Test that enabled status matches availability."""
@@ -62,8 +62,8 @@ class TestTracingManager:
 
         assert span is not None
         # Span should be context manager
-        assert hasattr(span, '__enter__')
-        assert hasattr(span, '__exit__')
+        assert hasattr(span, "__enter__")
+        assert hasattr(span, "__exit__")
 
     def test_start_span_when_disabled(self):
         """Test starting a span when tracing is disabled."""
@@ -82,7 +82,7 @@ class TestTracingManager:
             "attributed_span",
             attr1="value1",
             attr2=42,
-            attr3=True
+            attr3=True,
         )
 
         assert span is not None
@@ -134,18 +134,18 @@ class TestTraceFunctionDecorator:
         @trace_function()
         def complex_func(x, y, *args, **kwargs):
             return {
-                'x': x,
-                'y': y,
-                'args': args,
-                'kwargs': kwargs
+                "x": x,
+                "y": y,
+                "args": args,
+                "kwargs": kwargs,
             }
 
         result = complex_func(1, 2, 3, 4, key="value")
 
-        assert result['x'] == 1
-        assert result['y'] == 2
-        assert result['args'] == (3, 4)
-        assert result['kwargs'] == {'key': 'value'}
+        assert result["x"] == 1
+        assert result["y"] == 2
+        assert result["args"] == (3, 4)
+        assert result["kwargs"] == {"key": "value"}
 
     def test_decorator_with_exception(self):
         """Test decorator handles exceptions properly."""
@@ -283,10 +283,9 @@ class TestTracingIntegration:
         def multi_return(value):
             if value > 0:
                 return "positive"
-            elif value < 0:
+            if value < 0:
                 return "negative"
-            else:
-                return "zero"
+            return "zero"
 
         assert multi_return(5) == "positive"
         assert multi_return(-3) == "negative"
@@ -366,7 +365,7 @@ class TestEdgeCases:
             return "async_result"
 
         # We can't easily await this in sync tests, but decorator should apply
-        assert hasattr(async_func, '__name__')
+        assert hasattr(async_func, "__name__")
 
     def test_decorator_with_none_return(self):
         """Test decorator on function returning None."""
@@ -391,9 +390,9 @@ class TestEdgeCases:
         manager = TracingManager()
 
         # Should handle special characters gracefully
-        span = manager.start_span("span-with-dashes")
-        span = manager.start_span("span_with_underscores")
-        span = manager.start_span("span.with.dots")
+        manager.start_span("span-with-dashes")
+        manager.start_span("span_with_underscores")
+        manager.start_span("span.with.dots")
 
         # Should not error
 
@@ -440,7 +439,7 @@ class TestEdgeCases:
             string_attr="value",
             int_attr=42,
             float_attr=3.14,
-            bool_attr=True
+            bool_attr=True,
         )
 
         assert span is not None
@@ -483,7 +482,7 @@ class TestTracingPerformance:
 
         # Create many spans
         for i in range(1000):
-            span = manager.start_span(f"span_{i}")
+            manager.start_span(f"span_{i}")
 
         # Should complete without issues
 
@@ -515,7 +514,7 @@ class TestTracingConfiguration:
         manager = TracingManager()
 
         # Should have setup method called
-        assert hasattr(manager, '_setup_tracing')
+        assert hasattr(manager, "_setup_tracing")
 
     def test_graceful_degradation(self):
         """Test graceful degradation when tracing unavailable."""
@@ -523,7 +522,7 @@ class TestTracingConfiguration:
         manager = TracingManager()
 
         # All operations should be safe
-        span = manager.start_span("test")
+        manager.start_span("test")
         manager.instrument_fastapi(None)
 
         # No errors should occur

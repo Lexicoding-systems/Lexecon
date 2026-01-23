@@ -1,5 +1,4 @@
-"""
-Persistent Storage for EU AI Act Compliance Records
+"""Persistent Storage for EU AI Act Compliance Records
 
 Stores Article 14 human oversight interventions in SQLite for
 10-year retention as required by EU AI Act Article 12.
@@ -15,16 +14,14 @@ from .article_14_oversight import HumanIntervention, InterventionType, Oversight
 
 
 class InterventionStorage:
-    """
-    Persistent storage for Article 14 human oversight interventions.
+    """Persistent storage for Article 14 human oversight interventions.
 
     Ensures intervention records survive system restarts and are
     available for long-term compliance audits.
     """
 
     def __init__(self, db_path: str = "lexecon_interventions.db"):
-        """
-        Initialize storage.
+        """Initialize storage.
 
         Args:
             db_path: Path to SQLite database file
@@ -32,7 +29,7 @@ class InterventionStorage:
         self.db_path = db_path
         self._init_database()
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Create tables and indexes if they don't exist."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -75,8 +72,7 @@ class InterventionStorage:
         conn.close()
 
     def save_intervention(self, intervention: HumanIntervention) -> None:
-        """
-        Save a single intervention record.
+        """Save a single intervention record.
 
         Args:
             intervention: HumanIntervention to save
@@ -103,15 +99,14 @@ class InterventionStorage:
             json.dumps(intervention.request_context),
             intervention.signature,
             intervention.response_time_ms,
-            datetime.utcnow().isoformat()
+            datetime.utcnow().isoformat(),
         ))
 
         conn.commit()
         conn.close()
 
     def load_all_interventions(self) -> List[HumanIntervention]:
-        """
-        Load all intervention records in chronological order.
+        """Load all intervention records in chronological order.
 
         Returns:
             List of HumanIntervention objects
@@ -142,7 +137,7 @@ class InterventionStorage:
                 reason=row[7],
                 request_context=json.loads(row[8]),
                 signature=row[9],
-                response_time_ms=row[10]
+                response_time_ms=row[10],
             )
             interventions.append(intervention)
 
@@ -152,10 +147,9 @@ class InterventionStorage:
     def get_by_timerange(
         self,
         start_date: Optional[str] = None,
-        end_date: Optional[str] = None
+        end_date: Optional[str] = None,
     ) -> List[HumanIntervention]:
-        """
-        Get interventions within a time range.
+        """Get interventions within a time range.
 
         Args:
             start_date: ISO format start date (inclusive)
@@ -203,7 +197,7 @@ class InterventionStorage:
                 reason=row[7],
                 request_context=json.loads(row[8]),
                 signature=row[9],
-                response_time_ms=row[10]
+                response_time_ms=row[10],
             )
             interventions.append(intervention)
 
@@ -211,8 +205,7 @@ class InterventionStorage:
         return interventions
 
     def get_statistics(self) -> dict:
-        """
-        Get storage statistics.
+        """Get storage statistics.
 
         Returns:
             Dict with storage statistics
@@ -269,7 +262,7 @@ class InterventionStorage:
             "by_intervention_type": by_type,
             "by_human_role": by_role,
             "override_count": overrides,
-            "override_rate": (overrides / total * 100) if total > 0 else 0
+            "override_rate": (overrides / total * 100) if total > 0 else 0,
         }
 
     def count_interventions(self) -> int:

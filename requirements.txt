@@ -1,15 +1,30 @@
+# Core Framework
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
+
+# Cryptography & Security
 cryptography>=42.0.0
 click>=8.1.0
 pyyaml>=6.0
 requests>=2.31.0
+PyJWT>=2.8.0  # OIDC OAuth Support
 
-# MFA/TOTP Support (Phase 1E)
+# Database & ORM
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.29.0        # PostgreSQL async driver
+aiosqlite>=0.19.0      # SQLite async driver
+
+# Caching
+redis>=5.0.0           # Redis client for caching
+
+# MFA/TOTP Support
 pyotp>=2.9.0
 qrcode>=7.4.2
 Pillow>=10.0.0
 
-# OIDC OAuth Support (Phase 1F)
-PyJWT>=2.8.0
+# Monitoring & Observability
+prometheus-client>=0.19.0
+
+# Environment Configuration
+python-dotenv>=1.0.0

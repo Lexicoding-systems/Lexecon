@@ -8,18 +8,17 @@ import pytest
 # Add model_governance_pack to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../model_governance_pack/adapters"))
 
-from base import GovernanceAdapter, GovernanceError  # noqa: E402
-from verification import GovernanceVerifier  # noqa: E402
+from base import GovernanceAdapter, GovernanceError
+from verification import GovernanceVerifier
 
 
 class MockGovernanceAdapter(GovernanceAdapter):
     """Mock adapter for testing."""
 
     def intercept_tool_call(self, tool_name: str, tool_args: dict, **kwargs):
-        decision = self.request_decision(
-            tool_name=tool_name, tool_args=tool_args, user_intent=kwargs.get("user_intent", "")
+        return self.request_decision(
+            tool_name=tool_name, tool_args=tool_args, user_intent=kwargs.get("user_intent", ""),
         )
-        return decision
 
     def wrap_response(self, decision: dict, result=None):
         return {"decision": decision, "result": result}
@@ -219,10 +218,8 @@ class TestAdapterIntegration:
 
         # This would test actual decision request
         # Requires governance server to be running
-        pass
 
     def test_verify_ledger_with_server(self):
         """Test ledger verification against live server."""
         # Would test actual ledger verification
         # Requires governance server to be running
-        pass

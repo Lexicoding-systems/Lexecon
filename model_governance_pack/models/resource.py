@@ -1,5 +1,4 @@
-"""
-This model is a derived runtime binding of the canonical governance JSON schema.
+"""This model is a derived runtime binding of the canonical governance JSON schema.
 The JSON schema remains the authoritative source of truth.
 This file exists solely to enforce contract correctness at runtime.
 
@@ -36,8 +35,7 @@ class ResourceType(str, Enum):
 
 
 class Resource(BaseModel):
-    """
-    Lexecon Resource
+    """Lexecon Resource
 
     Data, system, or capability that is the target of an action.
     """

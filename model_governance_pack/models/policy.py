@@ -1,5 +1,4 @@
-"""
-This model is a derived runtime binding of the canonical governance JSON schema.
+"""This model is a derived runtime binding of the canonical governance JSON schema.
 The JSON schema remains the authoritative source of truth.
 This file exists solely to enforce contract correctness at runtime.
 
@@ -40,8 +39,7 @@ class RelationType(str, Enum):
 
 
 class Term(BaseModel):
-    """
-    Policy term definition.
+    """Policy term definition.
 
     Defined terms (actors, actions, resources).
     """
@@ -85,8 +83,7 @@ class Term(BaseModel):
 
 
 class Relation(BaseModel):
-    """
-    Policy relation definition.
+    """Policy relation definition.
 
     Permission/prohibition rules.
     """
@@ -138,8 +135,7 @@ class Relation(BaseModel):
 
 
 class Constraint(BaseModel):
-    """
-    Policy constraint definition.
+    """Policy constraint definition.
 
     Conditional constraints.
     """
@@ -175,8 +171,7 @@ class Constraint(BaseModel):
 
 
 class Policy(BaseModel):
-    """
-    Lexecon Policy
+    """Lexecon Policy
 
     Declarative specification of permitted, forbidden, and conditionally-allowed behaviors.
     """

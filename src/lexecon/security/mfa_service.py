@@ -1,5 +1,4 @@
-"""
-Multi-Factor Authentication (MFA) Service.
+"""Multi-Factor Authentication (MFA) Service.
 
 Implements TOTP-based two-factor authentication using time-based one-time passwords.
 Supports:
@@ -12,28 +11,26 @@ Supports:
 Uses pyotp for TOTP generation/verification and qrcode for QR code generation.
 """
 
-import sqlite3
-import secrets
-import hashlib
 import base64
+import hashlib
+import io
+import secrets
+import sqlite3
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
 import pyotp
 import qrcode
-import io
-from typing import Tuple, List, Optional, Dict, Any
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 
 class MFAService:
-    """
-    Multi-factor authentication service using TOTP (Time-based One-Time Password).
+    """Multi-factor authentication service using TOTP (Time-based One-Time Password).
 
     Integrates with existing auth_service database.
     """
 
     def __init__(self, db_path: str = "lexecon_auth.db", issuer: str = "Lexecon"):
-        """
-        Initialize MFA service.
+        """Initialize MFA service.
 
         Args:
             db_path: Path to authentication database
@@ -43,20 +40,17 @@ class MFAService:
         self.issuer = issuer
 
     def generate_secret(self) -> str:
-        """
-        Generate a new TOTP secret.
+        """Generate a new TOTP secret.
 
         Returns:
             Base32-encoded secret (32 bytes / 52 characters)
         """
         # Generate 32 random bytes, encode as base32
         random_bytes = secrets.token_bytes(32)
-        secret = base64.b32encode(random_bytes).decode('utf-8')
-        return secret
+        return base64.b32encode(random_bytes).decode("utf-8")
 
     def generate_qr_code(self, username: str, secret: str) -> bytes:
-        """
-        Generate QR code for authenticator app setup.
+        """Generate QR code for authenticator app setup.
 
         Args:
             username: Username to display in authenticator
@@ -83,12 +77,11 @@ class MFAService:
 
         # Convert to PNG bytes
         buffer = io.BytesIO()
-        img.save(buffer, format='PNG')
+        img.save(buffer, format="PNG")
         return buffer.getvalue()
 
     def verify_totp(self, secret: str, token: str) -> bool:
-        """
-        Verify a TOTP token.
+        """Verify a TOTP token.
 
         Args:
             secret: TOTP secret (base32)
@@ -107,8 +100,7 @@ class MFAService:
         return totp.verify(token, valid_window=1)
 
     def generate_backup_codes(self, count: int = 10) -> List[str]:
-        """
-        Generate backup recovery codes.
+        """Generate backup recovery codes.
 
         Args:
             count: Number of codes to generate
@@ -119,13 +111,12 @@ class MFAService:
         codes = []
         for _ in range(count):
             # Generate 8-character code (uppercase letters and digits)
-            code = ''.join(secrets.choice('ABCDEFGHJKLMNPQRSTUVWXYZ23456789') for _ in range(8))
+            code = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(8))
             codes.append(code)
         return codes
 
     def hash_backup_code(self, code: str) -> str:
-        """
-        Hash a backup code for storage.
+        """Hash a backup code for storage.
 
         Uses PBKDF2-HMAC-SHA256 (same as passwords).
 
@@ -138,15 +129,14 @@ class MFAService:
         # Use a fixed salt for backup codes (they're already random)
         salt = b"lexecon-backup-code-salt"
         return hashlib.pbkdf2_hmac(
-            'sha256',
-            code.encode('utf-8'),
+            "sha256",
+            code.encode("utf-8"),
             salt,
-            100000
+            100000,
         ).hex()
 
     def verify_backup_code(self, user_id: str, code: str) -> bool:
-        """
-        Verify a backup code and mark it as used.
+        """Verify a backup code and mark it as used.
 
         Args:
             user_id: User ID
@@ -178,10 +168,10 @@ class MFAService:
 
             # Check if code exists and is unused
             for i, stored_code in enumerate(backup_codes):
-                if stored_code['hash'] == code_hash and not stored_code.get('used', False):
+                if stored_code["hash"] == code_hash and not stored_code.get("used", False):
                     # Mark as used
-                    backup_codes[i]['used'] = True
-                    backup_codes[i]['used_at'] = datetime.now(timezone.utc).isoformat()
+                    backup_codes[i]["used"] = True
+                    backup_codes[i]["used_at"] = datetime.now(timezone.utc).isoformat()
 
                     # Update database
                     cursor.execute("""
@@ -199,8 +189,7 @@ class MFAService:
             conn.close()
 
     def enable_mfa(self, user_id: str, secret: str, backup_codes: List[str]) -> bool:
-        """
-        Enable MFA for a user.
+        """Enable MFA for a user.
 
         Args:
             user_id: User ID
@@ -211,6 +200,7 @@ class MFAService:
             True if enabled successfully
         """
         import json
+
         from lexecon.security.db_encryption import get_db_encryption
 
         conn = sqlite3.connect(self.db_path)
@@ -224,8 +214,8 @@ class MFAService:
             # Hash backup codes
             backup_code_data = [
                 {
-                    'hash': self.hash_backup_code(code),
-                    'used': False
+                    "hash": self.hash_backup_code(code),
+                    "used": False,
                 }
                 for code in backup_codes
             ]
@@ -248,8 +238,7 @@ class MFAService:
             conn.close()
 
     def disable_mfa(self, user_id: str) -> bool:
-        """
-        Disable MFA for a user.
+        """Disable MFA for a user.
 
         Args:
             user_id: User ID
@@ -279,10 +268,9 @@ class MFAService:
         self,
         user_id: str,
         session_token: str,
-        ip_address: Optional[str] = None
+        ip_address: Optional[str] = None,
     ) -> str:
-        """
-        Create an MFA challenge for login.
+        """Create an MFA challenge for login.
 
         Args:
             user_id: User ID
@@ -311,7 +299,7 @@ class MFAService:
                 session_token,
                 created_at.isoformat(),
                 expires_at.isoformat(),
-                ip_address
+                ip_address,
             ))
 
             conn.commit()
@@ -323,10 +311,9 @@ class MFAService:
     def verify_mfa_challenge(
         self,
         challenge_id: str,
-        totp_code: str
+        totp_code: str,
     ) -> Tuple[bool, Optional[str], Optional[str]]:
-        """
-        Verify an MFA challenge with TOTP code.
+        """Verify an MFA challenge with TOTP code.
 
         Args:
             challenge_id: Challenge ID
@@ -356,7 +343,7 @@ class MFAService:
             user_id, session_token, expires_at, encrypted_secret = row
 
             # Check expiration
-            expires_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            expires_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expires_dt:
                 return False, None, None
 
@@ -384,10 +371,9 @@ class MFAService:
     def verify_mfa_challenge_with_backup(
         self,
         challenge_id: str,
-        backup_code: str
+        backup_code: str,
     ) -> Tuple[bool, Optional[str], Optional[str]]:
-        """
-        Verify an MFA challenge with backup code.
+        """Verify an MFA challenge with backup code.
 
         Args:
             challenge_id: Challenge ID
@@ -414,7 +400,7 @@ class MFAService:
             user_id, session_token, expires_at = row
 
             # Check expiration
-            expires_dt = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            expires_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
             if datetime.now(timezone.utc) > expires_dt:
                 return False, None, None
 
@@ -449,16 +435,14 @@ class MFAService:
             """, (cutoff.isoformat(),))
 
             conn.commit()
-            deleted_count = cursor.rowcount
+            return cursor.rowcount
 
-            return deleted_count
 
         finally:
             conn.close()
 
     def get_mfa_status(self, user_id: str) -> Dict[str, Any]:
-        """
-        Get MFA status for a user.
+        """Get MFA status for a user.
 
         Args:
             user_id: User ID
@@ -483,7 +467,7 @@ class MFAService:
                 return {
                     "enabled": False,
                     "enrolled_at": None,
-                    "backup_codes_remaining": 0
+                    "backup_codes_remaining": 0,
                 }
 
             mfa_enabled, enrolled_at, backup_codes_json = row
@@ -493,13 +477,13 @@ class MFAService:
             if backup_codes_json:
                 backup_codes = json.loads(backup_codes_json)
                 backup_codes_remaining = sum(
-                    1 for code in backup_codes if not code.get('used', False)
+                    1 for code in backup_codes if not code.get("used", False)
                 )
 
             return {
                 "enabled": bool(mfa_enabled),
                 "enrolled_at": enrolled_at,
-                "backup_codes_remaining": backup_codes_remaining
+                "backup_codes_remaining": backup_codes_remaining,
             }
 
         finally:
@@ -511,8 +495,7 @@ _mfa_service: Optional[MFAService] = None
 
 
 def get_mfa_service() -> MFAService:
-    """
-    Get global MFA service instance.
+    """Get global MFA service instance.
 
     Returns:
         MFAService instance

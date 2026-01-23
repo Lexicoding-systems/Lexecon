@@ -1,5 +1,4 @@
-"""
-Database Field Encryption.
+"""Database Field Encryption.
 
 Provides transparent encryption/decryption for sensitive database fields
 like MFA secrets, API keys, tokens, etc.
@@ -8,21 +7,20 @@ Uses Fernet symmetric encryption with a dedicated database encryption key.
 Key is managed by SecretsManager (Docker Secrets, encrypted .env, or env vars).
 """
 
-from typing import Optional
-from cryptography.fernet import Fernet
 import base64
+from typing import Optional
+
+from cryptography.fernet import Fernet
 
 
 class DatabaseEncryption:
-    """
-    Encrypt/decrypt sensitive database fields.
+    """Encrypt/decrypt sensitive database fields.
 
     Uses Fernet symmetric encryption for fast, secure field-level encryption.
     """
 
     def __init__(self, encryption_key: Optional[str] = None):
-        """
-        Initialize database encryption.
+        """Initialize database encryption.
 
         Args:
             encryption_key: Base64-encoded Fernet key (32 bytes)
@@ -38,14 +36,13 @@ class DatabaseEncryption:
         if not self.encryption_key:
             raise ValueError(
                 "Database encryption key not found. "
-                "Set DB_ENCRYPTION_KEY environment variable or configure Docker Secrets."
+                "Set DB_ENCRYPTION_KEY environment variable or configure Docker Secrets.",
             )
 
         self._fernet = self._init_fernet()
 
     def _init_fernet(self) -> Fernet:
-        """
-        Initialize Fernet cipher.
+        """Initialize Fernet cipher.
 
         Returns:
             Fernet instance
@@ -60,15 +57,14 @@ class DatabaseEncryption:
                 key_b64 = base64.urlsafe_b64encode(key_bytes)
             else:
                 # Assume it's already base64
-                key_b64 = self.encryption_key.encode('utf-8') if isinstance(self.encryption_key, str) else self.encryption_key
+                key_b64 = self.encryption_key.encode("utf-8") if isinstance(self.encryption_key, str) else self.encryption_key
 
             return Fernet(key_b64)
         except Exception as e:
             raise ValueError(f"Invalid database encryption key: {e}")
 
     def encrypt_field(self, plaintext: str) -> str:
-        """
-        Encrypt a database field value.
+        """Encrypt a database field value.
 
         Args:
             plaintext: Plain text value to encrypt
@@ -79,12 +75,11 @@ class DatabaseEncryption:
         if not plaintext:
             return plaintext
 
-        encrypted_bytes = self._fernet.encrypt(plaintext.encode('utf-8'))
-        return encrypted_bytes.decode('utf-8')
+        encrypted_bytes = self._fernet.encrypt(plaintext.encode("utf-8"))
+        return encrypted_bytes.decode("utf-8")
 
     def decrypt_field(self, ciphertext: str) -> str:
-        """
-        Decrypt a database field value.
+        """Decrypt a database field value.
 
         Args:
             ciphertext: Encrypted value (base64-encoded)
@@ -96,14 +91,13 @@ class DatabaseEncryption:
             return ciphertext
 
         try:
-            decrypted_bytes = self._fernet.decrypt(ciphertext.encode('utf-8'))
-            return decrypted_bytes.decode('utf-8')
+            decrypted_bytes = self._fernet.decrypt(ciphertext.encode("utf-8"))
+            return decrypted_bytes.decode("utf-8")
         except Exception as e:
             raise ValueError(f"Failed to decrypt field: {e}")
 
     def encrypt_dict(self, data: dict, fields_to_encrypt: list) -> dict:
-        """
-        Encrypt specified fields in a dictionary.
+        """Encrypt specified fields in a dictionary.
 
         Args:
             data: Dictionary with data
@@ -114,13 +108,12 @@ class DatabaseEncryption:
         """
         result = data.copy()
         for field in fields_to_encrypt:
-            if field in result and result[field]:
+            if result.get(field):
                 result[field] = self.encrypt_field(str(result[field]))
         return result
 
     def decrypt_dict(self, data: dict, fields_to_decrypt: list) -> dict:
-        """
-        Decrypt specified fields in a dictionary.
+        """Decrypt specified fields in a dictionary.
 
         Args:
             data: Dictionary with encrypted data
@@ -131,14 +124,13 @@ class DatabaseEncryption:
         """
         result = data.copy()
         for field in fields_to_decrypt:
-            if field in result and result[field]:
+            if result.get(field):
                 result[field] = self.decrypt_field(str(result[field]))
         return result
 
     @staticmethod
     def generate_key() -> str:
-        """
-        Generate a new database encryption key.
+        """Generate a new database encryption key.
 
         Returns:
             64-character hex-encoded key (32 bytes)
@@ -153,8 +145,7 @@ _db_encryption: Optional[DatabaseEncryption] = None
 
 
 def get_db_encryption() -> DatabaseEncryption:
-    """
-    Get global database encryption instance.
+    """Get global database encryption instance.
 
     Returns:
         DatabaseEncryption instance
@@ -168,8 +159,7 @@ def get_db_encryption() -> DatabaseEncryption:
 
 
 def encrypt_field(plaintext: str) -> str:
-    """
-    Convenience function to encrypt a field.
+    """Convenience function to encrypt a field.
 
     Args:
         plaintext: Plain text to encrypt
@@ -181,8 +171,7 @@ def encrypt_field(plaintext: str) -> str:
 
 
 def decrypt_field(ciphertext: str) -> str:
-    """
-    Convenience function to decrypt a field.
+    """Convenience function to decrypt a field.
 
     Args:
         ciphertext: Encrypted value

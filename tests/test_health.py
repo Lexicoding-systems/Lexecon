@@ -2,8 +2,6 @@
 
 import time
 
-import pytest
-
 from lexecon.observability.health import (
     HealthCheck,
     HealthStatus,

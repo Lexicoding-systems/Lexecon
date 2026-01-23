@@ -1,5 +1,4 @@
-"""
-Override Service - Human authority mechanism for governance decisions.
+"""Override Service - Human authority mechanism for governance decisions.
 
 Provides explicit override capability with:
 - Mandatory justification for all overrides
@@ -17,13 +16,13 @@ from typing import Any, Dict, List, Optional
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        Override,
-        OverrideType,
-        OriginalOutcome,
-        NewOutcome,
-        OverrideScope,
-        EvidenceArtifact,
         ArtifactType,
+        EvidenceArtifact,
+        NewOutcome,
+        OriginalOutcome,
+        Override,
+        OverrideScope,
+        OverrideType,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -39,8 +38,7 @@ except ImportError:
 
 
 def generate_override_id(decision_id: str) -> str:
-    """
-    Generate an override ID linked to a decision.
+    """Generate an override ID linked to a decision.
 
     Format: ovr_dec_<decision_suffix>_<short_uuid>
     Allows multiple overrides per decision (audit trail).
@@ -85,8 +83,7 @@ class OverrideConfig:
 
 
 class OverrideService:
-    """
-    Override service for governance decisions.
+    """Override service for governance decisions.
 
     Provides human authority mechanism to override system decisions
     with full audit trail and authorization controls.
@@ -97,8 +94,7 @@ class OverrideService:
         config: Optional[OverrideConfig] = None,
         store_evidence: bool = True,
     ):
-        """
-        Initialize the override service.
+        """Initialize the override service.
 
         Args:
             config: Optional custom configuration
@@ -106,7 +102,7 @@ class OverrideService:
         """
         if not GOVERNANCE_MODELS_AVAILABLE:
             raise RuntimeError(
-                "Governance models not available. Install model_governance_pack."
+                "Governance models not available. Install model_governance_pack.",
             )
 
         self.config = config or OverrideConfig()
@@ -122,8 +118,7 @@ class OverrideService:
         actor_id: str,
         override_type: "OverrideType",
     ) -> bool:
-        """
-        Check if actor is authorized to perform override.
+        """Check if actor is authorized to perform override.
 
         Args:
             actor_id: Actor ID requesting override
@@ -161,8 +156,7 @@ class OverrideService:
         review_required_by: Optional[datetime] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "Override":
-        """
-        Create an override for a decision.
+        """Create an override for a decision.
 
         Requires explicit justification (min 20 chars) and authorization.
         Validates via canonical schema and creates immutable record.
@@ -188,7 +182,7 @@ class OverrideService:
         # Enforce authorization check
         if not self.is_authorized(authorized_by, override_type):
             raise ValueError(
-                f"Actor {authorized_by} not authorized for {override_type.value} override"
+                f"Actor {authorized_by} not authorized for {override_type.value} override",
             )
 
         # Validate justification length (schema enforces min 20, but check explicitly)
@@ -201,13 +195,13 @@ class OverrideService:
         # Set defaults for time-limited overrides
         if override_type == OverrideType.TIME_LIMITED_EXCEPTION and expires_at is None:
             expires_at = datetime.now(timezone.utc) + timedelta(
-                hours=self.config.DEFAULT_TIME_LIMIT_HOURS
+                hours=self.config.DEFAULT_TIME_LIMIT_HOURS,
             )
 
         # Set default review deadline
         if review_required_by is None:
             review_required_by = datetime.now(timezone.utc) + timedelta(
-                days=self.config.DEFAULT_REVIEW_PERIOD_DAYS
+                days=self.config.DEFAULT_REVIEW_PERIOD_DAYS,
             )
 
         # Create override (validates against schema)
@@ -244,16 +238,14 @@ class OverrideService:
         return override
 
     def get_override(self, override_id: str) -> Optional["Override"]:
-        """
-        Retrieve an override by ID.
+        """Retrieve an override by ID.
 
         Returns immutable override record.
         """
         return self._overrides.get(override_id)
 
     def get_overrides_for_decision(self, decision_id: str) -> List["Override"]:
-        """
-        Get all overrides for a decision.
+        """Get all overrides for a decision.
 
         Returns list of overrides in chronological order (oldest first).
         Multiple overrides indicate audit trail.
@@ -273,8 +265,7 @@ class OverrideService:
         return overrides
 
     def get_active_override(self, decision_id: str) -> Optional["Override"]:
-        """
-        Get the most recent active override for a decision.
+        """Get the most recent active override for a decision.
 
         Checks expiration for time-limited overrides.
 
@@ -301,8 +292,7 @@ class OverrideService:
         return latest
 
     def is_decision_overridden(self, decision_id: str) -> bool:
-        """
-        Check if a decision has an active override.
+        """Check if a decision has an active override.
 
         Args:
             decision_id: Decision ID
@@ -319,8 +309,7 @@ class OverrideService:
         expired: Optional[bool] = None,
         limit: int = 100,
     ) -> List["Override"]:
-        """
-        List overrides with optional filtering.
+        """List overrides with optional filtering.
 
         Args:
             override_type: Filter by override type
@@ -359,8 +348,7 @@ class OverrideService:
         return overrides[:limit]
 
     def get_overrides_needing_review(self) -> List["Override"]:
-        """
-        Get overrides that need review (past review_required_by date).
+        """Get overrides that need review (past review_required_by date).
 
         Returns:
             List of Override objects needing review
@@ -378,10 +366,9 @@ class OverrideService:
         return overrides
 
     def get_decision_with_override_status(
-        self, decision_id: str, decision_data: Dict[str, Any]
+        self, decision_id: str, decision_data: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """
-        Enrich decision data with override status.
+        """Enrich decision data with override status.
 
         Preserves original decision outcome and adds override metadata.
         Never rewrites original decision record.
@@ -430,8 +417,7 @@ class OverrideService:
         return enriched
 
     def _create_evidence_artifact(self, override: "Override") -> "EvidenceArtifact":
-        """
-        Create evidence artifact for override.
+        """Create evidence artifact for override.
 
         Args:
             override: Override object to create artifact for
@@ -482,8 +468,7 @@ class OverrideService:
         override_id: Optional[str] = None,
         decision_id: Optional[str] = None,
     ) -> List["EvidenceArtifact"]:
-        """
-        List evidence artifacts with optional filtering.
+        """List evidence artifacts with optional filtering.
 
         Args:
             override_id: Filter by override ID
@@ -516,8 +501,7 @@ class OverrideValidator:
 
     @staticmethod
     def validate_justification(justification: str) -> bool:
-        """
-        Validate override justification.
+        """Validate override justification.
 
         Args:
             justification: Justification text
@@ -540,11 +524,10 @@ class OverrideValidator:
         ]
 
         justification_lower = justification.lower()
-        if any(phrase in justification_lower for phrase in generic_phrases):
-            if len(justification.strip()) < 50:
-                raise ValueError(
-                    "Justification appears generic. Please provide specific reasoning."
-                )
+        if any(phrase in justification_lower for phrase in generic_phrases) and len(justification.strip()) < 50:
+            raise ValueError(
+                "Justification appears generic. Please provide specific reasoning.",
+            )
 
         return True
 
@@ -553,8 +536,7 @@ class OverrideValidator:
         override_type: "OverrideType",
         expires_at: Optional[datetime],
     ) -> bool:
-        """
-        Validate time limit for time-limited overrides.
+        """Validate time limit for time-limited overrides.
 
         Args:
             override_type: Type of override
@@ -586,8 +568,7 @@ class OverrideValidator:
         override_type: "OverrideType",
         scope: Optional["OverrideScope"],
     ) -> bool:
-        """
-        Validate override scope.
+        """Validate override scope.
 
         Args:
             override_type: Type of override
@@ -600,8 +581,7 @@ class OverrideValidator:
             ValueError: If scope is invalid
         """
         # Emergency bypass should be one-time only
-        if override_type == OverrideType.EMERGENCY_BYPASS:
-            if not scope or not scope.is_one_time:
-                raise ValueError("Emergency bypass must be one-time only")
+        if override_type == OverrideType.EMERGENCY_BYPASS and (not scope or not scope.is_one_time):
+            raise ValueError("Emergency bypass must be one-time only")
 
         return True

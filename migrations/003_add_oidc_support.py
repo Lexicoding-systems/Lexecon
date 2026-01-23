@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Migration: Add OIDC OAuth support.
+"""Migration: Add OIDC OAuth support.
 
 Creates tables for OpenID Connect authentication:
 - oidc_states: CSRF protection for OAuth flow
@@ -11,12 +10,10 @@ Run: python migrations/003_add_oidc_support.py [db_path]
 
 import sqlite3
 import sys
-from datetime import datetime, timezone
 
 
 def migrate(db_path="lexecon_auth.db"):
-    """
-    Apply OIDC migration to database.
+    """Apply OIDC migration to database.
 
     Args:
         db_path: Path to authentication database
@@ -98,8 +95,7 @@ def migrate(db_path="lexecon_auth.db"):
 
 
 def verify_migration(db_path="lexecon_auth.db"):
-    """
-    Verify migration was applied successfully.
+    """Verify migration was applied successfully.
 
     Args:
         db_path: Path to authentication database

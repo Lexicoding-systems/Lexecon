@@ -1,5 +1,4 @@
-"""
-Rate Limiting Service with Token Bucket Algorithm.
+"""Rate Limiting Service with Token Bucket Algorithm.
 
 Provides in-memory rate limiting for Lexecon authentication and API endpoints.
 Supports per-IP, per-user, and per-endpoint rate limits.
@@ -11,16 +10,14 @@ Security Features:
 - Automatic bucket cleanup to prevent memory leaks
 """
 
-from typing import Dict, Optional, Tuple
-from datetime import datetime, timedelta
-from collections import defaultdict
 import threading
 import time
+from datetime import datetime, timedelta
+from typing import Dict, Optional, Tuple
 
 
 class TokenBucket:
-    """
-    Token bucket implementation for rate limiting.
+    """Token bucket implementation for rate limiting.
 
     The token bucket algorithm allows bursts while maintaining an average rate.
     Tokens are added to the bucket at a constant rate up to a maximum capacity.
@@ -28,8 +25,7 @@ class TokenBucket:
     """
 
     def __init__(self, capacity: int, refill_rate: float):
-        """
-        Initialize token bucket.
+        """Initialize token bucket.
 
         Args:
             capacity: Maximum number of tokens (burst size)
@@ -41,7 +37,7 @@ class TokenBucket:
         self.last_refill = time.time()
         self.lock = threading.Lock()
 
-    def _refill(self):
+    def _refill(self) -> None:
         """Refill tokens based on time elapsed."""
         now = time.time()
         elapsed = now - self.last_refill
@@ -52,8 +48,7 @@ class TokenBucket:
         self.last_refill = now
 
     def consume(self, tokens: int = 1) -> bool:
-        """
-        Try to consume tokens from bucket.
+        """Try to consume tokens from bucket.
 
         Args:
             tokens: Number of tokens to consume
@@ -71,8 +66,7 @@ class TokenBucket:
             return False
 
     def get_retry_after(self) -> int:
-        """
-        Calculate seconds until next token is available.
+        """Calculate seconds until next token is available.
 
         Returns:
             Seconds to wait before retry
@@ -90,8 +84,7 @@ class TokenBucket:
 
 
 class RateLimiter:
-    """
-    In-memory rate limiter with token bucket algorithm.
+    """In-memory rate limiter with token bucket algorithm.
 
     Supports multiple rate limit configurations:
     - Global per-IP limits
@@ -136,8 +129,7 @@ class RateLimiter:
         self._start_cleanup_thread()
 
     def _get_or_create_bucket(self, key: str, limit_type: str) -> TokenBucket:
-        """
-        Get existing bucket or create new one.
+        """Get existing bucket or create new one.
 
         Args:
             key: Unique identifier (e.g., "ip:192.168.1.1")
@@ -159,8 +151,7 @@ class RateLimiter:
             return self.buckets[bucket_key]
 
     def check_rate_limit(self, key: str, limit_type: str) -> Tuple[bool, Optional[int]]:
-        """
-        Check if request is within rate limit WITHOUT consuming a token.
+        """Check if request is within rate limit WITHOUT consuming a token.
 
         Args:
             key: Unique identifier for rate limit context
@@ -180,13 +171,11 @@ class RateLimiter:
             bucket._refill()
             if bucket.tokens >= 1:
                 return True, None
-            else:
-                retry_after = bucket.get_retry_after()
-                return False, retry_after
+            retry_after = bucket.get_retry_after()
+            return False, retry_after
 
     def consume(self, key: str, limit_type: str, tokens: int = 1) -> bool:
-        """
-        Consume tokens from rate limit bucket.
+        """Consume tokens from rate limit bucket.
 
         Args:
             key: Unique identifier for rate limit context
@@ -204,8 +193,7 @@ class RateLimiter:
         return bucket.consume(tokens)
 
     def get_retry_after(self, key: str, limit_type: str) -> int:
-        """
-        Get seconds until rate limit resets.
+        """Get seconds until rate limit resets.
 
         Args:
             key: Unique identifier for rate limit context
@@ -221,8 +209,7 @@ class RateLimiter:
         return bucket.get_retry_after()
 
     def reset(self, key: str, limit_type: str):
-        """
-        Reset rate limit for a specific key.
+        """Reset rate limit for a specific key.
 
         Useful for administrative overrides or after successful login.
 
@@ -239,8 +226,7 @@ class RateLimiter:
                 self.buckets[bucket_key] = TokenBucket(capacity, refill_rate)
 
     def get_remaining(self, key: str, limit_type: str) -> int:
-        """
-        Get remaining tokens for a key.
+        """Get remaining tokens for a key.
 
         Args:
             key: Unique identifier for rate limit context
@@ -259,8 +245,7 @@ class RateLimiter:
             return int(bucket.tokens)
 
     def cleanup_expired_buckets(self, max_age_hours: int = 24):
-        """
-        Remove expired buckets to prevent memory leak.
+        """Remove expired buckets to prevent memory leak.
 
         Args:
             max_age_hours: Remove buckets older than this many hours
@@ -281,9 +266,9 @@ class RateLimiter:
             if expired_keys:
                 print(f"Rate limiter: Cleaned up {len(expired_keys)} expired buckets")
 
-    def _start_cleanup_thread(self):
+    def _start_cleanup_thread(self) -> None:
         """Start background thread for bucket cleanup."""
-        def cleanup_loop():
+        def cleanup_loop() -> None:
             while True:
                 time.sleep(3600)  # Run every hour
                 self.cleanup_expired_buckets(max_age_hours=24)
@@ -292,8 +277,7 @@ class RateLimiter:
         thread.start()
 
     def get_stats(self) -> Dict[str, int]:
-        """
-        Get rate limiter statistics.
+        """Get rate limiter statistics.
 
         Returns:
             Dictionary with statistics
@@ -301,7 +285,7 @@ class RateLimiter:
         with self.lock:
             return {
                 "total_buckets": len(self.buckets),
-                "configured_limits": len(self.limits)
+                "configured_limits": len(self.limits),
             }
 
 
@@ -310,8 +294,7 @@ _rate_limiter: Optional[RateLimiter] = None
 
 
 def get_rate_limiter() -> RateLimiter:
-    """
-    Get global rate limiter instance.
+    """Get global rate limiter instance.
 
     Returns:
         Global RateLimiter instance

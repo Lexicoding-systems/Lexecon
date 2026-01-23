@@ -1,5 +1,4 @@
-"""
-Decision Service - Orchestrates governance decision workflow.
+"""Decision Service - Orchestrates governance decision workflow.
 
 Receives decision requests, evaluates them using the policy engine,
 generates capability tokens, and records decisions in the ledger.
@@ -20,6 +19,8 @@ from lexecon.policy.engine import PolicyEngine
 try:
     from model_governance_pack.models import (
         Decision as CanonicalDecision,
+    )
+    from model_governance_pack.models import (
         DecisionOutcome,
         Risk,
         RiskLevel,
@@ -34,15 +35,13 @@ except ImportError:
 
 
 def generate_ulid() -> str:
-    """
-    Generate a ULID-like identifier for decision IDs.
+    """Generate a ULID-like identifier for decision IDs.
 
     Format: 26 uppercase alphanumeric characters.
     Uses timestamp + random component for sortability and uniqueness.
     """
-    import time
     import random
-    import string
+    import time
 
     # ULID encoding alphabet (Crockford's Base32)
     alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -72,8 +71,7 @@ def generate_risk_id(decision_id: str) -> str:
 
 
 class DecisionRequest:
-    """
-    Represents a governance decision request.
+    """Represents a governance decision request.
 
     This is the legacy request format maintained for backwards compatibility.
     Internally converts to canonical governance models when available.
@@ -86,11 +84,11 @@ class DecisionRequest:
         tool: str,
         user_intent: str,
         request_id: Optional[str] = None,
-        data_classes: list = None,
+        data_classes: Optional[list] = None,
         risk_level: int = 1,
         requested_output_type: str = "tool_action",
         policy_mode: str = "strict",
-        context: Dict[str, Any] = None,
+        context: Optional[Dict[str, Any]] = None,
     ):
         self.request_id = request_id or str(uuid.uuid4())
         self.actor = actor
@@ -128,10 +126,9 @@ class DecisionRequest:
         # Otherwise, infer type and format
         if self.actor in ["model", "ai", "assistant"]:
             return f"act_ai_agent:{self.actor}"
-        elif self.actor in ["user", "human"]:
+        if self.actor in ["user", "human"]:
             return f"act_human_user:{self.actor}"
-        else:
-            return f"act_system_service:{self.actor}"
+        return f"act_system_service:{self.actor}"
 
     def to_canonical_action_id(self) -> str:
         """Convert proposed_action to canonical action_id format."""
@@ -142,21 +139,19 @@ class DecisionRequest:
         action_lower = self.proposed_action.lower()
         if any(kw in action_lower for kw in ["read", "get", "fetch", "view"]):
             return f"axn_read:{self.proposed_action}"
-        elif any(kw in action_lower for kw in ["write", "create", "update", "set"]):
+        if any(kw in action_lower for kw in ["write", "create", "update", "set"]):
             return f"axn_write:{self.proposed_action}"
-        elif any(kw in action_lower for kw in ["execute", "run", "call"]):
+        if any(kw in action_lower for kw in ["execute", "run", "call"]):
             return f"axn_execute:{self.proposed_action}"
-        elif any(kw in action_lower for kw in ["delete", "remove"]):
+        if any(kw in action_lower for kw in ["delete", "remove"]):
             return f"axn_delete:{self.proposed_action}"
-        elif any(kw in action_lower for kw in ["send", "transmit", "post"]):
+        if any(kw in action_lower for kw in ["send", "transmit", "post"]):
             return f"axn_transmit:{self.proposed_action}"
-        else:
-            return f"axn_execute:{self.proposed_action}"
+        return f"axn_execute:{self.proposed_action}"
 
 
 class DecisionResponse:
-    """
-    Represents a governance decision response.
+    """Represents a governance decision response.
 
     This is the legacy response format maintained for backwards compatibility.
     Contains reference to canonical Decision when available.
@@ -230,8 +225,7 @@ class DecisionResponse:
 
 
 class DecisionService:
-    """
-    Decision service orchestrates the governance workflow.
+    """Decision service orchestrates the governance workflow.
 
     Evaluates requests, generates capability tokens, and maintains audit trail.
     Integrates with canonical governance models for audit-defensible records.
@@ -244,8 +238,7 @@ class DecisionService:
         identity=None,
         store_canonical: bool = True,
     ):
-        """
-        Initialize the decision service.
+        """Initialize the decision service.
 
         Args:
             policy_engine: Policy engine for evaluation
@@ -257,11 +250,10 @@ class DecisionService:
         self.ledger = ledger
         self.identity = identity
         self.store_canonical = store_canonical and GOVERNANCE_MODELS_AVAILABLE
-        self._canonical_decisions: Dict[str, "CanonicalDecision"] = {}
+        self._canonical_decisions: Dict[str, CanonicalDecision] = {}
 
     def evaluate_request(self, request: DecisionRequest) -> DecisionResponse:
-        """
-        Evaluate a decision request.
+        """Evaluate a decision request.
 
         Returns a decision response with permit/deny decision,
         reasoning, and capability token if approved.
@@ -292,7 +284,7 @@ class DecisionService:
         capability_token = None
         if evaluation.allowed:
             capability_token = self._generate_capability_token(
-                request=request, policy_version_hash=evaluation.policy_version_hash
+                request=request, policy_version_hash=evaluation.policy_version_hash,
             )
 
         # Create canonical Decision if models available
@@ -387,15 +379,14 @@ class DecisionService:
     def evaluate(
         self,
         actor: str,
-        action: str = None,
-        proposed_action: str = None,
-        tool: str = None,
-        user_intent: str = None,
-        data_classes: List[str] = None,
+        action: Optional[str] = None,
+        proposed_action: Optional[str] = None,
+        tool: Optional[str] = None,
+        user_intent: Optional[str] = None,
+        data_classes: Optional[List[str]] = None,
         risk_level: int = 1,
     ):
-        """
-        Evaluate a decision (convenience method).
+        """Evaluate a decision (convenience method).
 
         Can be used in two ways:
         1. Simple policy evaluation: evaluate(actor="...", action="...", data_classes=[...], risk_level=1)
@@ -415,14 +406,13 @@ class DecisionService:
                 risk_level=risk_level,
             )
             return self.evaluate_request(request)
-        else:
-            # Simple evaluation - return policy decision directly
-            return self.policy_engine.evaluate(
-                actor=actor, action=action, data_classes=data_classes, risk_level=risk_level
-            )
+        # Simple evaluation - return policy decision directly
+        return self.policy_engine.evaluate(
+            actor=actor, action=action, data_classes=data_classes, risk_level=risk_level,
+        )
 
     def _generate_capability_token(
-        self, request: DecisionRequest, policy_version_hash: str
+        self, request: DecisionRequest, policy_version_hash: str,
     ) -> Dict[str, Any]:
         """Generate an ephemeral capability token for approved action."""
         token_id = f"tok_{uuid.uuid4().hex[:16]}"
@@ -445,8 +435,7 @@ class DecisionService:
         limit: int = 100,
         outcome: Optional["DecisionOutcome"] = None,
     ) -> List["CanonicalDecision"]:
-        """
-        List canonical decisions with optional filtering.
+        """List canonical decisions with optional filtering.
 
         Args:
             limit: Maximum number of decisions to return
@@ -470,8 +459,7 @@ class DecisionService:
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Export canonical decisions for audit purposes.
+        """Export canonical decisions for audit purposes.
 
         Args:
             start_time: Filter decisions after this time

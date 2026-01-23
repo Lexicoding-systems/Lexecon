@@ -1,5 +1,4 @@
-"""
-Capability Tokens - Ephemeral authorization tokens for approved actions.
+"""Capability Tokens - Ephemeral authorization tokens for approved actions.
 
 Tokens are cryptographically signed and time-limited.
 """
@@ -12,8 +11,7 @@ from typing import Any, Dict, Optional
 
 @dataclass
 class CapabilityToken:
-    """
-    A capability token represents an ephemeral authorization.
+    """A capability token represents an ephemeral authorization.
 
     Tokens are granted for specific actions and have limited lifetime.
     """
@@ -27,7 +25,7 @@ class CapabilityToken:
 
     @classmethod
     def create(
-        cls, action: str, tool: str, policy_version_hash: str, ttl_minutes: int = 5
+        cls, action: str, tool: str, policy_version_hash: str, ttl_minutes: int = 5,
     ) -> "CapabilityToken":
         """Create a new capability token."""
         now = datetime.utcnow()

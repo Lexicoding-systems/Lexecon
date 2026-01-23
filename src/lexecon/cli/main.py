@@ -1,5 +1,4 @@
-"""
-CLI - Command-line interface for Lexecon.
+"""CLI - Command-line interface for Lexecon.
 
 Provides commands for initializing nodes, starting servers, and making decisions.
 """
@@ -22,7 +21,6 @@ from lexecon.policy.engine import PolicyEngine, PolicyMode
 @click.version_option(version="0.1.0")
 def cli():
     """Lexecon - Lexical Governance Protocol"""
-    pass
 
 
 @cli.command()
@@ -86,7 +84,6 @@ def decide(
     intent: Optional[str],
 ):
     """Make a governance decision."""
-
     # Load request from file or CLI args
     if json_file:
         with open(json_file) as f:
@@ -100,7 +97,7 @@ def decide(
         }
     else:
         click.echo(
-            "Error: Provide either --json or all of (--actor, --action, --tool, --intent)", err=True
+            "Error: Provide either --json or all of (--actor, --action, --tool, --intent)", err=True,
         )
         sys.exit(1)
 

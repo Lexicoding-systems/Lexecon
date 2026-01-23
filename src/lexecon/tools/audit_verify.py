@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Audit Packet Verification Tool
+"""Audit Packet Verification Tool
 
 Verifies the integrity and completeness of Lexecon audit export packages.
 """
@@ -10,12 +9,11 @@ import hashlib
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 class AuditVerificationError(Exception):
     """Base exception for verification failures."""
-    pass
 
 
 class AuditVerifier:
@@ -28,8 +26,7 @@ class AuditVerifier:
         self.manifest: Dict = {}
 
     def verify(self) -> bool:
-        """
-        Verify audit packet integrity.
+        """Verify audit packet integrity.
 
         Returns:
             True if verification passes, False otherwise
@@ -51,10 +48,10 @@ class AuditVerifier:
                 print("✓")
             except AuditVerificationError as e:
                 print("✗")
-                self.errors.append(f"{check_name}: {str(e)}")
+                self.errors.append(f"{check_name}: {e!s}")
             except Exception as e:
                 print("✗")
-                self.errors.append(f"{check_name}: Unexpected error: {str(e)}")
+                self.errors.append(f"{check_name}: Unexpected error: {e!s}")
 
         self._print_results()
         return len(self.errors) == 0
@@ -82,17 +79,17 @@ class AuditVerifier:
         """Load and verify manifest structure."""
         try:
             if self.packet_path.is_file():
-                with open(self.packet_path, "r") as f:
+                with open(self.packet_path) as f:
                     data = json.load(f)
                     self.manifest = data.get("manifest", {})
                     if not self.manifest:
                         raise AuditVerificationError("Manifest not found in packet file")
             else:
                 manifest_path = self.packet_path / "manifest.json"
-                with open(manifest_path, "r") as f:
+                with open(manifest_path) as f:
                     self.manifest = json.load(f)
         except json.JSONDecodeError as e:
-            raise AuditVerificationError(f"Invalid JSON in manifest: {str(e)}")
+            raise AuditVerificationError(f"Invalid JSON in manifest: {e!s}")
         except FileNotFoundError:
             raise AuditVerificationError("Manifest file not found")
 
@@ -119,7 +116,7 @@ class AuditVerifier:
 
         if integrity["algorithm"] != "SHA-256":
             self.warnings.append(
-                f"Unexpected hash algorithm: {integrity['algorithm']} (expected SHA-256)"
+                f"Unexpected hash algorithm: {integrity['algorithm']} (expected SHA-256)",
             )
 
     def _verify_required_sections(self) -> None:
@@ -172,7 +169,7 @@ class AuditVerifier:
             if actual_hash != expected_hash:
                 self.errors.append(
                     f"Artifact {artifact_id} checksum mismatch: "
-                    f"expected {expected_hash[:16]}..., got {actual_hash[:16]}..."
+                    f"expected {expected_hash[:16]}..., got {actual_hash[:16]}...",
                 )
             else:
                 verified_count += 1
@@ -193,7 +190,7 @@ class AuditVerifier:
             # Note: This is a simplified check. Full verification would
             # require canonical JSON serialization
             self.warnings.append(
-                "Root checksum verification for single-file packet is simplified"
+                "Root checksum verification for single-file packet is simplified",
             )
             return
 
@@ -204,7 +201,7 @@ class AuditVerifier:
         # In production, this would use a more sophisticated deterministic approach
         if actual_root != expected_root:
             self.warnings.append(
-                f"Root checksum mismatch (may be due to non-deterministic serialization)"
+                "Root checksum mismatch (may be due to non-deterministic serialization)",
             )
             print(f"\n  Expected: {expected_root[:32]}...")
             print(f"  Actual:   {actual_root[:32]}...")
@@ -243,7 +240,7 @@ class AuditVerifier:
                 f
                 for f in self.packet_path.rglob("*")
                 if f.is_file() and f.name not in ["checksum.sha256"]
-            ]
+            ],
         )
 
         for file_path in all_files:
@@ -274,7 +271,7 @@ class AuditVerifier:
         print(f"  Version: {self.manifest.get('packet_version', 'N/A')}")
 
         contents = self.manifest.get("contents", {})
-        print(f"\nContents:")
+        print("\nContents:")
         print(f"  Decisions: {contents.get('decision_count', 0)}")
         print(f"  Evidence: {contents.get('evidence_count', 0)}")
         print(f"  Risks: {contents.get('risk_count', 0)}")
@@ -322,7 +319,7 @@ Examples:
         success = verifier.verify()
         sys.exit(0 if success else 1)
     except Exception as e:
-        print(f"\n❌ Verification failed with exception: {str(e)}")
+        print(f"\n❌ Verification failed with exception: {e!s}")
         if args.verbose:
             import traceback
 

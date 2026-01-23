@@ -1,12 +1,10 @@
-"""
-Decision Responsibility Tracker
+"""Decision Responsibility Tracker
 
 Tracks WHO made decisions, WHY, and maintains accountability chains.
 Critical for audits, legal liability, and EU AI Act Article 14 compliance.
 """
 
-import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
@@ -32,8 +30,7 @@ class ResponsibilityLevel(Enum):
 
 @dataclass
 class ResponsibilityRecord:
-    """
-    Records who is responsible for a decision and why.
+    """Records who is responsible for a decision and why.
 
     Critical for legal liability and compliance audits.
     """
@@ -71,13 +68,12 @@ class ResponsibilityRecord:
         return {
             **asdict(self),
             "decision_maker": self.decision_maker.value,
-            "responsibility_level": self.responsibility_level.value
+            "responsibility_level": self.responsibility_level.value,
         }
 
 
 class ResponsibilityTracker:
-    """
-    Tracks decision responsibility for compliance and liability.
+    """Tracks decision responsibility for compliance and liability.
 
     Answers critical questions:
     - Who decided this?
@@ -87,8 +83,7 @@ class ResponsibilityTracker:
     """
 
     def __init__(self, storage=None):
-        """
-        Initialize responsibility tracker.
+        """Initialize responsibility tracker.
 
         Args:
             storage: Optional ResponsibilityStorage instance for persistence
@@ -115,10 +110,9 @@ class ResponsibilityTracker:
         escalated_to: Optional[str] = None,
         review_required: bool = False,
         liability_accepted: bool = False,
-        liability_signature: Optional[str] = None
+        liability_signature: Optional[str] = None,
     ) -> ResponsibilityRecord:
-        """
-        Record who is responsible for a decision.
+        """Record who is responsible for a decision.
 
         Call this for EVERY decision to maintain accountability.
         """
@@ -138,7 +132,7 @@ class ResponsibilityTracker:
             escalated_to=escalated_to,
             review_required=review_required,
             liability_accepted=liability_accepted,
-            liability_signature=liability_signature
+            liability_signature=liability_signature,
         )
 
         self.records.append(record)
@@ -153,7 +147,7 @@ class ResponsibilityTracker:
         self,
         record_id: str,
         reviewed_by: str,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> bool:
         """Mark a decision as reviewed."""
         for record in self.records:
@@ -166,15 +160,14 @@ class ResponsibilityTracker:
                     self.storage.update_record(
                         record_id,
                         reviewed_by=reviewed_by,
-                        reviewed_at=record.reviewed_at
+                        reviewed_at=record.reviewed_at,
                     )
 
                 return True
         return False
 
     def get_responsibility_chain(self, decision_id: str) -> List[ResponsibilityRecord]:
-        """
-        Get the full chain of responsibility for a decision.
+        """Get the full chain of responsibility for a decision.
 
         Shows delegations, escalations, and reviews.
         """
@@ -195,10 +188,9 @@ class ResponsibilityTracker:
     def generate_accountability_report(
         self,
         start_date: Optional[str] = None,
-        end_date: Optional[str] = None
+        end_date: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Generate accountability report.
+        """Generate accountability report.
 
         Critical for audits and legal defense.
         """
@@ -251,7 +243,7 @@ class ResponsibilityTracker:
             "generated_at": datetime.utcnow().isoformat(),
             "period": {
                 "start": start_date or "inception",
-                "end": end_date or "present"
+                "end": end_date or "present",
             },
             "summary": {
                 "total_decisions": total,
@@ -261,7 +253,7 @@ class ResponsibilityTracker:
                 "override_rate": (overrides / total * 100) if total > 0 else 0,
                 "pending_reviews": pending_reviews,
                 "liability_accepted_count": liability_accepted,
-                "liability_acceptance_rate": (liability_accepted / total * 100) if total > 0 else 0
+                "liability_acceptance_rate": (liability_accepted / total * 100) if total > 0 else 0,
             },
             "top_responsible_parties": [
                 {"party": party, "decision_count": count}
@@ -273,13 +265,12 @@ class ResponsibilityTracker:
                 ),
                 "review_process_active": any(r.reviewed_by for r in records),
                 "liability_framework_active": liability_accepted > 0,
-                "delegation_chain_documented": any(r.delegated_from for r in records)
-            }
+                "delegation_chain_documented": any(r.delegated_from for r in records),
+            },
         }
 
     def export_for_legal(self, decision_id: str) -> Dict[str, Any]:
-        """
-        Export responsibility chain for legal proceedings.
+        """Export responsibility chain for legal proceedings.
 
         Provides full accountability trail with signatures.
         """
@@ -301,12 +292,12 @@ class ResponsibilityTracker:
                 "human_oversight_documented": any(
                     r.decision_maker != DecisionMaker.AI_SYSTEM for r in chain
                 ),
-                "liability_accepted": any(r.liability_accepted for r in chain)
-            }
+                "liability_accepted": any(r.liability_accepted for r in chain),
+            },
         }
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize all records."""
         return {
-            "records": [r.to_dict() for r in self.records]
+            "records": [r.to_dict() for r in self.records],
         }

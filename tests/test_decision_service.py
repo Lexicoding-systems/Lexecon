@@ -50,10 +50,10 @@ class TestDecisionRequest:
     def test_request_generates_uuid_if_no_id(self):
         """Test that request generates UUID if no ID provided."""
         request1 = DecisionRequest(
-            actor="model", proposed_action="action1", tool="tool1", user_intent="intent1"
+            actor="model", proposed_action="action1", tool="tool1", user_intent="intent1",
         )
         request2 = DecisionRequest(
-            actor="model", proposed_action="action2", tool="tool2", user_intent="intent2"
+            actor="model", proposed_action="action2", tool="tool2", user_intent="intent2",
         )
 
         # Should be different UUIDs
@@ -127,7 +127,7 @@ class TestDecisionRequest:
     def test_request_has_timestamp(self):
         """Test that request includes timestamp."""
         request = DecisionRequest(
-            actor="model", proposed_action="action", tool="tool", user_intent="intent"
+            actor="model", proposed_action="action", tool="tool", user_intent="intent",
         )
 
         assert hasattr(request, "timestamp")
@@ -270,7 +270,7 @@ class TestDecisionResponse:
     def test_response_allowed_field_for_deny(self):
         """Test that 'allowed' field is False for deny."""
         response = DecisionResponse(
-            request_id="req_deny", decision="deny", reasoning="No", policy_version_hash="hash"
+            request_id="req_deny", decision="deny", reasoning="No", policy_version_hash="hash",
         )
 
         data = response.to_dict()
@@ -279,7 +279,7 @@ class TestDecisionResponse:
     def test_response_signature_defaults_to_empty(self):
         """Test that signature defaults to empty string in serialization."""
         response = DecisionResponse(
-            request_id="req_nosig", decision="permit", reasoning="OK", policy_version_hash="hash"
+            request_id="req_nosig", decision="permit", reasoning="OK", policy_version_hash="hash",
         )
 
         data = response.to_dict()
@@ -357,7 +357,7 @@ class TestDecisionService:
     def test_capability_token_generation(self, service):
         """Test that capability token is generated for permitted actions."""
         request = DecisionRequest(
-            actor="model", proposed_action="search", tool="web_search", user_intent="Search"
+            actor="model", proposed_action="search", tool="web_search", user_intent="Search",
         )
 
         response = service.evaluate_request(request)
@@ -372,7 +372,7 @@ class TestDecisionService:
     def test_ledger_entry_creation(self, full_service):
         """Test that ledger entry is created."""
         request = DecisionRequest(
-            actor="model", proposed_action="search", tool="web", user_intent="Test"
+            actor="model", proposed_action="search", tool="web", user_intent="Test",
         )
 
         response = full_service.evaluate_request(request)
@@ -388,7 +388,7 @@ class TestDecisionService:
     def test_signature_generation(self, full_service):
         """Test that decision is signed."""
         request = DecisionRequest(
-            actor="model", proposed_action="search", tool="web", user_intent="Test"
+            actor="model", proposed_action="search", tool="web", user_intent="Test",
         )
 
         response = full_service.evaluate_request(request)
@@ -479,7 +479,7 @@ class TestDecisionService:
     def test_policy_version_hash_in_response(self, service):
         """Test that response includes policy version hash."""
         request = DecisionRequest(
-            actor="model", proposed_action="search", tool="web", user_intent="Test"
+            actor="model", proposed_action="search", tool="web", user_intent="Test",
         )
 
         response = service.evaluate_request(request)
@@ -490,7 +490,7 @@ class TestDecisionService:
     def test_reasoning_in_response(self, service):
         """Test that response includes reasoning."""
         request = DecisionRequest(
-            actor="model", proposed_action="search", tool="web", user_intent="Test"
+            actor="model", proposed_action="search", tool="web", user_intent="Test",
         )
 
         response = service.evaluate_request(request)
@@ -516,7 +516,7 @@ class TestDecisionWorkflow:
 
         # Make decision
         request = DecisionRequest(
-            actor="user", proposed_action="read", tool="file_system", user_intent="Read file"
+            actor="user", proposed_action="read", tool="file_system", user_intent="Read file",
         )
 
         response = service.evaluate_request(request)
@@ -543,7 +543,7 @@ class TestDecisionWorkflow:
         service = DecisionService(engine, ledger, identity)
 
         request = DecisionRequest(
-            actor="unknown", proposed_action="forbidden", tool="admin", user_intent="Test"
+            actor="unknown", proposed_action="forbidden", tool="admin", user_intent="Test",
         )
 
         response = service.evaluate_request(request)
@@ -568,12 +568,12 @@ class TestDecisionWorkflow:
         # Make multiple decisions
         requests = [
             DecisionRequest(
-                actor="bot", proposed_action="execute", tool=f"tool{i}", user_intent=f"Task {i}"
+                actor="bot", proposed_action="execute", tool=f"tool{i}", user_intent=f"Task {i}",
             )
             for i in range(3)
         ]
 
-        responses = [service.evaluate_request(req) for req in requests]
+        [service.evaluate_request(req) for req in requests]
 
         # Check audit report
         report = ledger.generate_audit_report()
@@ -596,7 +596,7 @@ class TestDecisionWorkflow:
         # Simulate concurrent requests
         requests = [
             DecisionRequest(
-                actor=f"actor{i}", proposed_action="action", tool="tool", user_intent="Intent"
+                actor=f"actor{i}", proposed_action="action", tool="tool", user_intent="Intent",
             )
             for i in range(10)
         ]
@@ -624,7 +624,7 @@ class TestEdgeCases:
         service = DecisionService(engine)
 
         request = DecisionRequest(
-            actor="model", proposed_action="action", tool="tool", user_intent=""
+            actor="model", proposed_action="action", tool="tool", user_intent="",
         )
 
         response = service.evaluate_request(request)
@@ -637,7 +637,7 @@ class TestEdgeCases:
 
         long_intent = "A" * 10000
         request = DecisionRequest(
-            actor="model", proposed_action="action", tool="tool", user_intent=long_intent
+            actor="model", proposed_action="action", tool="tool", user_intent=long_intent,
         )
 
         response = service.evaluate_request(request)
@@ -664,7 +664,7 @@ class TestEdgeCases:
         service = DecisionService(engine)  # No ledger
 
         request = DecisionRequest(
-            actor="model", proposed_action="action", tool="tool", user_intent="Test"
+            actor="model", proposed_action="action", tool="tool", user_intent="Test",
         )
 
         response = service.evaluate_request(request)
@@ -679,7 +679,7 @@ class TestEdgeCases:
         service = DecisionService(engine, ledger)  # No identity
 
         request = DecisionRequest(
-            actor="model", proposed_action="action", tool="tool", user_intent="Test"
+            actor="model", proposed_action="action", tool="tool", user_intent="Test",
         )
 
         response = service.evaluate_request(request)
@@ -745,7 +745,7 @@ class TestCanonicalGovernanceModels:
         """Test AI agent actor conversion."""
         for actor in ["model", "ai", "assistant"]:
             request = DecisionRequest(
-                actor=actor, proposed_action="x", tool="t", user_intent="u"
+                actor=actor, proposed_action="x", tool="t", user_intent="u",
             )
             assert request.to_canonical_actor_id().startswith("act_ai_agent:")
 
@@ -753,7 +753,7 @@ class TestCanonicalGovernanceModels:
         """Test human actor conversion."""
         for actor in ["user", "human"]:
             request = DecisionRequest(
-                actor=actor, proposed_action="x", tool="t", user_intent="u"
+                actor=actor, proposed_action="x", tool="t", user_intent="u",
             )
             assert request.to_canonical_actor_id().startswith("act_human_user:")
 
@@ -784,7 +784,7 @@ class TestCanonicalGovernanceModels:
         """Test read action conversion."""
         for action in ["read_file", "get_data", "fetch_content", "view_resource"]:
             request = DecisionRequest(
-                actor="model", proposed_action=action, tool="t", user_intent="u"
+                actor="model", proposed_action=action, tool="t", user_intent="u",
             )
             assert request.to_canonical_action_id().startswith("axn_read:")
 
@@ -792,7 +792,7 @@ class TestCanonicalGovernanceModels:
         """Test write action conversion."""
         for action in ["write_file", "create_record", "update_data", "set_value"]:
             request = DecisionRequest(
-                actor="model", proposed_action=action, tool="t", user_intent="u"
+                actor="model", proposed_action=action, tool="t", user_intent="u",
             )
             assert request.to_canonical_action_id().startswith("axn_write:")
 
@@ -800,7 +800,7 @@ class TestCanonicalGovernanceModels:
         """Test execute action conversion."""
         for action in ["execute_command", "run_script", "call_api"]:
             request = DecisionRequest(
-                actor="model", proposed_action=action, tool="t", user_intent="u"
+                actor="model", proposed_action=action, tool="t", user_intent="u",
             )
             assert request.to_canonical_action_id().startswith("axn_execute:")
 
@@ -808,7 +808,7 @@ class TestCanonicalGovernanceModels:
         """Test delete action conversion."""
         for action in ["delete_file", "remove_entry"]:
             request = DecisionRequest(
-                actor="model", proposed_action=action, tool="t", user_intent="u"
+                actor="model", proposed_action=action, tool="t", user_intent="u",
             )
             assert request.to_canonical_action_id().startswith("axn_delete:")
 
@@ -816,7 +816,7 @@ class TestCanonicalGovernanceModels:
         """Test transmit action conversion."""
         for action in ["send_email", "transmit_data", "post_message"]:
             request = DecisionRequest(
-                actor="model", proposed_action=action, tool="t", user_intent="u"
+                actor="model", proposed_action=action, tool="t", user_intent="u",
             )
             assert request.to_canonical_action_id().startswith("axn_transmit:")
 
@@ -863,6 +863,7 @@ class TestCanonicalGovernanceModels:
     def test_ulid_sortability(self):
         """Test that generated ULIDs are chronologically sortable."""
         import time
+
         from lexecon.decision.service import generate_decision_id
 
         ids = []
@@ -1075,7 +1076,7 @@ class TestDecisionServiceHelpers:
             request_id="req_123",
             decision="allowed",
             reasoning="Test decision",
-            policy_version_hash="abc123"
+            policy_version_hash="abc123",
         )
         # Don't set _canonical_decision
 
@@ -1106,24 +1107,24 @@ class TestDecisionServiceFiltering:
             actor="user",
             proposed_action="read",
             tool="database",
-            user_intent="Read data"
+            user_intent="Read data",
         )
         request2 = DecisionRequest(
             request_id="req_2",
             actor="user",
             proposed_action="delete",
             tool="database",
-            user_intent="Delete data"
+            user_intent="Delete data",
         )
 
-        response1 = service.evaluate_request(request1)
-        response2 = service.evaluate_request(request2)
+        service.evaluate_request(request1)
+        service.evaluate_request(request2)
 
         # Get decisions filtered by outcome (if governance models available)
         try:
             from model_governance_pack.models import DecisionOutcome
             approved_decisions = service.list_canonical_decisions(
-                limit=10, outcome=DecisionOutcome.APPROVED
+                limit=10, outcome=DecisionOutcome.APPROVED,
             )
             # Should have decisions
             assert isinstance(approved_decisions, list)
@@ -1141,7 +1142,7 @@ class TestDecisionServiceFiltering:
             actor="user",
             proposed_action="read",
             tool="database",
-            user_intent="Read data"
+            user_intent="Read data",
         )
         service.evaluate_request(request)
 
@@ -1152,7 +1153,7 @@ class TestDecisionServiceFiltering:
 
         decisions = service.export_decisions_for_audit(
             start_time=start_time,
-            end_time=end_time
+            end_time=end_time,
         )
 
         # Should have the decision we just made
@@ -1168,7 +1169,7 @@ class TestDecisionServiceFiltering:
             actor="user",
             proposed_action="read",
             tool="database",
-            user_intent="Read data"
+            user_intent="Read data",
         )
         service.evaluate_request(request)
 
@@ -1187,7 +1188,7 @@ class TestDecisionServiceFiltering:
             actor="user",
             proposed_action="read",
             tool="database",
-            user_intent="Read data"
+            user_intent="Read data",
         )
         service.evaluate_request(request)
 

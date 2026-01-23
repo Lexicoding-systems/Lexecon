@@ -1,5 +1,4 @@
-"""
-Security Headers Middleware for FastAPI.
+"""Security Headers Middleware for FastAPI.
 
 Adds comprehensive security headers to all HTTP responses to protect against
 common web vulnerabilities:
@@ -12,14 +11,14 @@ common web vulnerabilities:
 Implements OWASP security best practices.
 """
 
-from fastapi import Request, Response
-from typing import Callable, Dict, Optional
 import os
+from typing import Callable, Dict, Optional
+
+from fastapi import Request, Response
 
 
 class SecurityHeadersMiddleware:
-    """
-    FastAPI middleware that adds security headers to all responses.
+    """FastAPI middleware that adds security headers to all responses.
 
     Headers added:
     - Strict-Transport-Security (HSTS)
@@ -33,8 +32,7 @@ class SecurityHeadersMiddleware:
     """
 
     def __init__(self, config: Optional[Dict[str, str]] = None):
-        """
-        Initialize security headers middleware.
+        """Initialize security headers middleware.
 
         Args:
             config: Optional custom header configuration
@@ -43,8 +41,7 @@ class SecurityHeadersMiddleware:
         self.config = config or self._default_headers()
 
     def _default_headers(self) -> Dict[str, str]:
-        """
-        Get default security headers configuration.
+        """Get default security headers configuration.
 
         Returns:
             Dictionary of header name to value
@@ -106,8 +103,7 @@ class SecurityHeadersMiddleware:
         return headers
 
     async def __call__(self, request: Request, call_next: Callable) -> Response:
-        """
-        Process request and add security headers to response.
+        """Process request and add security headers to response.
 
         Args:
             request: FastAPI request object
@@ -132,8 +128,7 @@ class SecurityHeadersMiddleware:
         return response
 
     def _is_sensitive_page(self, request: Request) -> bool:
-        """
-        Check if request is for a sensitive page that should not be cached.
+        """Check if request is for a sensitive page that should not be cached.
 
         Args:
             request: FastAPI request object
@@ -163,17 +158,13 @@ class SecurityHeadersMiddleware:
             return True
 
         # Export and audit pages
-        if any(word in path for word in ["export", "audit", "evidence"]):
-            return True
-
-        return False
+        return bool(any(word in path for word in ["export", "audit", "evidence"]))
 
 
 def create_security_headers_middleware(
-    config: Optional[Dict[str, str]] = None
+    config: Optional[Dict[str, str]] = None,
 ) -> SecurityHeadersMiddleware:
-    """
-    Create security headers middleware instance.
+    """Create security headers middleware instance.
 
     Args:
         config: Optional custom header configuration
@@ -185,8 +176,7 @@ def create_security_headers_middleware(
 
 
 def get_recommended_csp_for_environment(env: str = "production") -> str:
-    """
-    Get recommended Content-Security-Policy for environment.
+    """Get recommended Content-Security-Policy for environment.
 
     Args:
         env: Environment name (development, production)
@@ -205,17 +195,16 @@ def get_recommended_csp_for_environment(env: str = "production") -> str:
             "connect-src 'self' ws: wss:; "
             "frame-ancestors 'none'"
         )
-    else:
-        # Strict for production
-        return (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https:; "
-            "font-src 'self'; "
-            "connect-src 'self'; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'; "
-            "upgrade-insecure-requests"
-        )
+    # Strict for production
+    return (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "upgrade-insecure-requests"
+    )
