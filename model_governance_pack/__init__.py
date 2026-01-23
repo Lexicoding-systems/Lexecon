@@ -1,5 +1,4 @@
-"""
-Model Governance Pack
+"""Model Governance Pack
 
 Canonical governance models and schemas for the Lexecon protocol.
 """

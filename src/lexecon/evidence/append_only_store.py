@@ -1,5 +1,4 @@
-"""
-Append-only storage adapter for evidence artifacts.
+"""Append-only storage adapter for evidence artifacts.
 
 Provides an optional layer that enforces append-only semantics,
 preventing updates or deletes of evidence artifacts after creation.
@@ -8,17 +7,15 @@ Feature-flagged: Must be explicitly enabled. When disabled, behaves
 as pass-through to underlying storage.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 class AppendOnlyViolationError(Exception):
     """Raised when attempting to modify or delete in append-only mode."""
-    pass
 
 
 class AppendOnlyStore:
-    """
-    Append-only wrapper for evidence artifact storage.
+    """Append-only wrapper for evidence artifact storage.
 
     When enabled, prevents updates and deletes of existing artifacts.
     When disabled, acts as transparent pass-through.
@@ -35,8 +32,7 @@ class AppendOnlyStore:
         underlying_store: Dict[str, Any],
         enabled: bool = False,
     ):
-        """
-        Initialize append-only store wrapper.
+        """Initialize append-only store wrapper.
 
         Args:
             underlying_store: The actual storage dictionary
@@ -64,8 +60,7 @@ class AppendOnlyStore:
         self._initial_keys = set()
 
     def __setitem__(self, key: str, value: Any):
-        """
-        Set item in store.
+        """Set item in store.
 
         Args:
             key: Artifact ID
@@ -76,7 +71,7 @@ class AppendOnlyStore:
         """
         if self._enabled and key in self._store:
             raise AppendOnlyViolationError(
-                f"Cannot update existing artifact '{key}' in append-only mode"
+                f"Cannot update existing artifact '{key}' in append-only mode",
             )
         self._store[key] = value
 
@@ -85,15 +80,14 @@ class AppendOnlyStore:
         return self._store[key]
 
     def __delitem__(self, key: str):
-        """
-        Delete item from store.
+        """Delete item from store.
 
         Raises:
             AppendOnlyViolationError: If append-only enabled
         """
         if self._enabled:
             raise AppendOnlyViolationError(
-                f"Cannot delete artifact '{key}' in append-only mode"
+                f"Cannot delete artifact '{key}' in append-only mode",
             )
         del self._store[key]
 
@@ -122,8 +116,7 @@ class AppendOnlyStore:
         return self._store.items()
 
     def update_allowed(self, key: str) -> bool:
-        """
-        Check if update is allowed for key.
+        """Check if update is allowed for key.
 
         Args:
             key: Artifact ID
@@ -136,8 +129,7 @@ class AppendOnlyStore:
         return key not in self._store
 
     def delete_allowed(self, key: str) -> bool:
-        """
-        Check if delete is allowed for key.
+        """Check if delete is allowed for key.
 
         Args:
             key: Artifact ID
@@ -149,16 +141,14 @@ class AppendOnlyStore:
 
 
 class AppendOnlyEvidenceStore:
-    """
-    Append-only wrapper specifically for EvidenceService.
+    """Append-only wrapper specifically for EvidenceService.
 
     Wraps the artifact storage dictionary and indices to enforce
     append-only semantics when enabled.
     """
 
     def __init__(self, evidence_service, enabled: bool = False):
-        """
-        Initialize append-only wrapper for EvidenceService.
+        """Initialize append-only wrapper for EvidenceService.
 
         Args:
             evidence_service: EvidenceService instance to wrap
@@ -172,7 +162,7 @@ class AppendOnlyEvidenceStore:
             # Replace internal dict with append-only wrapper
             self.service._artifacts = AppendOnlyStore(
                 self.service._artifacts,
-                enabled=True
+                enabled=True,
             )
 
     @property
@@ -187,7 +177,7 @@ class AppendOnlyEvidenceStore:
             if not isinstance(self.service._artifacts, AppendOnlyStore):
                 self.service._artifacts = AppendOnlyStore(
                     self.service._artifacts,
-                    enabled=True
+                    enabled=True,
                 )
             else:
                 self.service._artifacts.enable()
@@ -200,8 +190,7 @@ class AppendOnlyEvidenceStore:
                 self.service._artifacts.disable()
 
     def verify_integrity(self) -> bool:
-        """
-        Verify that no artifacts have been modified.
+        """Verify that no artifacts have been modified.
 
         Returns:
             True if all artifacts match their declared hashes
@@ -212,9 +201,9 @@ class AppendOnlyEvidenceStore:
             else self.service._artifacts
         )
 
-        for artifact_id, artifact in artifacts.items():
+        for _artifact_id, artifact in artifacts.items():
             # Recompute hash
-            if hasattr(artifact, 'content') and hasattr(artifact, 'sha256_hash'):
+            if hasattr(artifact, "content") and hasattr(artifact, "sha256_hash"):
                 from .service import compute_sha256
                 actual_hash = compute_sha256(artifact.content)
                 if actual_hash != artifact.sha256_hash:

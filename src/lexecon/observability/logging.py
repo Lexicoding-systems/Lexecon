@@ -76,10 +76,7 @@ def configure_logging(
         root.removeHandler(handler)
 
     # Create handler
-    if output == "stdout":
-        handler = logging.StreamHandler(sys.stdout)
-    else:
-        handler = logging.FileHandler(output)
+    handler = logging.StreamHandler(sys.stdout) if output == "stdout" else logging.FileHandler(output)
 
     # Set formatter
     if format == "json":

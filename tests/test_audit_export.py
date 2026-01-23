@@ -4,8 +4,10 @@ Tests for Audit Export Service (Phase 8).
 Tests comprehensive governance data export functionality.
 """
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
-from datetime import datetime, timezone, timedelta
+
 from lexecon.audit_export.service import (
     AuditExportService,
     ExportFormat,
@@ -23,18 +25,18 @@ def export_service():
 @pytest.fixture
 def mock_risk_service():
     """Create a mock risk service with test data."""
-    from lexecon.risk.service import RiskService, RiskDimensions
+    from lexecon.risk.service import RiskDimensions, RiskService
 
     service = RiskService()
 
     # Add test risks
     service.assess_risk(
         decision_id="dec_001",
-        dimensions=RiskDimensions(security=80, privacy=60, compliance=40)
+        dimensions=RiskDimensions(security=80, privacy=60, compliance=40),
     )
     service.assess_risk(
         decision_id="dec_002",
-        dimensions=RiskDimensions(security=30, privacy=20, compliance=10)
+        dimensions=RiskDimensions(security=30, privacy=20, compliance=10),
     )
 
     return service
@@ -44,7 +46,7 @@ def mock_risk_service():
 def mock_escalation_service():
     """Create a mock escalation service with test data."""
     from lexecon.escalation.service import EscalationService
-    from model_governance_pack.models import EscalationTrigger, EscalationPriority
+    from model_governance_pack.models import EscalationPriority, EscalationTrigger
 
     service = EscalationService()
 
@@ -53,7 +55,7 @@ def mock_escalation_service():
         decision_id="dec_001",
         trigger=EscalationTrigger.RISK_THRESHOLD,
         escalated_to=["manager@example.com"],
-        priority=EscalationPriority.HIGH
+        priority=EscalationPriority.HIGH,
     )
 
     return service
@@ -62,10 +64,11 @@ def mock_escalation_service():
 @pytest.fixture
 def mock_override_service():
     """Create a mock override service with test data."""
+    import uuid
+    from datetime import datetime, timezone
+
     from lexecon.override.service import OverrideService
     from model_governance_pack.models import Override, OverrideType
-    from datetime import datetime, timezone
-    import uuid
 
     service = OverrideService()
 
@@ -77,7 +80,7 @@ def mock_override_service():
         authorized_by="admin@example.com",
         justification="Emergency override due to critical business need",
         timestamp=datetime.now(timezone.utc),
-        evidence_ids=[]
+        evidence_ids=[],
     )
 
     # Add to service's internal storage
@@ -100,7 +103,7 @@ def mock_evidence_service():
         artifact_type=ArtifactType.DECISION_LOG,
         content="Test decision log content",
         source="test_system",
-        related_decision_ids=["dec_001"]
+        related_decision_ids=["dec_001"],
     )
 
     return service
@@ -127,7 +130,7 @@ def mock_ledger():
         "request_id": "req_001",
         "decision": "allow",
         "actor": "system",
-        "action": "test_action"
+        "action": "test_action",
     })
 
     return ledger
@@ -146,7 +149,7 @@ class TestAuditExportService:
             requester="auditor@example.com",
             purpose="Regulatory compliance audit",
             scope=ExportScope.ALL,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         assert request is not None
@@ -165,14 +168,14 @@ class TestAuditExportService:
         mock_override_service,
         mock_evidence_service,
         mock_compliance_service,
-        mock_ledger
+        mock_ledger,
     ):
         """Test generating complete export with all data."""
         request = export_service.create_export_request(
             requester="auditor@example.com",
             purpose="Complete audit",
             scope=ExportScope.ALL,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
@@ -182,7 +185,7 @@ class TestAuditExportService:
             override_service=mock_override_service,
             evidence_service=mock_evidence_service,
             compliance_service=mock_compliance_service,
-            ledger=mock_ledger
+            ledger=mock_ledger,
         )
 
         assert package is not None
@@ -207,12 +210,12 @@ class TestAuditExportService:
             requester="risk_analyst@example.com",
             purpose="Risk analysis",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         assert package is not None
@@ -226,7 +229,7 @@ class TestAuditExportService:
         self,
         export_service,
         mock_risk_service,
-        mock_ledger
+        mock_ledger,
     ):
         """Test exporting with date range filter."""
         now = datetime.now(timezone.utc)
@@ -239,13 +242,13 @@ class TestAuditExportService:
             scope=ExportScope.ALL,
             format=ExportFormat.JSON,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
         )
 
         package = export_service.generate_export(
             request=request,
             risk_service=mock_risk_service,
-            ledger=mock_ledger
+            ledger=mock_ledger,
         )
 
         assert package is not None
@@ -258,12 +261,12 @@ class TestAuditExportService:
             requester="dev@example.com",
             purpose="Testing",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         assert package.format == ExportFormat.JSON
@@ -276,12 +279,12 @@ class TestAuditExportService:
             requester="analyst@example.com",
             purpose="Data analysis",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.CSV
+            format=ExportFormat.CSV,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         assert package.format == ExportFormat.CSV
@@ -294,12 +297,12 @@ class TestAuditExportService:
             requester="doc_writer@example.com",
             purpose="Documentation",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.MARKDOWN
+            format=ExportFormat.MARKDOWN,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         assert package.format == ExportFormat.MARKDOWN
@@ -312,12 +315,12 @@ class TestAuditExportService:
             requester="reporter@example.com",
             purpose="Report generation",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.HTML
+            format=ExportFormat.HTML,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         assert package.format == ExportFormat.HTML
@@ -329,21 +332,21 @@ class TestAuditExportService:
         export_service,
         mock_risk_service,
         mock_escalation_service,
-        mock_override_service
+        mock_override_service,
     ):
         """Test statistics calculation in export."""
         request = export_service.create_export_request(
             requester="auditor@example.com",
             purpose="Statistics test",
             scope=ExportScope.ALL,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
             risk_service=mock_risk_service,
             escalation_service=mock_escalation_service,
-            override_service=mock_override_service
+            override_service=mock_override_service,
         )
 
         stats = package.data["statistics"]
@@ -357,12 +360,12 @@ class TestAuditExportService:
             requester="security@example.com",
             purpose="Integrity verification",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         assert package.checksum is not None
@@ -379,12 +382,12 @@ class TestAuditExportService:
             requester="user@example.com",
             purpose="Test",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         retrieved = export_service.get_export(package.export_id)
@@ -404,11 +407,11 @@ class TestAuditExportService:
                 requester=f"user{i}@example.com",
                 purpose=f"Test {i}",
                 scope=ExportScope.RISK_ONLY,
-                format=ExportFormat.JSON
+                format=ExportFormat.JSON,
             )
             export_service.generate_export(
                 request=request,
-                risk_service=mock_risk_service
+                risk_service=mock_risk_service,
             )
 
         exports = export_service.list_exports()
@@ -421,7 +424,7 @@ class TestAuditExportService:
             requester="alice@example.com",
             purpose="Test 1",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
         export_service.generate_export(request=request1, risk_service=mock_risk_service)
 
@@ -429,7 +432,7 @@ class TestAuditExportService:
             requester="bob@example.com",
             purpose="Test 2",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
         export_service.generate_export(request=request2, risk_service=mock_risk_service)
 
@@ -445,11 +448,11 @@ class TestAuditExportService:
                 requester=f"user{i}@example.com",
                 purpose=f"Test {i}",
                 scope=ExportScope.RISK_ONLY,
-                format=ExportFormat.JSON if i % 2 == 0 else ExportFormat.CSV
+                format=ExportFormat.JSON if i % 2 == 0 else ExportFormat.CSV,
             )
             export_service.generate_export(
                 request=request,
-                risk_service=mock_risk_service
+                risk_service=mock_risk_service,
             )
 
         stats = export_service.get_export_statistics()
@@ -464,21 +467,21 @@ class TestAuditExportService:
         export_service,
         mock_risk_service,
         mock_escalation_service,
-        mock_override_service
+        mock_override_service,
     ):
         """Test record count in export."""
         request = export_service.create_export_request(
             requester="auditor@example.com",
             purpose="Record count test",
             scope=ExportScope.ALL,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
             risk_service=mock_risk_service,
             escalation_service=mock_escalation_service,
-            override_service=mock_override_service
+            override_service=mock_override_service,
         )
 
         assert package.record_count > 0
@@ -490,7 +493,7 @@ class TestAuditExportService:
         metadata = {
             "compliance_framework": "SOC2",
             "audit_period": "Q4 2023",
-            "auditor_name": "John Doe"
+            "auditor_name": "John Doe",
         }
 
         request = export_service.create_export_request(
@@ -498,12 +501,12 @@ class TestAuditExportService:
             purpose="Compliance audit",
             scope=ExportScope.RISK_ONLY,
             format=ExportFormat.JSON,
-            metadata=metadata
+            metadata=metadata,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         assert package.metadata == metadata
@@ -514,12 +517,12 @@ class TestAuditExportService:
             requester="compliance@example.com",
             purpose="Compliance review",
             scope=ExportScope.COMPLIANCE_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
-            compliance_service=mock_compliance_service
+            compliance_service=mock_compliance_service,
         )
 
         assert "compliance" in package.data
@@ -536,12 +539,12 @@ class TestAuditExportService:
             requester="auditor@example.com",
             purpose="Decision log review",
             scope=ExportScope.DECISION_LOG_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
-            ledger=mock_ledger
+            ledger=mock_ledger,
         )
 
         assert "decisions" in package.data
@@ -561,11 +564,11 @@ class TestAuditExportService:
                 requester="tester@example.com",
                 purpose=f"Test {fmt.value} format",
                 scope=ExportScope.RISK_ONLY,
-                format=fmt
+                format=fmt,
             )
             package = export_service.generate_export(
                 request=request,
-                risk_service=mock_risk_service
+                risk_service=mock_risk_service,
             )
             packages.append(package)
 
@@ -573,7 +576,7 @@ class TestAuditExportService:
         assert all(len(p.content) > 0 for p in packages)
 
         # Each format should be different
-        assert len(set(p.content for p in packages)) == len(formats)
+        assert len({p.content for p in packages}) == len(formats)
 
     def test_export_size_calculation(self, export_service, mock_risk_service):
         """Test export size is calculated correctly."""
@@ -581,12 +584,12 @@ class TestAuditExportService:
             requester="admin@example.com",
             purpose="Size test",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=mock_risk_service
+            risk_service=mock_risk_service,
         )
 
         assert package.size_bytes == len(package.content.encode())
@@ -601,12 +604,12 @@ class TestAuditExportService:
             requester="tester@example.com",
             purpose="Empty data test",
             scope=ExportScope.RISK_ONLY,
-            format=ExportFormat.JSON
+            format=ExportFormat.JSON,
         )
 
         package = export_service.generate_export(
             request=request,
-            risk_service=empty_risk_service
+            risk_service=empty_risk_service,
         )
 
         assert package is not None

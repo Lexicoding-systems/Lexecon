@@ -1,5 +1,4 @@
-"""
-Ledger Chain - Tamper-evident audit log using hash chaining.
+"""Ledger Chain - Tamper-evident audit log using hash chaining.
 
 Each entry is cryptographically linked to previous entries.
 """
@@ -51,8 +50,7 @@ class LedgerEntry:
 
 
 class LedgerChain:
-    """
-    Tamper-evident ledger using hash chaining.
+    """Tamper-evident ledger using hash chaining.
 
     Each entry contains a hash of the previous entry, making modifications detectable.
 
@@ -60,8 +58,7 @@ class LedgerChain:
     """
 
     def __init__(self, storage=None):
-        """
-        Initialize ledger chain.
+        """Initialize ledger chain.
 
         Args:
             storage: Optional LedgerStorage instance for persistence.
@@ -96,8 +93,7 @@ class LedgerChain:
             self.storage.save_entry(genesis)
 
     def append(self, event_type: str, data: Dict[str, Any]) -> LedgerEntry:
-        """
-        Append a new entry to the ledger.
+        """Append a new entry to the ledger.
 
         Automatically saves to storage if configured.
 
@@ -123,8 +119,7 @@ class LedgerChain:
         return entry
 
     def verify_integrity(self) -> Dict[str, Any]:
-        """
-        Verify the integrity of the entire chain.
+        """Verify the integrity of the entire chain.
 
         Returns verification result with details of any corruption.
         """
@@ -162,7 +157,7 @@ class LedgerChain:
     def get_entry(self, entry_id_or_hash: str) -> Optional[LedgerEntry]:
         """Get entry by ID or hash."""
         for entry in self.entries:
-            if entry.entry_id == entry_id_or_hash or entry.entry_hash == entry_id_or_hash:
+            if entry_id_or_hash in (entry.entry_id, entry.entry_hash):
                 return entry
         return None
 

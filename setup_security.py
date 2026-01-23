@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Setup script for Lexecon enterprise security features.
+"""Setup script for Lexecon enterprise security features.
 
 Creates:
 - Authentication database with initial users
@@ -8,14 +7,14 @@ Creates:
 - RSA key pair for digital signatures
 """
 
-import sys
 import os
+import sys
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from lexecon.security.auth_service import AuthService, Role
 from lexecon.security.audit_service import AuditService
+from lexecon.security.auth_service import AuthService, Role
 from lexecon.security.signature_service import SignatureService
 
 
@@ -28,7 +27,7 @@ def main():
     # Initialize services
     print("Initializing security services...")
     auth = AuthService("lexecon_auth.db")
-    audit = AuditService("lexecon_export_audit.db")
+    AuditService("lexecon_export_audit.db")
     signature = SignatureService("lexecon_keys")
 
     print("   [OK] Authentication service initialized")
@@ -45,13 +44,13 @@ def main():
             email="admin@lexecon.local",
             password="ChangeMe123!",  # MUST CHANGE IN PRODUCTION
             role=Role.ADMIN,
-            full_name="System Administrator"
+            full_name="System Administrator",
         )
-        print(f"   [OK] Admin user created")
+        print("   [OK] Admin user created")
         print(f"        Username: {admin.username}")
         print(f"        Email: {admin.email}")
         print(f"        Role: {admin.role.value}")
-        print(f"        ℹ Password: ChangeMe123! (CHANGE IMMEDIATELY)")
+        print("        ℹ Password: ChangeMe123! (CHANGE IMMEDIATELY)")
     except ValueError as e:
         print(f"   [SKIP] Admin user already exists or error: {e}")
 
@@ -64,13 +63,13 @@ def main():
             email="auditor@lexecon.local",
             password="TestAuditor123!",
             role=Role.AUDITOR,
-            full_name="Test Auditor"
+            full_name="Test Auditor",
         )
-        print(f"   [OK] Auditor user created")
+        print("   [OK] Auditor user created")
         print(f"        Username: {auditor.username}")
         print(f"        Email: {auditor.email}")
         print(f"        Role: {auditor.role.value}")
-        print(f"        Password: TestAuditor123!")
+        print("        Password: TestAuditor123!")
     except ValueError as e:
         print(f"   [SKIP] Auditor user already exists or error: {e}")
 
@@ -83,13 +82,13 @@ def main():
             email="compliance@lexecon.local",
             password="TestCompliance123!",
             role=Role.COMPLIANCE_OFFICER,
-            full_name="Compliance Officer"
+            full_name="Compliance Officer",
         )
-        print(f"   [OK] Compliance Officer created")
+        print("   [OK] Compliance Officer created")
         print(f"        Username: {officer.username}")
         print(f"        Email: {officer.email}")
         print(f"        Role: {officer.role.value}")
-        print(f"        Password: TestCompliance123!")
+        print("        Password: TestCompliance123!")
     except ValueError as e:
         print(f"   [SKIP] Compliance Officer already exists or error: {e}")
 

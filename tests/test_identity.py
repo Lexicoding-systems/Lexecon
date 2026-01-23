@@ -409,8 +409,7 @@ class TestNodeIdentity:
         signature = node.sign(data)
 
         # Convert dict to canonical JSON for verification
-        import json
-        canonical = json.dumps(data, sort_keys=True, separators=(",", ":"))
+        json.dumps(data, sort_keys=True, separators=(",", ":"))
 
         # This should work with the node's verify_signature method
         # but it expects string data, so we need to verify differently
@@ -441,7 +440,7 @@ class TestCrossNodeVerification:
     def test_public_key_distribution(self):
         """Test that public keys can be shared for verification."""
         node1 = NodeIdentity("alice")
-        node2 = NodeIdentity("bob")
+        NodeIdentity("bob")
 
         data = {"transfer": "100", "to": "bob"}
 

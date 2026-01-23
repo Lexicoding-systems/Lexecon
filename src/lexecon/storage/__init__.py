@@ -1,5 +1,4 @@
-"""
-Storage Layer - Persistent storage for audit ledger
+"""Storage Layer - Persistent storage for audit ledger
 
 Provides SQLite-based persistence for EU AI Act compliance requirements.
 """

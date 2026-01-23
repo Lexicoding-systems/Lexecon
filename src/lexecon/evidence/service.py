@@ -1,5 +1,4 @@
-"""
-Evidence Service - Centralized trust layer for governance artifacts.
+"""Evidence Service - Centralized trust layer for governance artifacts.
 
 Provides immutable evidence storage with:
 - SHA-256 hash generation for integrity verification
@@ -18,9 +17,9 @@ from typing import Any, Dict, List, Optional, Union
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        EvidenceArtifact,
         ArtifactType,
         DigitalSignature,
+        EvidenceArtifact,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -32,8 +31,7 @@ except ImportError:
 
 
 def generate_artifact_id(artifact_type: str) -> str:
-    """
-    Generate an evidence artifact ID.
+    """Generate an evidence artifact ID.
 
     Format: evd_<type>_<8_hex_chars>
     Removes underscores from type to match schema pattern.
@@ -45,8 +43,7 @@ def generate_artifact_id(artifact_type: str) -> str:
 
 
 def compute_sha256(content: Union[str, bytes]) -> str:
-    """
-    Compute SHA-256 hash of content.
+    """Compute SHA-256 hash of content.
 
     Args:
         content: String or bytes to hash
@@ -80,8 +77,7 @@ class EvidenceConfig:
 
 
 class EvidenceService:
-    """
-    Evidence artifact storage service.
+    """Evidence artifact storage service.
 
     Centralized trust layer for storing immutable evidence
     artifacts with integrity guarantees and audit trail.
@@ -92,8 +88,7 @@ class EvidenceService:
         config: Optional[EvidenceConfig] = None,
         enable_signatures: bool = True,
     ):
-        """
-        Initialize the evidence service.
+        """Initialize the evidence service.
 
         Args:
             config: Optional custom configuration
@@ -101,7 +96,7 @@ class EvidenceService:
         """
         if not GOVERNANCE_MODELS_AVAILABLE:
             raise RuntimeError(
-                "Governance models not available. Install model_governance_pack."
+                "Governance models not available. Install model_governance_pack.",
             )
 
         self.config = config or EvidenceConfig()
@@ -126,8 +121,7 @@ class EvidenceService:
         digital_signature: Optional["DigitalSignature"] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "EvidenceArtifact":
-        """
-        Store an evidence artifact.
+        """Store an evidence artifact.
 
         Validates via schema, generates SHA-256 hash, and creates
         immutable record with all linkages.
@@ -151,15 +145,12 @@ class EvidenceService:
             ValueError: If validation fails or content too large
         """
         # Convert content to bytes for hashing
-        if isinstance(content, str):
-            content_bytes = content.encode("utf-8")
-        else:
-            content_bytes = content
+        content_bytes = content.encode("utf-8") if isinstance(content, str) else content
 
         # Check content size
         if len(content_bytes) > self.config.MAX_CONTENT_SIZE:
             raise ValueError(
-                f"Content size {len(content_bytes)} exceeds maximum {self.config.MAX_CONTENT_SIZE}"
+                f"Content size {len(content_bytes)} exceeds maximum {self.config.MAX_CONTENT_SIZE}",
             )
 
         # Generate SHA-256 hash
@@ -203,8 +194,7 @@ class EvidenceService:
         return artifact
 
     def get_artifact(self, artifact_id: str) -> Optional["EvidenceArtifact"]:
-        """
-        Retrieve an artifact by ID.
+        """Retrieve an artifact by ID.
 
         Returns immutable artifact record.
         """
@@ -215,8 +205,7 @@ class EvidenceService:
         artifact_id: str,
         content: Union[str, bytes],
     ) -> bool:
-        """
-        Verify artifact integrity by recomputing hash.
+        """Verify artifact integrity by recomputing hash.
 
         Args:
             artifact_id: Artifact ID to verify
@@ -239,8 +228,7 @@ class EvidenceService:
         return computed_hash == artifact.sha256_hash
 
     def get_artifacts_for_decision(self, decision_id: str) -> List["EvidenceArtifact"]:
-        """
-        Get all artifacts linked to a decision.
+        """Get all artifacts linked to a decision.
 
         Args:
             decision_id: Decision ID
@@ -257,8 +245,7 @@ class EvidenceService:
         return artifacts
 
     def get_artifacts_for_control(self, control_id: str) -> List["EvidenceArtifact"]:
-        """
-        Get all artifacts linked to a compliance control.
+        """Get all artifacts linked to a compliance control.
 
         Args:
             control_id: Compliance control ID
@@ -282,8 +269,7 @@ class EvidenceService:
         end_time: Optional[datetime] = None,
         limit: int = 100,
     ) -> List["EvidenceArtifact"]:
-        """
-        List artifacts with optional filtering.
+        """List artifacts with optional filtering.
 
         Args:
             artifact_type: Filter by artifact type
@@ -321,8 +307,7 @@ class EvidenceService:
         self,
         days_until_expiry: int = 30,
     ) -> List["EvidenceArtifact"]:
-        """
-        Get artifacts approaching retention deadline.
+        """Get artifacts approaching retention deadline.
 
         Args:
             days_until_expiry: Threshold in days
@@ -334,9 +319,8 @@ class EvidenceService:
         artifacts = []
 
         for artifact in self._artifacts.values():
-            if artifact.retention_until:
-                if artifact.retention_until <= threshold:
-                    artifacts.append(artifact)
+            if artifact.retention_until and artifact.retention_until <= threshold:
+                artifacts.append(artifact)
 
         # Sort by retention deadline (most urgent first)
         artifacts.sort(key=lambda a: a.retention_until)
@@ -347,8 +331,7 @@ class EvidenceService:
         self,
         decision_id: str,
     ) -> Dict[str, Any]:
-        """
-        Export complete artifact lineage for a decision.
+        """Export complete artifact lineage for a decision.
 
         Provides audit-ready export with all evidence,
         hashes, and metadata for the decision.
@@ -361,7 +344,7 @@ class EvidenceService:
         """
         artifacts = self.get_artifacts_for_decision(decision_id)
 
-        lineage = {
+        return {
             "decision_id": decision_id,
             "artifact_count": len(artifacts),
             "exported_at": datetime.now(timezone.utc).isoformat(),
@@ -384,7 +367,6 @@ class EvidenceService:
             ],
         }
 
-        return lineage
 
     def sign_artifact(
         self,
@@ -393,8 +375,7 @@ class EvidenceService:
         signature: str,
         algorithm: str = "RSA-SHA256",
     ) -> "EvidenceArtifact":
-        """
-        Add digital signature to an artifact.
+        """Add digital signature to an artifact.
 
         Creates new version of artifact with signature.
         Original artifact remains unchanged (immutability).
@@ -431,7 +412,7 @@ class EvidenceService:
 
         # Create new artifact with signature (immutability preserved)
         signed_artifact = artifact.model_copy(
-            update={"digital_signature": digital_signature}
+            update={"digital_signature": digital_signature},
         )
 
         # Replace in storage (allowed because it's adding signature)
@@ -440,8 +421,7 @@ class EvidenceService:
         return signed_artifact
 
     def get_statistics(self) -> Dict[str, Any]:
-        """
-        Get evidence service statistics.
+        """Get evidence service statistics.
 
         Returns:
             Dictionary with statistics
@@ -469,8 +449,7 @@ class EvidenceService:
         }
 
     def _index_artifact(self, artifact: "EvidenceArtifact") -> None:
-        """
-        Index artifact for fast lookup.
+        """Index artifact for fast lookup.
 
         Args:
             artifact: Artifact to index
@@ -504,8 +483,7 @@ class ArtifactBuilder:
         content: Union[str, bytes],
         source: str,
     ):
-        """
-        Initialize artifact builder.
+        """Initialize artifact builder.
 
         Args:
             artifact_type: Type of artifact
@@ -520,7 +498,7 @@ class ArtifactBuilder:
         self.content_type: Optional[str] = None
         self.storage_uri: Optional[str] = None
         self.retention_days: Optional[int] = None
-        self.digital_signature: Optional["DigitalSignature"] = None
+        self.digital_signature: Optional[DigitalSignature] = None
         self.metadata: Dict[str, Any] = {}
 
     def link_to_decision(self, decision_id: str) -> "ArtifactBuilder":
@@ -554,8 +532,7 @@ class ArtifactBuilder:
         return self
 
     def build(self, service: EvidenceService) -> "EvidenceArtifact":
-        """
-        Build and store the artifact.
+        """Build and store the artifact.
 
         Args:
             service: EvidenceService to store in

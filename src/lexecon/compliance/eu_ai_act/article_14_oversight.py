@@ -1,5 +1,4 @@
-"""
-Article 14 - Human Oversight Evidence System
+"""Article 14 - Human Oversight Evidence System
 
 Proves human-in-the-loop compliance with verifiable evidence chains.
 
@@ -10,12 +9,10 @@ EU AI Act Article 14 Requirements:
 - All oversight actions must be logged with evidence
 """
 
-import hashlib
-import json
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, asdict
 
 from lexecon.identity.signing import KeyManager
 
@@ -78,16 +75,14 @@ class EscalationPath:
 
 
 class HumanOversightEvidence:
-    """
-    Article 14 compliance system for human oversight evidence.
+    """Article 14 compliance system for human oversight evidence.
 
     Logs all human interventions with cryptographic signatures and
     generates oversight effectiveness reports.
     """
 
     def __init__(self, key_manager: Optional[KeyManager] = None, storage=None):
-        """
-        Initialize human oversight evidence system.
+        """Initialize human oversight evidence system.
 
         Args:
             key_manager: Optional KeyManager for signing interventions
@@ -105,7 +100,7 @@ class HumanOversightEvidence:
         # Define default escalation paths
         self._initialize_default_escalations()
 
-    def _initialize_default_escalations(self):
+    def _initialize_default_escalations(self) -> None:
         """Set up default escalation paths."""
         self.escalation_paths = {
             "high_risk": EscalationPath(
@@ -113,40 +108,40 @@ class HumanOversightEvidence:
                 roles=[
                     OversightRole.SOC_ANALYST,
                     OversightRole.SECURITY_LEAD,
-                    OversightRole.EXECUTIVE
+                    OversightRole.EXECUTIVE,
                 ],
                 max_response_time_minutes=15,
-                requires_approval_from=OversightRole.SECURITY_LEAD
+                requires_approval_from=OversightRole.SECURITY_LEAD,
             ),
             "financial": EscalationPath(
                 decision_class="financial",
                 roles=[
                     OversightRole.RISK_MANAGER,
                     OversightRole.COMPLIANCE_OFFICER,
-                    OversightRole.EXECUTIVE
+                    OversightRole.EXECUTIVE,
                 ],
                 max_response_time_minutes=30,
-                requires_approval_from=OversightRole.RISK_MANAGER
+                requires_approval_from=OversightRole.RISK_MANAGER,
             ),
             "legal": EscalationPath(
                 decision_class="legal",
                 roles=[
                     OversightRole.COMPLIANCE_OFFICER,
                     OversightRole.LEGAL_COUNSEL,
-                    OversightRole.EXECUTIVE
+                    OversightRole.EXECUTIVE,
                 ],
                 max_response_time_minutes=60,
-                requires_approval_from=OversightRole.LEGAL_COUNSEL
+                requires_approval_from=OversightRole.LEGAL_COUNSEL,
             ),
             "operational": EscalationPath(
                 decision_class="operational",
                 roles=[
                     OversightRole.SOC_ANALYST,
-                    OversightRole.SECURITY_LEAD
+                    OversightRole.SECURITY_LEAD,
                 ],
                 max_response_time_minutes=5,
-                requires_approval_from=OversightRole.SOC_ANALYST
-            )
+                requires_approval_from=OversightRole.SOC_ANALYST,
+            ),
         }
 
     def log_intervention(
@@ -158,10 +153,9 @@ class HumanOversightEvidence:
         reason: str,
         request_context: Optional[Dict[str, Any]] = None,
         response_time_ms: Optional[int] = None,
-        sign: bool = True
+        sign: bool = True,
     ) -> HumanIntervention:
-        """
-        Log a human oversight intervention.
+        """Log a human oversight intervention.
 
         This is called whenever a human approves, overrides, or escalates
         an AI decision.
@@ -176,7 +170,7 @@ class HumanOversightEvidence:
             human_role=human_role,
             reason=reason,
             request_context=request_context or {},
-            response_time_ms=response_time_ms
+            response_time_ms=response_time_ms,
         )
 
         # Sign the intervention
@@ -201,12 +195,11 @@ class HumanOversightEvidence:
             "ai_recommendation": intervention.ai_recommendation,
             "human_decision": intervention.human_decision,
             "role": intervention.human_role.value,
-            "reason": intervention.reason
+            "reason": intervention.reason,
         }
 
         # KeyManager.sign() expects a dict and returns base64-encoded signature
-        signature = self.key_manager.sign(data)
-        return signature
+        return self.key_manager.sign(data)
 
     def verify_intervention(self, intervention: HumanIntervention) -> bool:
         """Verify cryptographic signature of intervention."""
@@ -221,7 +214,7 @@ class HumanOversightEvidence:
             "ai_recommendation": intervention.ai_recommendation,
             "human_decision": intervention.human_decision,
             "role": intervention.human_role.value,
-            "reason": intervention.reason
+            "reason": intervention.reason,
         }
 
         # Use KeyManager.verify static method
@@ -233,10 +226,9 @@ class HumanOversightEvidence:
 
     def generate_oversight_effectiveness_report(
         self,
-        time_period_days: int = 30
+        time_period_days: int = 30,
     ) -> Dict[str, Any]:
-        """
-        Generate oversight effectiveness report.
+        """Generate oversight effectiveness report.
 
         Proves humans actually intervene, not just rubber-stamp.
         This is critical for Article 14 compliance.
@@ -244,14 +236,14 @@ class HumanOversightEvidence:
         cutoff = datetime.now(timezone.utc) - timedelta(days=time_period_days)
         recent = [
             i for i in self.interventions
-            if datetime.fromisoformat(i.timestamp.replace('Z', '+00:00')) >= cutoff
+            if datetime.fromisoformat(i.timestamp.replace("Z", "+00:00")) >= cutoff
         ]
 
         if not recent:
             return {
                 "period_days": time_period_days,
                 "total_interventions": 0,
-                "message": "No interventions in period"
+                "message": "No interventions in period",
             }
 
         # Calculate statistics
@@ -296,7 +288,7 @@ class HumanOversightEvidence:
         # Compliance assessment
         compliance_status = self._assess_compliance(override_rate, avg_response_time)
 
-        report = {
+        return {
             "article": "Article 14 - Human Oversight Effectiveness",
             "period_days": time_period_days,
             "period_start": cutoff.isoformat(),
@@ -305,14 +297,14 @@ class HumanOversightEvidence:
 
             "intervention_breakdown": {
                 "by_type": by_type,
-                "by_role": by_role
+                "by_role": by_role,
             },
 
             "effectiveness_metrics": {
                 "total_overrides": overrides,
                 "total_approvals": rubber_stamps,
                 "override_rate_percent": round(override_rate, 2),
-                "interpretation": self._interpret_override_rate(override_rate)
+                "interpretation": self._interpret_override_rate(override_rate),
             },
 
             "response_time_metrics": {
@@ -321,7 +313,7 @@ class HumanOversightEvidence:
                 "maximum_ms": max_response_time,
                 "average_seconds": round(avg_response_time / 1000, 2),
                 "compliance_target_seconds": 60,
-                "meets_target": avg_response_time / 1000 < 60
+                "meets_target": avg_response_time / 1000 < 60,
             },
 
             "compliance_assessment": compliance_status,
@@ -330,23 +322,21 @@ class HumanOversightEvidence:
                 "all_signed": all(i.signature for i in recent),
                 "signatures_verified": sum(1 for i in recent if self.verify_intervention(i)),
                 "verification_rate": round(
-                    sum(1 for i in recent if self.verify_intervention(i)) / total * 100, 2
-                )
-            }
+                    sum(1 for i in recent if self.verify_intervention(i)) / total * 100, 2,
+                ),
+            },
         }
 
-        return report
 
     def _interpret_override_rate(self, rate: float) -> str:
         """Interpret override rate for compliance."""
         if rate < 5:
             return "LOW - Possible rubber-stamping concern. Humans may not be actively reviewing."
-        elif rate < 15:
+        if rate < 15:
             return "MODERATE - Acceptable but monitor for genuine engagement."
-        elif rate < 40:
+        if rate < 40:
             return "HEALTHY - Clear evidence of active human judgment."
-        else:
-            return "HIGH - Frequent overrides may indicate AI recommendations need improvement."
+        return "HIGH - Frequent overrides may indicate AI recommendations need improvement."
 
     def _assess_compliance(self, override_rate: float, avg_response_ms: float) -> Dict[str, Any]:
         """Assess overall Article 14 compliance."""
@@ -368,7 +358,7 @@ class HumanOversightEvidence:
         return {
             "compliant": compliant,
             "status": "COMPLIANT" if compliant else "NEEDS_ATTENTION",
-            "issues": issues if issues else ["None - oversight is effective"]
+            "issues": issues if issues else ["None - oversight is effective"],
         }
 
     def get_escalation_path(self, decision_class: str) -> Optional[EscalationPath]:
@@ -378,10 +368,9 @@ class HumanOversightEvidence:
     def simulate_escalation(
         self,
         decision_class: str,
-        current_role: OversightRole
+        current_role: OversightRole,
     ) -> Dict[str, Any]:
-        """
-        Simulate escalation chain for a decision.
+        """Simulate escalation chain for a decision.
 
         Shows who can override/approve and response time requirements.
         """
@@ -406,16 +395,15 @@ class HumanOversightEvidence:
             "requires_approval_from": path.requires_approval_from.value,
             "next_escalation": next_escalation.value if next_escalation else None,
             "max_response_time_minutes": path.max_response_time_minutes,
-            "full_escalation_chain": [r.value for r in path.roles]
+            "full_escalation_chain": [r.value for r in path.roles],
         }
 
     def export_evidence_package(
         self,
         start_date: Optional[str] = None,
-        end_date: Optional[str] = None
+        end_date: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Export complete evidence package for Article 14 compliance.
+        """Export complete evidence package for Article 14 compliance.
 
         Includes all interventions with cryptographic proofs.
         """
@@ -426,14 +414,14 @@ class HumanOversightEvidence:
             start = datetime.fromisoformat(start_date)
             interventions = [
                 i for i in interventions
-                if datetime.fromisoformat(i.timestamp.replace('Z', '+00:00')) >= start
+                if datetime.fromisoformat(i.timestamp.replace("Z", "+00:00")) >= start
             ]
 
         if end_date:
             end = datetime.fromisoformat(end_date)
             interventions = [
                 i for i in interventions
-                if datetime.fromisoformat(i.timestamp.replace('Z', '+00:00')) <= end
+                if datetime.fromisoformat(i.timestamp.replace("Z", "+00:00")) <= end
             ]
 
         return {
@@ -441,12 +429,12 @@ class HumanOversightEvidence:
             "generated_at": datetime.utcnow().isoformat(),
             "period": {
                 "start": start_date or "inception",
-                "end": end_date or "present"
+                "end": end_date or "present",
             },
             "summary": {
                 "total_interventions": len(interventions),
                 "all_signed": all(i.signature for i in interventions),
-                "verification_rate": sum(1 for i in interventions if self.verify_intervention(i)) / len(interventions) * 100 if interventions else 0
+                "verification_rate": sum(1 for i in interventions if self.verify_intervention(i)) / len(interventions) * 100 if interventions else 0,
             },
             "effectiveness_report": self.generate_oversight_effectiveness_report(),
             "interventions": [asdict(i) for i in interventions],
@@ -455,7 +443,7 @@ class HumanOversightEvidence:
                     "decision_class": v.decision_class,
                     "roles": [r.value for r in v.roles],
                     "max_response_time_minutes": v.max_response_time_minutes,
-                    "requires_approval_from": v.requires_approval_from.value
+                    "requires_approval_from": v.requires_approval_from.value,
                 }
                 for k, v in self.escalation_paths.items()
             },
@@ -464,15 +452,15 @@ class HumanOversightEvidence:
                 "human_oversight_documented": True,
                 "intervention_capability_proven": len(interventions) > 0,
                 "cryptographic_signatures": True,
-                "generated_by": "Lexecon Human Oversight Evidence System"
-            }
+                "generated_by": "Lexecon Human Oversight Evidence System",
+            },
         }
 
     def export_markdown(self, evidence_package: Dict[str, Any]) -> str:
         """Export evidence package as Markdown report."""
         effectiveness = evidence_package["effectiveness_report"]
 
-        md = f"""# EU AI Act Article 14 - Human Oversight Evidence
+        return f"""# EU AI Act Article 14 - Human Oversight Evidence
 
 **Package Type:** {evidence_package['package_type']}
 **Generated:** {evidence_package['generated_at']}
@@ -538,4 +526,3 @@ We attest that this evidence package demonstrates compliance with EU AI Act Arti
 
 *For detailed intervention records, request JSON format export.*
 """
-        return md

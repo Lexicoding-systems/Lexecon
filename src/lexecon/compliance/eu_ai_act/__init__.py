@@ -1,5 +1,4 @@
-"""
-EU AI Act Compliance Infrastructure
+"""EU AI Act Compliance Infrastructure
 
 Automated compliance documentation, record-keeping, and evidence generation
 for EU Artificial Intelligence Act enforcement.
@@ -13,8 +12,8 @@ from .article_14_oversight import HumanOversightEvidence
 from .storage import InterventionStorage
 
 __all__ = [
-    "TechnicalDocumentationGenerator",
-    "RecordKeepingSystem",
     "HumanOversightEvidence",
     "InterventionStorage",
+    "RecordKeepingSystem",
+    "TechnicalDocumentationGenerator",
 ]

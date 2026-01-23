@@ -1,22 +1,23 @@
 """Tests for evidence service."""
 
-import pytest
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from lexecon.evidence.service import (
-    EvidenceService,
-    EvidenceConfig,
     ArtifactBuilder,
-    generate_artifact_id,
+    EvidenceConfig,
+    EvidenceService,
     compute_sha256,
+    generate_artifact_id,
 )
 
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        EvidenceArtifact,
         ArtifactType,
         DigitalSignature,
+        EvidenceArtifact,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -602,7 +603,7 @@ class TestEvidenceServiceBytesContent:
         artifact = service.store_artifact(
             artifact_type=ArtifactType.SCREENSHOT,
             content=content_bytes,
-            source="screenshot_tool"
+            source="screenshot_tool",
         )
 
         assert artifact.artifact_id.startswith("evd_screenshot_")
@@ -673,7 +674,7 @@ class TestIntegrationWorkflows:
         lineage = service.export_artifact_lineage(decision_id)
 
         assert lineage["artifact_count"] == 3
-        assert len(set(a["artifact_type"] for a in lineage["artifacts"])) == 3
+        assert len({a["artifact_type"] for a in lineage["artifacts"]}) == 3
         assert all(a["is_immutable"] for a in lineage["artifacts"])
 
     def test_signed_artifact_workflow(self):

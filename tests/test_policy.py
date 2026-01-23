@@ -113,7 +113,7 @@ class TestPolicyRelation:
             relation_type=RelationType.PERMITS,
             source="actor:user",
             target="action:read",
-            conditions=None  # Explicitly None
+            conditions=None,  # Explicitly None
         )
         assert relation.conditions == []
         assert relation.metadata == {}
@@ -122,7 +122,7 @@ class TestPolicyRelation:
         """Test from_dict raises ValueError when relation_type is missing."""
         data = {
             "source": "actor:user",
-            "target": "action:read"
+            "target": "action:read",
         }
         with pytest.raises(ValueError, match="Missing relation_type or type field"):
             PolicyRelation.from_dict(data)
@@ -130,7 +130,7 @@ class TestPolicyRelation:
     def test_from_dict_missing_source_and_target(self):
         """Test from_dict raises ValueError when both source and target are missing."""
         data = {
-            "relation_type": "permits"
+            "relation_type": "permits",
         }
         with pytest.raises(ValueError, match="Missing source/target"):
             PolicyRelation.from_dict(data)
@@ -139,7 +139,7 @@ class TestPolicyRelation:
         """Test from_dict uses source for target when target is missing."""
         data = {
             "relation_type": "permits",
-            "source": "actor:user"
+            "source": "actor:user",
         }
         relation = PolicyRelation.from_dict(data)
         assert relation.source == "actor:user"
@@ -149,7 +149,7 @@ class TestPolicyRelation:
         """Test from_dict uses target for source when source is missing."""
         data = {
             "relation_type": "permits",
-            "action": "action:read"  # Using 'action' as alias for 'target'
+            "action": "action:read",  # Using 'action' as alias for 'target'
         }
         relation = PolicyRelation.from_dict(data)
         assert relation.source == "action:read"  # Should copy target to source
@@ -163,7 +163,7 @@ class TestPolicyRelation:
             "target": "action:read",
             "object": "data:pii",
             "justification": "User has clearance",
-            "condition": "during_business_hours"
+            "condition": "during_business_hours",
         }
         relation = PolicyRelation.from_dict(data)
         assert relation.metadata["object"] == "data:pii"

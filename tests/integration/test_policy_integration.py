@@ -12,7 +12,7 @@ class TestPolicyEvaluation:
         """Test that strict mode denies actions not explicitly permitted."""
         engine = PolicyEngine(mode="strict")
         decision = engine.evaluate(
-            actor="model", action="unknown_action", data_classes=[], risk_level=1
+            actor="model", action="unknown_action", data_classes=[], risk_level=1,
         )
         assert decision.allowed is False
         assert "not explicitly permitted" in decision.reason.lower()
@@ -21,7 +21,7 @@ class TestPolicyEvaluation:
         """Test that permissive mode allows actions not explicitly forbidden."""
         engine = PolicyEngine(mode="permissive")
         decision = engine.evaluate(
-            actor="model", action="unknown_action", data_classes=[], risk_level=1
+            actor="model", action="unknown_action", data_classes=[], risk_level=1,
         )
         assert decision.allowed is True
 
@@ -29,7 +29,7 @@ class TestPolicyEvaluation:
         """Test that paranoid mode requires confirmation for high-risk actions."""
         engine = PolicyEngine(mode="paranoid")
         decision = engine.evaluate(
-            actor="model", action="high_risk_action", data_classes=[], risk_level=4
+            actor="model", action="high_risk_action", data_classes=[], risk_level=4,
         )
         assert "confirmation" in decision.reason.lower() or decision.allowed is False
 
@@ -47,7 +47,7 @@ class TestPolicyEvaluation:
                     "type": "permits",
                     "subject": "actor:model",
                     "action": "action:read",
-                }
+                },
             ],
         }
         engine = PolicyEngine(policy)
@@ -68,7 +68,7 @@ class TestPolicyEvaluation:
                     "type": "forbids",
                     "subject": "actor:model",
                     "action": "action:delete",
-                }
+                },
             ],
         }
         engine = PolicyEngine(policy)
@@ -162,6 +162,6 @@ class TestDecisionServiceIntegration:
         assert decision.signature is not None
         # Verify signature
         is_valid = identity.verify_signature(
-            data=decision.decision_hash, signature=decision.signature
+            data=decision.decision_hash, signature=decision.signature,
         )
         assert is_valid is True

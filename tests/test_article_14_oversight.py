@@ -1,6 +1,6 @@
 """Tests for EU AI Act Article 14 - Human Oversight Evidence System."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import pytest
 
@@ -346,16 +346,16 @@ class TestHumanOversightEvidence:
     def test_effectiveness_report_intervention_breakdown(self, oversight):
         """Test that report breaks down interventions by type."""
         oversight.log_intervention(
-            InterventionType.APPROVAL, {}, {}, OversightRole.COMPLIANCE_OFFICER, "A"
+            InterventionType.APPROVAL, {}, {}, OversightRole.COMPLIANCE_OFFICER, "A",
         )
         oversight.log_intervention(
-            InterventionType.APPROVAL, {}, {}, OversightRole.COMPLIANCE_OFFICER, "B"
+            InterventionType.APPROVAL, {}, {}, OversightRole.COMPLIANCE_OFFICER, "B",
         )
         oversight.log_intervention(
-            InterventionType.OVERRIDE, {}, {}, OversightRole.SECURITY_LEAD, "C"
+            InterventionType.OVERRIDE, {}, {}, OversightRole.SECURITY_LEAD, "C",
         )
         oversight.log_intervention(
-            InterventionType.EMERGENCY_STOP, {}, {}, OversightRole.EXECUTIVE, "D"
+            InterventionType.EMERGENCY_STOP, {}, {}, OversightRole.EXECUTIVE, "D",
         )
 
         report = oversight.generate_oversight_effectiveness_report()
@@ -407,7 +407,7 @@ class TestHumanOversightEvidence:
 
     def test_export_evidence_package_verification_proofs(self, oversight):
         """Test that evidence package includes verification evidence."""
-        intervention = oversight.log_intervention(
+        oversight.log_intervention(
             InterventionType.OVERRIDE,
             {"action": "deny"},
             {"action": "allow"},

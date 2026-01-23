@@ -5,14 +5,16 @@ Verifies that audit exports are reproducible: the same input data
 and parameters produce byte-identical outputs.
 """
 
-import json
 import hashlib
-import pytest
+import json
 from datetime import datetime, timezone
+
+import pytest
+
 from lexecon.audit_export.service import (
     AuditExportService,
-    ExportScope,
     ExportFormat,
+    ExportScope,
     ExportStatus,
 )
 
@@ -109,9 +111,7 @@ class TestExportDeterminism:
         if generated_at:
             assert "T" in generated_at  # Has time component
             # Has timezone (Z or +/-offset)
-            assert (generated_at.endswith("Z") or
-                    "+" in generated_at or
-                    generated_at.endswith("+00:00"))
+            assert (generated_at.endswith(("Z", "+00:00")) or "+" in generated_at)
 
     def test_empty_export_reproducible(self, export_service):
         """
@@ -211,7 +211,7 @@ class TestExportDeterminism:
             stats = data["statistics"]
             assert isinstance(stats, dict)
             # Should have count fields
-            assert any(key.startswith("total_") for key in stats.keys())
+            assert any(key.startswith("total_") for key in stats)
 
     def test_deterministic_checksums(self, export_service):
         """

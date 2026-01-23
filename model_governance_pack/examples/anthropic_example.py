@@ -1,14 +1,15 @@
-"""
-Example: Governed Anthropic (Claude) Integration
+"""Example: Governed Anthropic (Claude) Integration
 
 This example shows how to use Lexecon governance with Anthropic models.
 """
 
 import os
-from anthropic import Anthropic
 
 # Import the governance adapter
 import sys
+
+from anthropic import Anthropic
+
 sys.path.insert(0, "../adapters")
 from anthropic_adapter import AnthropicGovernanceAdapter
 
@@ -20,9 +21,9 @@ def search_web(query: str, max_results: int = 10):
     return {
         "results": [
             {"title": f"Result about {query}", "url": "https://example.com/1"},
-            {"title": f"More about {query}", "url": "https://example.com/2"}
+            {"title": f"More about {query}", "url": "https://example.com/2"},
         ],
-        "count": max_results
+        "count": max_results,
     }
 
 
@@ -31,7 +32,7 @@ def read_file(filepath: str):
     # Simulate file read
     return {
         "content": f"Contents of {filepath}",
-        "size": 1024
+        "size": 1024,
     }
 
 
@@ -40,7 +41,7 @@ def execute_code(code: str, language: str = "python"):
     # This would execute in actual sandbox
     return {
         "output": f"Executed {language} code",
-        "status": "success"
+        "status": "success",
     }
 
 
@@ -50,7 +51,7 @@ client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 # Create governance adapter
 adapter = AnthropicGovernanceAdapter(
     governance_url="http://localhost:8000",
-    actor="model"
+    actor="model",
 )
 
 # Register tools with the adapter
@@ -68,16 +69,16 @@ tools = [
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Search query"
+                    "description": "Search query",
                 },
                 "max_results": {
                     "type": "integer",
                     "description": "Maximum number of results",
-                    "default": 10
-                }
+                    "default": 10,
+                },
             },
-            "required": ["query"]
-        }
+            "required": ["query"],
+        },
     },
     {
         "name": "read_file",
@@ -87,12 +88,12 @@ tools = [
             "properties": {
                 "filepath": {
                     "type": "string",
-                    "description": "Path to the file"
-                }
+                    "description": "Path to the file",
+                },
             },
-            "required": ["filepath"]
-        }
-    }
+            "required": ["filepath"],
+        },
+    },
 ]
 
 
@@ -111,7 +112,7 @@ def main():
     user_message = "Search for information about AI governance frameworks"
 
     messages = [
-        {"role": "user", "content": user_message}
+        {"role": "user", "content": user_message},
     ]
 
     # System prompt with governance instructions
@@ -129,7 +130,7 @@ If approved, you receive a capability token. If denied, explain the denial reaso
             user_intent="Research AI governance",
             model="claude-3-sonnet-20240229",
             max_tokens=500,
-            system=system_prompt
+            system=system_prompt,
         )
 
         # Extract text response
@@ -141,7 +142,7 @@ If approved, you receive a capability token. If denied, explain the denial reaso
         print(f"Assistant: {' '.join(text_content)}\n")
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error: {e!s}")
 
 
 def manual_tool_call_example():
@@ -153,23 +154,23 @@ def manual_tool_call_example():
         tool_name="search_web",
         tool_args={"query": "AI safety", "max_results": 5},
         user_intent="Research AI safety best practices",
-        risk_level=1
+        risk_level=1,
     )
 
     print("Governance Decision:")
-    decision = result['governance_decision']
+    decision = result["governance_decision"]
     print(f"  Status: {decision['decision']}")
     print(f"  Reasoning: {decision['reasoning']}")
 
-    if decision['decision'] == 'permit':
-        token = decision.get('capability_token', {})
+    if decision["decision"] == "permit":
+        token = decision.get("capability_token", {})
         print(f"  Token ID: {token.get('token_id')}")
         print(f"  Expires: {token.get('expiry')}")
         print(f"  Ledger Entry: {decision.get('ledger_entry_hash', 'N/A')[:16]}...")
         print(f"\nTool Result Type: {result['type']}")
         print(f"Tool Result Content: {result['content'][:100]}...")
     else:
-        print(f"\n❌ Tool call was denied")
+        print("\n❌ Tool call was denied")
         print(f"Response type: {result['type']}")
         print(f"Is error: {result.get('is_error', False)}")
 

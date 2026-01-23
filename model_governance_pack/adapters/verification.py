@@ -1,20 +1,19 @@
-"""
-Response Verification Utilities
+"""Response Verification Utilities
 
 Tools for verifying governance decisions, capability tokens, and ledger entries.
 """
 
-import requests
-from typing import Dict, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+import requests
 
 
 class GovernanceVerifier:
     """Verify governance responses and audit trail."""
 
     def __init__(self, governance_url: str = "http://localhost:8000"):
-        """
-        Initialize verifier.
+        """Initialize verifier.
 
         Args:
             governance_url: Base URL of Lexecon governance API
@@ -22,8 +21,7 @@ class GovernanceVerifier:
         self.governance_url = governance_url.rstrip("/")
 
     def verify_decision(self, decision_response: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Verify a decision response against the ledger.
+        """Verify a decision response against the ledger.
 
         Args:
             decision_response: The decision response to verify
@@ -36,14 +34,14 @@ class GovernanceVerifier:
         if not ledger_entry_hash:
             return {
                 "valid": False,
-                "error": "No ledger entry hash in decision"
+                "error": "No ledger entry hash in decision",
             }
 
         try:
             response = requests.post(
                 f"{self.governance_url}/decide/verify",
                 json=decision_response,
-                timeout=5
+                timeout=5,
             )
             response.raise_for_status()
             return response.json()
@@ -51,12 +49,11 @@ class GovernanceVerifier:
         except requests.exceptions.RequestException as e:
             return {
                 "valid": False,
-                "error": f"Verification failed: {str(e)}"
+                "error": f"Verification failed: {e!s}",
             }
 
     def verify_ledger_integrity(self) -> Dict[str, Any]:
-        """
-        Verify the entire ledger chain integrity.
+        """Verify the entire ledger chain integrity.
 
         Returns:
             Integrity verification result
@@ -64,7 +61,7 @@ class GovernanceVerifier:
         try:
             response = requests.get(
                 f"{self.governance_url}/ledger/verify",
-                timeout=5
+                timeout=5,
             )
             response.raise_for_status()
             return response.json()
@@ -72,12 +69,11 @@ class GovernanceVerifier:
         except requests.exceptions.RequestException as e:
             return {
                 "valid": False,
-                "error": f"Ledger verification failed: {str(e)}"
+                "error": f"Ledger verification failed: {e!s}",
             }
 
     def get_audit_report(self) -> Dict[str, Any]:
-        """
-        Get comprehensive audit report.
+        """Get comprehensive audit report.
 
         Returns:
             Audit report with statistics and integrity check
@@ -85,19 +81,18 @@ class GovernanceVerifier:
         try:
             response = requests.get(
                 f"{self.governance_url}/ledger/report",
-                timeout=5
+                timeout=5,
             )
             response.raise_for_status()
             return response.json()
 
         except requests.exceptions.RequestException as e:
             return {
-                "error": f"Failed to retrieve audit report: {str(e)}"
+                "error": f"Failed to retrieve audit report: {e!s}",
             }
 
     def verify_capability_token(self, token: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Verify a capability token's validity.
+        """Verify a capability token's validity.
 
         Args:
             token: The capability token to verify
@@ -112,7 +107,7 @@ class GovernanceVerifier:
         if missing:
             return {
                 "valid": False,
-                "error": f"Missing required fields: {', '.join(missing)}"
+                "error": f"Missing required fields: {', '.join(missing)}",
             }
 
         # Check expiry
@@ -122,12 +117,12 @@ class GovernanceVerifier:
                 return {
                     "valid": False,
                     "error": "Token has expired",
-                    "expired_at": token["expiry"]
+                    "expired_at": token["expiry"],
                 }
         except ValueError as e:
             return {
                 "valid": False,
-                "error": f"Invalid expiry format: {str(e)}"
+                "error": f"Invalid expiry format: {e!s}",
             }
 
         # Check scope
@@ -135,7 +130,7 @@ class GovernanceVerifier:
         if not scope.get("action") or not scope.get("tool"):
             return {
                 "valid": False,
-                "error": "Token scope is incomplete"
+                "error": "Token scope is incomplete",
             }
 
         return {
@@ -143,16 +138,15 @@ class GovernanceVerifier:
             "token_id": token["token_id"],
             "scope": scope,
             "time_remaining": (expiry - datetime.utcnow()).total_seconds(),
-            "policy_version": token["policy_version_hash"]
+            "policy_version": token["policy_version_hash"],
         }
 
     def verify_policy_version(
         self,
         policy_hash: str,
-        expected_hash: Optional[str] = None
+        expected_hash: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """
-        Verify policy version hash.
+        """Verify policy version hash.
 
         Args:
             policy_hash: The policy hash to verify
@@ -165,7 +159,7 @@ class GovernanceVerifier:
         try:
             response = requests.get(
                 f"{self.governance_url}/policies",
-                timeout=5
+                timeout=5,
             )
             response.raise_for_status()
             policy_info = response.json()
@@ -175,7 +169,7 @@ class GovernanceVerifier:
             result = {
                 "current_policy_hash": current_hash,
                 "provided_hash": policy_hash,
-                "matches_current": current_hash == policy_hash
+                "matches_current": current_hash == policy_hash,
             }
 
             if expected_hash:
@@ -186,16 +180,15 @@ class GovernanceVerifier:
 
         except requests.exceptions.RequestException as e:
             return {
-                "error": f"Failed to verify policy version: {str(e)}"
+                "error": f"Failed to verify policy version: {e!s}",
             }
 
 
 def verify_governance_response(
     response: Dict[str, Any],
-    governance_url: str = "http://localhost:8000"
+    governance_url: str = "http://localhost:8000",
 ) -> bool:
-    """
-    Quick verification of a governance response.
+    """Quick verification of a governance response.
 
     Args:
         response: The governance response to verify
@@ -245,7 +238,7 @@ if __name__ == "__main__":
         "token_id": "tok_example123",
         "scope": {"action": "search", "tool": "web_search"},
         "expiry": "2025-12-31T23:59:59",
-        "policy_version_hash": "abc123..."
+        "policy_version_hash": "abc123...",
     }
     token_result = verifier.verify_capability_token(example_token)
     print(f"Valid: {token_result.get('valid', False)}")

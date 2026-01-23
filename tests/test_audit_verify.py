@@ -26,28 +26,28 @@ def valid_audit_packet_file(temp_dir):
             "generated_at": "2024-01-01T00:00:00Z",
             "generator": {
                 "name": "lexecon",
-                "version": "0.1.0"
+                "version": "0.1.0",
             },
             "scope": {
                 "start_time": "2024-01-01T00:00:00Z",
-                "end_time": "2024-01-02T00:00:00Z"
+                "end_time": "2024-01-02T00:00:00Z",
             },
             "contents": {
                 "decision_count": 1,
                 "evidence_count": 0,
                 "risk_count": 0,
                 "escalation_count": 0,
-                "override_count": 0
+                "override_count": 0,
             },
             "integrity": {
                 "algorithm": "SHA-256",
                 "root_checksum": "abc123def456",
-                "artifact_checksums": {}
-            }
+                "artifact_checksums": {},
+            },
         },
         "decisions": [
-            {"decision_id": "dec_1", "actor": "model", "action": "read"}
-        ]
+            {"decision_id": "dec_1", "actor": "model", "action": "read"},
+        ],
     }
 
     packet_file = Path(temp_dir) / "audit_packet.json"
@@ -68,21 +68,21 @@ def valid_audit_packet_dir(temp_dir):
         "generated_at": "2024-01-01T00:00:00Z",
         "generator": {
             "name": "lexecon",
-            "version": "0.1.0"
+            "version": "0.1.0",
         },
         "scope": {
             "start_time": "2024-01-01T00:00:00Z",
-            "end_time": "2024-01-02T00:00:00Z"
+            "end_time": "2024-01-02T00:00:00Z",
         },
         "contents": {
             "decision_count": 3,
-            "evidence_count": 0
+            "evidence_count": 0,
         },
         "integrity": {
             "algorithm": "SHA-256",
             "root_checksum": "dir_checksum",
-            "artifact_checksums": {}
-        }
+            "artifact_checksums": {},
+        },
     }
 
     manifest_file = packet_dir / "manifest.json"
@@ -93,7 +93,7 @@ def valid_audit_packet_dir(temp_dir):
     decisions = [
         {"decision_id": "dec_1"},
         {"decision_id": "dec_2"},
-        {"decision_id": "dec_3"}
+        {"decision_id": "dec_3"},
     ]
     decisions_file.write_text(json.dumps(decisions, indent=2))
 
@@ -194,8 +194,8 @@ class TestAuditVerifier:
         packet = {
             "manifest": {
                 # Missing most required fields
-                "packet_version": "1.0"
-            }
+                "packet_version": "1.0",
+            },
         }
 
         packet_file = Path(temp_dir) / "incomplete.json"
@@ -222,9 +222,9 @@ class TestAuditVerifier:
                     "contents": {"decision_count": 0},
                     "integrity": {
                         "algorithm": "SHA-256",
-                        "root_checksum": "test"
-                    }
-                }
+                        "root_checksum": "test",
+                    },
+                },
             }
 
             packet_file = Path(tmpdir) / "minimal.json"

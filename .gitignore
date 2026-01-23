@@ -67,6 +67,15 @@ venv.bak/
 *.pub
 node_data/
 
+# Secrets management (Phase 1D)
+secrets/
+.env
+*.env.local
+*.pem.backup
+private_key.pem
+# .env.encrypted can be committed (encrypted with master key)
+# but exclude for extra safety unless you want to version it
+
 # Sphinx documentation
 docs/_build/
 

@@ -68,7 +68,7 @@ class HealthCheck:
                         "name": name,
                         "status": HealthStatus.UNHEALTHY,
                         "details": {"error": str(e)},
-                    }
+                    },
                 )
                 overall_status = HealthStatus.UNHEALTHY
 

@@ -1,5 +1,4 @@
-"""
-Escalation Service - Safety valve for high-risk governance decisions.
+"""Escalation Service - Safety valve for high-risk governance decisions.
 
 Provides explicit escalation workflow with:
 - Auto-escalation based on risk thresholds
@@ -16,14 +15,14 @@ from typing import Any, Dict, List, Optional
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
+        ArtifactType,
         Escalation,
-        EscalationTrigger,
-        EscalationStatus,
         EscalationPriority,
+        EscalationStatus,
+        EscalationTrigger,
+        EvidenceArtifact,
         Resolution,
         ResolutionOutcome,
-        EvidenceArtifact,
-        ArtifactType,
         Risk,
         RiskLevel,
     )
@@ -44,8 +43,7 @@ except ImportError:
 
 
 def generate_escalation_id(decision_id: str) -> str:
-    """
-    Generate an escalation ID linked to a decision.
+    """Generate an escalation ID linked to a decision.
 
     Format: esc_dec_<decision_suffix>_<short_uuid>
     Allows multiple escalations per decision (e.g., re-escalation).
@@ -109,8 +107,7 @@ class NotificationEvent:
 
 
 class EscalationService:
-    """
-    Escalation service for governance decisions.
+    """Escalation service for governance decisions.
 
     Safety valve that routes high-risk decisions to human reviewers
     with explicit resolution requirements and SLA tracking.
@@ -122,8 +119,7 @@ class EscalationService:
         emit_notifications: bool = True,
         store_evidence: bool = True,
     ):
-        """
-        Initialize the escalation service.
+        """Initialize the escalation service.
 
         Args:
             config: Optional custom configuration
@@ -132,7 +128,7 @@ class EscalationService:
         """
         if not GOVERNANCE_MODELS_AVAILABLE:
             raise RuntimeError(
-                "Governance models not available. Install model_governance_pack."
+                "Governance models not available. Install model_governance_pack.",
             )
 
         self.config = config or EscalationConfig()
@@ -145,8 +141,7 @@ class EscalationService:
         self._evidence_artifacts: Dict[str, EvidenceArtifact] = {}
 
     def should_auto_escalate(self, risk: Optional["Risk"]) -> bool:
-        """
-        Determine if a decision should be auto-escalated based on risk.
+        """Determine if a decision should be auto-escalated based on risk.
 
         Args:
             risk: Risk assessment for the decision
@@ -162,13 +157,7 @@ class EscalationService:
             return True
 
         # Check risk level threshold
-        if (
-            risk.risk_level
-            and risk.risk_level == self.config.AUTO_ESCALATE_RISK_LEVEL
-        ):
-            return True
-
-        return False
+        return bool(risk.risk_level and risk.risk_level == self.config.AUTO_ESCALATE_RISK_LEVEL)
 
     def create_escalation(
         self,
@@ -179,8 +168,7 @@ class EscalationService:
         context_summary: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "Escalation":
-        """
-        Create an escalation for a decision.
+        """Create an escalation for a decision.
 
         Validates escalation via canonical schema and sets up SLA tracking.
 
@@ -251,8 +239,7 @@ class EscalationService:
         risk: "Risk",
         escalated_to: Optional[List[str]] = None,
     ) -> Optional["Escalation"]:
-        """
-        Auto-escalate a decision based on risk assessment.
+        """Auto-escalate a decision based on risk assessment.
 
         Only escalates if risk meets threshold criteria.
         Uses RISK_THRESHOLD trigger to indicate automatic escalation.
@@ -286,7 +273,7 @@ class EscalationService:
                 context_summary += f"High dimensions: {', '.join(high_dims)}. "
 
         # Create escalation
-        escalation = self.create_escalation(
+        return self.create_escalation(
             decision_id=decision_id,
             trigger=EscalationTrigger.RISK_THRESHOLD,
             escalated_to=recipients,
@@ -300,15 +287,13 @@ class EscalationService:
             },
         )
 
-        return escalation
 
     def acknowledge_escalation(
         self,
         escalation_id: str,
         acknowledged_by: str,
     ) -> "Escalation":
-        """
-        Acknowledge an escalation.
+        """Acknowledge an escalation.
 
         Updates status to ACKNOWLEDGED and records who acknowledged it.
 
@@ -328,7 +313,7 @@ class EscalationService:
 
         if escalation.status in [EscalationStatus.RESOLVED, EscalationStatus.EXPIRED]:
             raise ValueError(
-                f"Cannot acknowledge escalation in {escalation.status.value} state"
+                f"Cannot acknowledge escalation in {escalation.status.value} state",
             )
 
         # Create updated escalation (immutable pattern)
@@ -337,7 +322,7 @@ class EscalationService:
                 "status": EscalationStatus.ACKNOWLEDGED,
                 "acknowledged_at": datetime.now(timezone.utc),
                 "acknowledged_by": acknowledged_by,
-            }
+            },
         )
 
         self._escalations[escalation_id] = updated
@@ -366,8 +351,7 @@ class EscalationService:
         outcome: "ResolutionOutcome",
         notes: Optional[str] = None,
     ) -> "Escalation":
-        """
-        Resolve an escalation with explicit outcome.
+        """Resolve an escalation with explicit outcome.
 
         Requires explicit human action - escalations cannot auto-resolve.
 
@@ -395,7 +379,7 @@ class EscalationService:
             # Allow if resolver acknowledged it
             if resolved_by != escalation.acknowledged_by:
                 raise ValueError(
-                    f"Resolver {resolved_by} not authorized for this escalation"
+                    f"Resolver {resolved_by} not authorized for this escalation",
                 )
 
         # Create resolution
@@ -411,7 +395,7 @@ class EscalationService:
                 "status": EscalationStatus.RESOLVED,
                 "resolved_at": datetime.now(timezone.utc),
                 "resolution": resolution,
-            }
+            },
         )
 
         self._escalations[escalation_id] = updated
@@ -444,8 +428,7 @@ class EscalationService:
         decision_id: Optional[str] = None,
         limit: int = 100,
     ) -> List["Escalation"]:
-        """
-        List escalations with optional filtering.
+        """List escalations with optional filtering.
 
         Args:
             status: Filter by status
@@ -474,8 +457,7 @@ class EscalationService:
         return escalations[:limit]
 
     def check_sla_status(self) -> List[NotificationEvent]:
-        """
-        Check SLA status for all pending/acknowledged escalations.
+        """Check SLA status for all pending/acknowledged escalations.
 
         Emits notifications for escalations approaching or past deadline.
         Only emits when SLA risk exists (no spam).
@@ -514,7 +496,7 @@ class EscalationService:
             else:
                 # Check if approaching deadline
                 warning_time = escalation.sla_deadline - timedelta(
-                    hours=self.config.SLA_WARNING_HOURS
+                    hours=self.config.SLA_WARNING_HOURS,
                 )
 
                 if now > warning_time:
@@ -538,7 +520,7 @@ class EscalationService:
         return notifications
 
     def _infer_priority_from_trigger(
-        self, trigger: "EscalationTrigger"
+        self, trigger: "EscalationTrigger",
     ) -> "EscalationPriority":
         """Infer escalation priority from trigger type."""
         priority_map = {
@@ -636,7 +618,7 @@ class EscalationService:
         return artifact
 
     def _create_notification_artifact(
-        self, notification: NotificationEvent
+        self, notification: NotificationEvent,
     ) -> "EvidenceArtifact":
         """Create evidence artifact for notification."""
         # Serialize notification
@@ -688,8 +670,7 @@ class EscalationService:
         escalation_id: Optional[str] = None,
         event_type: Optional[str] = None,
     ) -> List[NotificationEvent]:
-        """
-        Get notification events with optional filtering.
+        """Get notification events with optional filtering.
 
         Args:
             escalation_id: Filter by escalation ID
@@ -713,8 +694,7 @@ class EscalationService:
         escalation_id: Optional[str] = None,
         decision_id: Optional[str] = None,
     ) -> List["EvidenceArtifact"]:
-        """
-        Get evidence artifacts with optional filtering.
+        """Get evidence artifacts with optional filtering.
 
         Args:
             escalation_id: Filter by escalation ID

@@ -1,5 +1,4 @@
-"""
-Compliance Mapping Service - Maps governance primitives to regulatory controls.
+"""Compliance Mapping Service - Maps governance primitives to regulatory controls.
 
 Provides regulatory alignment with:
 - Framework-specific control mappings (SOC 2, ISO 27001, GDPR, etc.)
@@ -9,12 +8,12 @@ Provides regulatory alignment with:
 - Automated compliance reporting
 """
 
+import copy
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
-import uuid
-import copy
+from typing import Any, Dict, List, Optional
 
 
 class RegulatoryFramework(Enum):
@@ -94,8 +93,7 @@ class ComplianceReport:
 
 
 class ComplianceMappingService:
-    """
-    Service for mapping governance primitives to regulatory controls.
+    """Service for mapping governance primitives to regulatory controls.
 
     Provides alignment between internal governance mechanisms and
     external compliance requirements.
@@ -113,9 +111,9 @@ class ComplianceMappingService:
             mapped_primitives=[
                 GovernancePrimitive.OVERRIDE,
                 GovernancePrimitive.EVIDENCE_ARTIFACT,
-                GovernancePrimitive.DECISION_LOG
+                GovernancePrimitive.DECISION_LOG,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
         "CC7.2": ComplianceControl(
             control_id="CC7.2",
@@ -127,9 +125,9 @@ class ComplianceMappingService:
             mapped_primitives=[
                 GovernancePrimitive.RISK_ASSESSMENT,
                 GovernancePrimitive.ESCALATION,
-                GovernancePrimitive.EVIDENCE_ARTIFACT
+                GovernancePrimitive.EVIDENCE_ARTIFACT,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
         "CC9.1": ComplianceControl(
             control_id="CC9.1",
@@ -141,9 +139,9 @@ class ComplianceMappingService:
             mapped_primitives=[
                 GovernancePrimitive.RISK_ASSESSMENT,
                 GovernancePrimitive.ESCALATION,
-                GovernancePrimitive.OVERRIDE
+                GovernancePrimitive.OVERRIDE,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
     }
 
@@ -158,9 +156,9 @@ class ComplianceMappingService:
             required_evidence_types=["decision_log", "audit_trail"],
             mapped_primitives=[
                 GovernancePrimitive.DECISION_LOG,
-                GovernancePrimitive.EVIDENCE_ARTIFACT
+                GovernancePrimitive.EVIDENCE_ARTIFACT,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
         "A.12.6.1": ComplianceControl(
             control_id="A.12.6.1",
@@ -171,9 +169,9 @@ class ComplianceMappingService:
             required_evidence_types=["risk_assessment", "evidence_artifact"],
             mapped_primitives=[
                 GovernancePrimitive.RISK_ASSESSMENT,
-                GovernancePrimitive.EVIDENCE_ARTIFACT
+                GovernancePrimitive.EVIDENCE_ARTIFACT,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
         "A.16.1.4": ComplianceControl(
             control_id="A.16.1.4",
@@ -185,9 +183,9 @@ class ComplianceMappingService:
             mapped_primitives=[
                 GovernancePrimitive.RISK_ASSESSMENT,
                 GovernancePrimitive.ESCALATION,
-                GovernancePrimitive.DECISION_LOG
+                GovernancePrimitive.DECISION_LOG,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
     }
 
@@ -202,9 +200,9 @@ class ComplianceMappingService:
             required_evidence_types=["risk_assessment", "evidence_artifact", "audit_trail"],
             mapped_primitives=[
                 GovernancePrimitive.RISK_ASSESSMENT,
-                GovernancePrimitive.EVIDENCE_ARTIFACT
+                GovernancePrimitive.EVIDENCE_ARTIFACT,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
         "Art.33": ComplianceControl(
             control_id="Art.33",
@@ -216,9 +214,9 @@ class ComplianceMappingService:
             mapped_primitives=[
                 GovernancePrimitive.ESCALATION,
                 GovernancePrimitive.EVIDENCE_ARTIFACT,
-                GovernancePrimitive.DECISION_LOG
+                GovernancePrimitive.DECISION_LOG,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
         "Art.35": ComplianceControl(
             control_id="Art.35",
@@ -229,9 +227,9 @@ class ComplianceMappingService:
             required_evidence_types=["risk_assessment", "evidence_artifact"],
             mapped_primitives=[
                 GovernancePrimitive.RISK_ASSESSMENT,
-                GovernancePrimitive.EVIDENCE_ARTIFACT
+                GovernancePrimitive.EVIDENCE_ARTIFACT,
             ],
-            status=ControlStatus.NOT_IMPLEMENTED
+            status=ControlStatus.NOT_IMPLEMENTED,
         ),
     }
 
@@ -250,10 +248,9 @@ class ComplianceMappingService:
         primitive_type: GovernancePrimitive,
         primitive_id: str,
         framework: RegulatoryFramework,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ControlMapping:
-        """
-        Map a governance primitive to relevant compliance controls.
+        """Map a governance primitive to relevant compliance controls.
 
         Args:
             primitive_type: Type of governance primitive
@@ -280,7 +277,7 @@ class ComplianceMappingService:
             framework=framework,
             mapped_at=datetime.now(timezone.utc),
             verification_status="pending",
-            metadata=metadata
+            metadata=metadata,
         )
 
         self._mappings[mapping_id] = mapping
@@ -290,10 +287,9 @@ class ComplianceMappingService:
         self,
         control_id: str,
         framework: RegulatoryFramework,
-        evidence_artifact_id: str
+        evidence_artifact_id: str,
     ) -> bool:
-        """
-        Link an evidence artifact to a compliance control.
+        """Link an evidence artifact to a compliance control.
 
         Args:
             control_id: Compliance control ID
@@ -319,10 +315,9 @@ class ComplianceMappingService:
         self,
         control_id: str,
         framework: RegulatoryFramework,
-        notes: Optional[str] = None
+        notes: Optional[str] = None,
     ) -> bool:
-        """
-        Mark a control as verified.
+        """Mark a control as verified.
 
         Args:
             control_id: Compliance control ID
@@ -348,10 +343,9 @@ class ComplianceMappingService:
     def get_control_status(
         self,
         control_id: str,
-        framework: RegulatoryFramework
+        framework: RegulatoryFramework,
     ) -> Optional[ComplianceControl]:
-        """
-        Get the current status of a compliance control.
+        """Get the current status of a compliance control.
 
         Args:
             control_id: Compliance control ID
@@ -369,10 +363,9 @@ class ComplianceMappingService:
         self,
         framework: RegulatoryFramework,
         status: Optional[ControlStatus] = None,
-        category: Optional[str] = None
+        category: Optional[str] = None,
     ) -> List[ComplianceControl]:
-        """
-        List compliance controls with optional filtering.
+        """List compliance controls with optional filtering.
 
         Args:
             framework: Regulatory framework
@@ -397,10 +390,9 @@ class ComplianceMappingService:
 
     def analyze_gaps(
         self,
-        framework: RegulatoryFramework
+        framework: RegulatoryFramework,
     ) -> List[Dict[str, Any]]:
-        """
-        Analyze compliance gaps for a framework.
+        """Analyze compliance gaps for a framework.
 
         Args:
             framework: Regulatory framework
@@ -421,17 +413,16 @@ class ComplianceMappingService:
                     "status": control.status.value,
                     "required_evidence_types": control.required_evidence_types,
                     "mapped_primitives": [p.value for p in control.mapped_primitives],
-                    "severity": "high" if control.status == ControlStatus.NON_COMPLIANT else "medium"
+                    "severity": "high" if control.status == ControlStatus.NON_COMPLIANT else "medium",
                 })
 
         return gaps
 
     def generate_compliance_report(
         self,
-        framework: RegulatoryFramework
+        framework: RegulatoryFramework,
     ) -> ComplianceReport:
-        """
-        Generate comprehensive compliance report for a framework.
+        """Generate comprehensive compliance report for a framework.
 
         Args:
             framework: Regulatory framework
@@ -471,7 +462,7 @@ class ComplianceMappingService:
             non_compliant_controls=non_compliant,
             compliance_percentage=compliance_percentage,
             gaps=gaps,
-            recommendations=recommendations
+            recommendations=recommendations,
         )
 
         self._reports[report_id] = report
@@ -479,10 +470,9 @@ class ComplianceMappingService:
 
     def get_framework_coverage(
         self,
-        framework: RegulatoryFramework
+        framework: RegulatoryFramework,
     ) -> Dict[str, Any]:
-        """
-        Get coverage statistics for a framework.
+        """Get coverage statistics for a framework.
 
         Args:
             framework: Regulatory framework
@@ -515,15 +505,14 @@ class ComplianceMappingService:
             "total_controls": total,
             "status_breakdown": status_counts,
             "categories": categories,
-            "overall_compliance": (status_counts.get("verified", 0) / total * 100) if total > 0 else 0
+            "overall_compliance": (status_counts.get("verified", 0) / total * 100) if total > 0 else 0,
         }
 
     def get_primitive_mappings(
         self,
-        primitive_id: str
+        primitive_id: str,
     ) -> List[ControlMapping]:
-        """
-        Get all control mappings for a primitive.
+        """Get all control mappings for a primitive.
 
         Args:
             primitive_id: Governance primitive ID
@@ -537,8 +526,7 @@ class ComplianceMappingService:
         ]
 
     def get_statistics(self) -> Dict[str, Any]:
-        """
-        Get overall compliance mapping statistics.
+        """Get overall compliance mapping statistics.
 
         Returns:
             Dictionary with statistics
@@ -561,5 +549,5 @@ class ComplianceMappingService:
             "total_controls": total_controls,
             "verified_controls": verified_controls,
             "frameworks": list(self._control_registry.keys()),
-            "overall_verification_rate": (verified_controls / total_controls * 100) if total_controls > 0 else 0
+            "overall_verification_rate": (verified_controls / total_controls * 100) if total_controls > 0 else 0,
         }

@@ -1,11 +1,12 @@
 """Tests for override service."""
 
-import pytest
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from lexecon.override.service import (
-    OverrideService,
     OverrideConfig,
+    OverrideService,
     OverrideValidator,
     generate_override_id,
 )
@@ -13,12 +14,12 @@ from lexecon.override.service import (
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        Override,
-        OverrideType,
-        OriginalOutcome,
-        NewOutcome,
-        OverrideScope,
         EvidenceArtifact,
+        NewOutcome,
+        OriginalOutcome,
+        Override,
+        OverrideScope,
+        OverrideType,
     )
 
     GOVERNANCE_MODELS_AVAILABLE = True
@@ -117,21 +118,21 @@ class TestOverrideService:
         """Test that governance lead is authorized for non-executive overrides."""
         assert service.is_authorized(governance_actor, OverrideType.RISK_ACCEPTED)
         assert service.is_authorized(
-            governance_actor, OverrideType.TIME_LIMITED_EXCEPTION
+            governance_actor, OverrideType.TIME_LIMITED_EXCEPTION,
         )
 
         # But not for executive-only types
         assert not service.is_authorized(
-            governance_actor, OverrideType.EMERGENCY_BYPASS
+            governance_actor, OverrideType.EMERGENCY_BYPASS,
         )
         assert not service.is_authorized(
-            governance_actor, OverrideType.EXECUTIVE_OVERRIDE
+            governance_actor, OverrideType.EXECUTIVE_OVERRIDE,
         )
 
     def test_is_authorized_unauthorized_actor(self, service, unauthorized_actor):
         """Test that unauthorized actors cannot override."""
         assert not service.is_authorized(
-            unauthorized_actor, OverrideType.RISK_ACCEPTED
+            unauthorized_actor, OverrideType.RISK_ACCEPTED,
         )
 
     def test_create_override_valid(self, service, executive_actor):
@@ -460,14 +461,14 @@ class TestOverrideService:
         }
 
         enriched = service.get_decision_with_override_status(
-            "dec_01JQXYZ1234567890ABCDEFGH", decision_data
+            "dec_01JQXYZ1234567890ABCDEFGH", decision_data,
         )
 
         assert enriched["decision"] == "deny"  # Original preserved
         assert enriched["override_status"]["is_overridden"] is False
 
     def test_get_decision_with_override_status_overridden(
-        self, service, executive_actor
+        self, service, executive_actor,
     ):
         """Test enriching decision data when overridden."""
         decision_id = "dec_01JQXYZ1234567890ABCDEFGH"
@@ -560,7 +561,7 @@ class TestOverrideValidator:
         future = datetime.now(timezone.utc) + timedelta(hours=24)
         assert (
             OverrideValidator.validate_time_limit(
-                OverrideType.TIME_LIMITED_EXCEPTION, future
+                OverrideType.TIME_LIMITED_EXCEPTION, future,
             )
             is True
         )
@@ -569,7 +570,7 @@ class TestOverrideValidator:
         """Test that time-limited exception requires expiration."""
         with pytest.raises(ValueError, match="must have expiration"):
             OverrideValidator.validate_time_limit(
-                OverrideType.TIME_LIMITED_EXCEPTION, None
+                OverrideType.TIME_LIMITED_EXCEPTION, None,
             )
 
     def test_validate_time_limit_past(self):
@@ -577,7 +578,7 @@ class TestOverrideValidator:
         past = datetime.now(timezone.utc) - timedelta(hours=1)
         with pytest.raises(ValueError, match="must be in the future"):
             OverrideValidator.validate_time_limit(
-                OverrideType.TIME_LIMITED_EXCEPTION, past
+                OverrideType.TIME_LIMITED_EXCEPTION, past,
             )
 
     def test_validate_time_limit_too_long(self):
@@ -585,7 +586,7 @@ class TestOverrideValidator:
         too_far = datetime.now(timezone.utc) + timedelta(days=100)
         with pytest.raises(ValueError, match="cannot exceed 90 days"):
             OverrideValidator.validate_time_limit(
-                OverrideType.TIME_LIMITED_EXCEPTION, too_far
+                OverrideType.TIME_LIMITED_EXCEPTION, too_far,
             )
 
     def test_validate_scope_emergency_bypass(self):
@@ -731,7 +732,7 @@ class TestIntegrationWorkflows:
 
         # Get enriched view
         enriched = service.get_decision_with_override_status(
-            decision_id, stored_decision
+            decision_id, stored_decision,
         )
 
         # Original decision unchanged

@@ -188,8 +188,8 @@ class TestLedgerChain:
     def test_verify_integrity_chain_break(self):
         """Test verify_integrity detects chain break."""
         ledger = LedgerChain()
-        entry1 = ledger.append("event1", {"data": 1})
-        entry2 = ledger.append("event2", {"data": 2})
+        ledger.append("event1", {"data": 1})
+        ledger.append("event2", {"data": 2})
 
         # Tamper with entry2's previous_hash AND recalculate its hash
         # This simulates a chain break where the hash is correct but points to wrong previous

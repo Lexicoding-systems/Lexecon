@@ -1,6 +1,6 @@
 """Tests for EU AI Act Article 12 - Record-Keeping Compliance."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import pytest
 
@@ -11,7 +11,7 @@ from lexecon.compliance.eu_ai_act.article_12_records import (
     RetentionClass,
     RetentionPolicy,
 )
-from lexecon.ledger.chain import LedgerChain, LedgerEntry
+from lexecon.ledger.chain import LedgerChain
 
 
 class TestRetentionClass:
@@ -199,7 +199,7 @@ class TestRecordKeepingSystem:
 
         # Apply legal hold
         record_system.apply_legal_hold(
-            hold_id="hold_002", entry_ids=[entry.entry_id], reason="Test"
+            hold_id="hold_002", entry_ids=[entry.entry_id], reason="Test",
         )
 
         # Wrap entry
@@ -214,7 +214,7 @@ class TestRecordKeepingSystem:
 
         # Apply and release
         record_system.apply_legal_hold(
-            hold_id="hold_003", entry_ids=[entry.entry_id], reason="Test"
+            hold_id="hold_003", entry_ids=[entry.entry_id], reason="Test",
         )
         result = record_system.release_legal_hold("hold_003", releaser="admin")
 
@@ -283,7 +283,7 @@ class TestRecordKeepingSystem:
     def test_anonymize_record(self, record_system, ledger):
         """Test anonymizing record with personal data."""
         entry = ledger.append(
-            "decision", {"user_email": "test@example.com", "action": "search"}
+            "decision", {"user_email": "test@example.com", "action": "search"},
         )
 
         result = record_system.anonymize_record(entry.entry_id)
@@ -370,8 +370,8 @@ class TestEdgeCases:
         entry1 = ledger.append("decision", {"action": "test1"})
         entry2 = ledger.append("decision", {"action": "test2"})
 
-        result = record_system.apply_legal_hold(
-            "hold_multi", [entry1.entry_id, entry2.entry_id], "Multi-entry hold"
+        record_system.apply_legal_hold(
+            "hold_multi", [entry1.entry_id, entry2.entry_id], "Multi-entry hold",
         )
 
         # Hold should be created

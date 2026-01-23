@@ -52,7 +52,7 @@ def example_policy_file(temp_dir):
                 "target": "action:search",
                 "conditions": [],
                 "metadata": {},
-            }
+            },
         ],
     }
 
@@ -144,7 +144,7 @@ class TestInitCommand:
         custom_dir = Path(temp_dir) / "custom"
 
         result = runner.invoke(
-            cli, ["init", "--node-id", "custom-node", "--data-dir", str(custom_dir)]
+            cli, ["init", "--node-id", "custom-node", "--data-dir", str(custom_dir)],
         )
 
         assert result.exit_code == 0
@@ -330,12 +330,11 @@ class TestVerifyLedgerCommand:
         ledger_file.write_text(json.dumps(ledger.to_dict()))
 
         # Mock verify_integrity to return failure
-        original_verify = LedgerChain.verify_integrity
         def mock_verify(self):
             return {
                 "valid": False,
                 "error": "Simulated verification failure",
-                "entries_verified": 0
+                "entries_verified": 0,
             }
 
         monkeypatch.setattr(LedgerChain, "verify_integrity", mock_verify)

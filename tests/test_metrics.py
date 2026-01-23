@@ -2,9 +2,6 @@
 
 import time
 
-import pytest
-from prometheus_client import REGISTRY
-
 from lexecon.observability.metrics import (
     MetricsCollector,
     active_policies,
@@ -15,7 +12,6 @@ from lexecon.observability.metrics import (
     http_requests_total,
     ledger_entries_total,
     metrics,
-    node_uptime_seconds,
     policies_loaded_total,
     record_decision,
     record_policy_load,
@@ -40,7 +36,7 @@ class TestMetricsCollector:
 
         # Get initial value
         initial_requests = http_requests_total.labels(
-            method="GET", endpoint="/health", status=200
+            method="GET", endpoint="/health", status=200,
         )._value.get()
 
         # Record request
@@ -48,7 +44,7 @@ class TestMetricsCollector:
 
         # Verify counter increased
         final_requests = http_requests_total.labels(
-            method="GET", endpoint="/health", status=200
+            method="GET", endpoint="/health", status=200,
         )._value.get()
 
         assert final_requests > initial_requests
@@ -71,7 +67,7 @@ class TestMetricsCollector:
 
         # Get initial value
         initial_decisions = decisions_total.labels(
-            allowed="True", actor="model", risk_level="1"
+            allowed="True", actor="model", risk_level="1",
         )._value.get()
 
         # Record decision
@@ -79,7 +75,7 @@ class TestMetricsCollector:
 
         # Verify counter increased
         final_decisions = decisions_total.labels(
-            allowed="True", actor="model", risk_level="1"
+            allowed="True", actor="model", risk_level="1",
         )._value.get()
 
         assert final_decisions > initial_decisions
@@ -89,13 +85,13 @@ class TestMetricsCollector:
         collector = MetricsCollector()
 
         initial_denials = decisions_denied_total.labels(
-            reason_category="policy", actor="model"
+            reason_category="policy", actor="model",
         )._value.get()
 
         collector.record_denial(reason_category="policy", actor="model")
 
         final_denials = decisions_denied_total.labels(
-            reason_category="policy", actor="model"
+            reason_category="policy", actor="model",
         )._value.get()
 
         assert final_denials > initial_denials
@@ -176,7 +172,7 @@ class TestMetricsCollector:
         assert len(output) > 0
 
         # Should contain Prometheus format markers
-        decoded = output.decode('utf-8')
+        decoded = output.decode("utf-8")
         assert "# HELP" in decoded or "# TYPE" in decoded
 
 
@@ -191,13 +187,13 @@ class TestGlobalMetricsInstance:
     def test_global_metrics_record_decision(self):
         """Test using global metrics instance."""
         initial = decisions_total.labels(
-            allowed="False", actor="user", risk_level="3"
+            allowed="False", actor="user", risk_level="3",
         )._value.get()
 
         metrics.record_decision(allowed=False, actor="user", risk_level=3, duration=0.2)
 
         final = decisions_total.labels(
-            allowed="False", actor="user", risk_level="3"
+            allowed="False", actor="user", risk_level="3",
         )._value.get()
 
         assert final > initial
@@ -209,13 +205,13 @@ class TestConvenienceFunctions:
     def test_record_decision_function(self):
         """Test record_decision convenience function."""
         initial = decisions_total.labels(
-            allowed="True", actor="bot", risk_level="2"
+            allowed="True", actor="bot", risk_level="2",
         )._value.get()
 
         record_decision(allowed=True, actor="bot", risk_level=2, duration=0.15)
 
         final = decisions_total.labels(
-            allowed="True", actor="bot", risk_level="2"
+            allowed="True", actor="bot", risk_level="2",
         )._value.get()
 
         assert final > initial
@@ -237,7 +233,7 @@ class TestMetricTypes:
     def test_counter_increments(self):
         """Test that counters only increment."""
         initial = http_requests_total.labels(
-            method="GET", endpoint="/test", status=200
+            method="GET", endpoint="/test", status=200,
         )._value.get()
 
         # Increment multiple times
@@ -245,7 +241,7 @@ class TestMetricTypes:
             metrics.record_request("GET", "/test", 200, 0.1)
 
         final = http_requests_total.labels(
-            method="GET", endpoint="/test", status=200
+            method="GET", endpoint="/test", status=200,
         )._value.get()
 
         # Should have incremented by 5
@@ -285,11 +281,11 @@ class TestMetricLabels:
     def test_different_labels_separate_metrics(self):
         """Test that different labels create separate metric series."""
         initial_200 = http_requests_total.labels(
-            method="GET", endpoint="/api", status=200
+            method="GET", endpoint="/api", status=200,
         )._value.get()
 
         initial_404 = http_requests_total.labels(
-            method="GET", endpoint="/api", status=404
+            method="GET", endpoint="/api", status=404,
         )._value.get()
 
         # Record 200
@@ -297,11 +293,11 @@ class TestMetricLabels:
 
         # Only 200 should increment
         final_200 = http_requests_total.labels(
-            method="GET", endpoint="/api", status=200
+            method="GET", endpoint="/api", status=200,
         )._value.get()
 
         final_404 = http_requests_total.labels(
-            method="GET", endpoint="/api", status=404
+            method="GET", endpoint="/api", status=404,
         )._value.get()
 
         assert final_200 > initial_200
@@ -331,7 +327,7 @@ class TestMetricsIntegration:
     def test_complete_request_workflow(self):
         """Test recording complete request workflow."""
         # Record incoming request
-        start_time = time.time()
+        time.time()
         metrics.record_request("POST", "/decide", 200, 0.2)
 
         # Record decision
@@ -384,15 +380,15 @@ class TestPrometheusExport:
     def test_export_format(self):
         """Test Prometheus export format."""
         output = metrics.export_metrics()
-        decoded = output.decode('utf-8')
+        decoded = output.decode("utf-8")
 
         # Should contain metric definitions
         assert "lexecon_" in decoded
 
         # Should contain HELP and TYPE comments
-        lines = decoded.split('\n')
-        help_lines = [l for l in lines if l.startswith('# HELP')]
-        type_lines = [l for l in lines if l.startswith('# TYPE')]
+        lines = decoded.split("\n")
+        help_lines = [l for l in lines if l.startswith("# HELP")]
+        type_lines = [l for l in lines if l.startswith("# TYPE")]
 
         assert len(help_lines) > 0
         assert len(type_lines) > 0
@@ -404,7 +400,7 @@ class TestPrometheusExport:
         metrics.record_ledger_entry()
 
         output = metrics.export_metrics()
-        decoded = output.decode('utf-8')
+        decoded = output.decode("utf-8")
 
         # Should contain metric values (numbers)
         assert any(char.isdigit() for char in decoded)
@@ -412,19 +408,19 @@ class TestPrometheusExport:
     def test_export_is_valid_prometheus_format(self):
         """Test that export is valid Prometheus format."""
         output = metrics.export_metrics()
-        decoded = output.decode('utf-8')
+        decoded = output.decode("utf-8")
 
-        lines = decoded.split('\n')
+        lines = decoded.split("\n")
 
         # Each metric line should have format: metric_name{labels} value
-        metric_lines = [l for l in lines if l and not l.startswith('#')]
+        metric_lines = [l for l in lines if l and not l.startswith("#")]
 
         for line in metric_lines[:10]:  # Check first 10
-            if '{' in line:
+            if "{" in line:
                 # Has labels
-                assert '}' in line
-                assert ' ' in line  # Space before value
-            elif ' ' in line and line.strip():
+                assert "}" in line
+                assert " " in line  # Space before value
+            elif " " in line and line.strip():
                 # No labels, just name and value
                 parts = line.split()
                 assert len(parts) >= 2
@@ -492,7 +488,7 @@ class TestEdgeCases:
     def test_multiple_collectors(self):
         """Test creating multiple collector instances."""
         collector1 = MetricsCollector()
-        collector2 = MetricsCollector()
+        MetricsCollector()
 
         # Should have different start times if created at different times
         time.sleep(0.01)

@@ -2,8 +2,6 @@
 
 from datetime import datetime, timedelta
 
-import pytest
-
 from lexecon.capability.tokens import CapabilityToken, CapabilityTokenStore
 
 
@@ -13,7 +11,7 @@ class TestCapabilityToken:
     def test_create_token(self):
         """Test creating a capability token."""
         token = CapabilityToken.create(
-            action="search", tool="web_search", policy_version_hash="abc123"
+            action="search", tool="web_search", policy_version_hash="abc123",
         )
 
         assert token.token_id.startswith("tok_")
@@ -27,7 +25,7 @@ class TestCapabilityToken:
     def test_create_token_with_custom_ttl(self):
         """Test creating token with custom TTL."""
         token = CapabilityToken.create(
-            action="write", tool="database", policy_version_hash="xyz789", ttl_minutes=10
+            action="write", tool="database", policy_version_hash="xyz789", ttl_minutes=10,
         )
 
         # Token should expire in 10 minutes
@@ -38,7 +36,7 @@ class TestCapabilityToken:
     def test_token_is_valid_when_not_expired(self):
         """Test that non-expired token is valid."""
         token = CapabilityToken.create(
-            action="read", tool="file_system", policy_version_hash="hash1", ttl_minutes=5
+            action="read", tool="file_system", policy_version_hash="hash1", ttl_minutes=5,
         )
 
         assert token.is_valid() is True
@@ -60,7 +58,7 @@ class TestCapabilityToken:
     def test_token_is_authorized_for_matching_action_and_tool(self):
         """Test authorization check with matching action and tool."""
         token = CapabilityToken.create(
-            action="search", tool="web_search", policy_version_hash="hash1"
+            action="search", tool="web_search", policy_version_hash="hash1",
         )
 
         assert token.is_authorized_for("search", "web_search") is True
@@ -68,7 +66,7 @@ class TestCapabilityToken:
     def test_token_not_authorized_for_different_action(self):
         """Test authorization check fails with different action."""
         token = CapabilityToken.create(
-            action="search", tool="web_search", policy_version_hash="hash1"
+            action="search", tool="web_search", policy_version_hash="hash1",
         )
 
         assert token.is_authorized_for("write", "web_search") is False
@@ -76,7 +74,7 @@ class TestCapabilityToken:
     def test_token_not_authorized_for_different_tool(self):
         """Test authorization check fails with different tool."""
         token = CapabilityToken.create(
-            action="search", tool="web_search", policy_version_hash="hash1"
+            action="search", tool="web_search", policy_version_hash="hash1",
         )
 
         assert token.is_authorized_for("search", "database") is False
@@ -97,7 +95,7 @@ class TestCapabilityToken:
     def test_token_serialization(self):
         """Test token serialization to dict."""
         token = CapabilityToken.create(
-            action="delete", tool="admin_panel", policy_version_hash="hash123"
+            action="delete", tool="admin_panel", policy_version_hash="hash123",
         )
         token.signature = "test_signature"
 
@@ -138,7 +136,7 @@ class TestCapabilityToken:
     def test_token_serialization_roundtrip(self):
         """Test that serialization and deserialization preserve token data."""
         original = CapabilityToken.create(
-            action="execute", tool="script_runner", policy_version_hash="hashABC"
+            action="execute", tool="script_runner", policy_version_hash="hashABC",
         )
         original.signature = "test_sig_123"
 

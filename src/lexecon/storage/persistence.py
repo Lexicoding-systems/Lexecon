@@ -1,5 +1,4 @@
-"""
-Ledger Persistence - SQLite storage for audit trail
+"""Ledger Persistence - SQLite storage for audit trail
 
 Maintains cryptographic integrity while providing persistent storage.
 Critical for EU AI Act Article 12 compliance (10-year retention).
@@ -15,8 +14,7 @@ from lexecon.ledger.chain import LedgerEntry
 
 
 class LedgerStorage:
-    """
-    Persistent storage for audit ledger using SQLite.
+    """Persistent storage for audit ledger using SQLite.
 
     Features:
     - Automatic saving on each append
@@ -30,7 +28,7 @@ class LedgerStorage:
         self.db_path = db_path
         self._init_database()
 
-    def _init_database(self):
+    def _init_database(self) -> None:
         """Create tables if they don't exist."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -86,7 +84,7 @@ class LedgerStorage:
                 json.dumps(entry.data),
                 entry.previous_hash,
                 entry.entry_hash,
-                datetime.utcnow().isoformat()
+                datetime.utcnow().isoformat(),
             ))
 
             # Update metadata with latest hash
@@ -121,7 +119,7 @@ class LedgerStorage:
                     event_type=row[1],
                     timestamp=row[2],
                     data=json.loads(row[3]),
-                    previous_hash=row[4]
+                    previous_hash=row[4],
                 )
 
                 # Verify stored hash matches calculated hash
@@ -156,7 +154,7 @@ class LedgerStorage:
                     event_type=row[1],
                     timestamp=row[2],
                     data=json.loads(row[3]),
-                    previous_hash=row[4]
+                    previous_hash=row[4],
                 )
 
                 # Verify hash integrity
@@ -208,9 +206,8 @@ class LedgerStorage:
                 return False
 
             # Verify chain linkage
-            if i > 0:
-                if entry.previous_hash != entries[i - 1].entry_hash:
-                    return False
+            if i > 0 and entry.previous_hash != entries[i - 1].entry_hash:
+                return False
 
         return True
 
@@ -221,10 +218,10 @@ class LedgerStorage:
         data = {
             "exported_at": datetime.utcnow().isoformat(),
             "total_entries": len(entries),
-            "entries": [entry.to_dict() for entry in entries]
+            "entries": [entry.to_dict() for entry in entries],
         }
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
 
     def get_statistics(self) -> dict:
@@ -262,7 +259,7 @@ class LedgerStorage:
                 "newest_entry": date_range[1],
                 "database_size_bytes": db_size,
                 "database_path": self.db_path,
-                "chain_integrity": self.verify_chain_integrity()
+                "chain_integrity": self.verify_chain_integrity(),
             }
         finally:
             conn.close()

@@ -1,5 +1,4 @@
-"""
-Identity & Signing - Ed25519 key management and cryptographic signatures.
+"""Identity & Signing - Ed25519 key management and cryptographic signatures.
 
 Manages key pairs for signing decisions and verifying integrity.
 """
@@ -14,8 +13,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 
 
 class NodeIdentity:
-    """
-    Represents a node's identity in the governance system.
+    """Represents a node's identity in the governance system.
 
     Each node has a unique identifier and associated cryptographic keys.
     """
@@ -60,8 +58,7 @@ class NodeIdentity:
 
 
 class KeyManager:
-    """
-    Manages Ed25519 key pairs for signing and verification.
+    """Manages Ed25519 key pairs for signing and verification.
 
     Keys can be generated, saved to disk, and loaded from disk.
     """
@@ -110,8 +107,7 @@ class KeyManager:
         return serialization.load_pem_public_key(public_pem)
 
     def sign(self, data: Dict[str, Any]) -> str:
-        """
-        Sign data using private key.
+        """Sign data using private key.
 
         Returns base64-encoded signature.
         """
@@ -130,8 +126,7 @@ class KeyManager:
 
     @staticmethod
     def verify(data: Dict[str, Any], signature: str, public_key: Ed25519PublicKey) -> bool:
-        """
-        Verify signature on data using public key.
+        """Verify signature on data using public key.
 
         Returns True if signature is valid, False otherwise.
         """

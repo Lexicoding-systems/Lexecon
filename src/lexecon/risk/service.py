@@ -1,5 +1,4 @@
-"""
-Risk Assessment Service - Deterministic risk scoring for governance decisions.
+"""Risk Assessment Service - Deterministic risk scoring for governance decisions.
 
 Integrates with canonical Risk model to provide:
 - Deterministic risk scoring based on RiskDimensions
@@ -9,15 +8,14 @@ Integrates with canonical Risk model to provide:
 """
 
 import hashlib
-import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 # Import canonical governance models
 try:
     from model_governance_pack.models import (
-        EvidenceArtifact,
         ArtifactType,
+        EvidenceArtifact,
         Risk,
         RiskDimensions,
         RiskFactor,
@@ -36,8 +34,7 @@ except ImportError:
 
 
 def generate_risk_id(decision_id: str) -> str:
-    """
-    Generate a risk assessment ID linked to a decision.
+    """Generate a risk assessment ID linked to a decision.
 
     Format: rsk_dec_<decision_suffix>
     Enforces one-to-one linkage between Risk and Decision.
@@ -45,14 +42,12 @@ def generate_risk_id(decision_id: str) -> str:
     if decision_id.startswith("dec_"):
         suffix = decision_id[4:]  # Remove "dec_" prefix
         return f"rsk_dec_{suffix}"
-    else:
-        # Fallback for non-canonical decision IDs
-        return f"rsk_dec_{decision_id}"
+    # Fallback for non-canonical decision IDs
+    return f"rsk_dec_{decision_id}"
 
 
 def generate_evidence_id(artifact_type: str) -> str:
-    """
-    Generate an evidence artifact ID.
+    """Generate an evidence artifact ID.
 
     Format: evd_<type>_<8_hex_chars>
     """
@@ -63,8 +58,7 @@ def generate_evidence_id(artifact_type: str) -> str:
 
 
 class RiskScoringEngine:
-    """
-    Deterministic risk scoring engine.
+    """Deterministic risk scoring engine.
 
     Calculates overall risk score from dimensional risk factors
     using transparent, explainable logic (no ML).
@@ -98,8 +92,7 @@ class RiskScoringEngine:
         }
 
     def __init__(self, weights: Optional[Dict[str, float]] = None):
-        """
-        Initialize the risk scoring engine.
+        """Initialize the risk scoring engine.
 
         Args:
             weights: Optional custom weights for risk dimensions.
@@ -116,8 +109,7 @@ class RiskScoringEngine:
         self,
         dimensions: "RiskDimensions",
     ) -> int:
-        """
-        Calculate overall risk score from dimensions.
+        """Calculate overall risk score from dimensions.
 
         Uses weighted average of populated dimensions.
         Returns integer score 0-100.
@@ -149,9 +141,9 @@ class RiskScoringEngine:
             return 1
 
         # Calculate weighted average using only populated dimensions
-        total_weight = sum(self.weights[k] for k in populated_dims.keys())
+        total_weight = sum(self.weights[k] for k in populated_dims)
         weighted_sum = sum(
-            populated_dims[k] * self.weights[k] for k in populated_dims.keys()
+            populated_dims[k] * self.weights[k] for k in populated_dims
         )
 
         overall_score = int(weighted_sum / total_weight)
@@ -160,8 +152,7 @@ class RiskScoringEngine:
         return max(1, min(100, overall_score))
 
     def determine_risk_level(self, overall_score: int) -> "RiskLevel":
-        """
-        Determine categorical risk level from overall score.
+        """Determine categorical risk level from overall score.
 
         Args:
             overall_score: Overall risk score (0-100)
@@ -174,18 +165,16 @@ class RiskScoringEngine:
 
         if overall_score >= self.RISK_THRESHOLDS[RiskLevel.CRITICAL]:
             return RiskLevel.CRITICAL
-        elif overall_score >= self.RISK_THRESHOLDS[RiskLevel.HIGH]:
+        if overall_score >= self.RISK_THRESHOLDS[RiskLevel.HIGH]:
             return RiskLevel.HIGH
-        elif overall_score >= self.RISK_THRESHOLDS[RiskLevel.MEDIUM]:
+        if overall_score >= self.RISK_THRESHOLDS[RiskLevel.MEDIUM]:
             return RiskLevel.MEDIUM
-        else:
-            return RiskLevel.LOW
+        return RiskLevel.LOW
 
     def calculate_risk_factors(
-        self, dimensions: "RiskDimensions"
+        self, dimensions: "RiskDimensions",
     ) -> List["RiskFactor"]:
-        """
-        Generate explainable risk factors from dimensions.
+        """Generate explainable risk factors from dimensions.
 
         Args:
             dimensions: RiskDimensions with scores
@@ -215,15 +204,14 @@ class RiskScoringEngine:
                         name=f"{dim_name}_risk",
                         weight=self.weights[dim_name],
                         value=float(score),
-                    )
+                    ),
                 )
 
         return factors
 
 
 class RiskService:
-    """
-    Risk assessment service for governance decisions.
+    """Risk assessment service for governance decisions.
 
     Provides deterministic risk scoring with full audit trail.
     Enforces one-to-one linkage between Risk and Decision records.
@@ -234,8 +222,7 @@ class RiskService:
         scoring_engine: Optional[RiskScoringEngine] = None,
         store_evidence: bool = True,
     ):
-        """
-        Initialize the risk service.
+        """Initialize the risk service.
 
         Args:
             scoring_engine: Optional custom scoring engine
@@ -243,7 +230,7 @@ class RiskService:
         """
         if not GOVERNANCE_MODELS_AVAILABLE:
             raise RuntimeError(
-                "Governance models not available. Install model_governance_pack."
+                "Governance models not available. Install model_governance_pack.",
             )
 
         self.scoring_engine = scoring_engine or RiskScoringEngine()
@@ -265,8 +252,7 @@ class RiskService:
         mitigations: Optional[List[str]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "Risk":
-        """
-        Assess risk for a decision.
+        """Assess risk for a decision.
 
         Creates a new Risk record with deterministic scoring.
         Enforces one-to-one linkage with Decision.
@@ -290,7 +276,7 @@ class RiskService:
             existing_risk_id = self._decision_to_risk[decision_id]
             raise ValueError(
                 f"Decision {decision_id} already has risk assessment {existing_risk_id}. "
-                "Create new assessment with new decision_id for versioning."
+                "Create new assessment with new decision_id for versioning.",
             )
 
         # Generate risk ID
@@ -347,8 +333,7 @@ class RiskService:
         risk_level: Optional["RiskLevel"] = None,
         limit: int = 100,
     ) -> List["Risk"]:
-        """
-        List risk assessments with optional filtering.
+        """List risk assessments with optional filtering.
 
         Args:
             min_score: Minimum overall score filter
@@ -373,8 +358,7 @@ class RiskService:
         return risks[:limit]
 
     def _create_evidence_artifact(self, risk: "Risk") -> "EvidenceArtifact":
-        """
-        Create evidence artifact for risk assessment.
+        """Create evidence artifact for risk assessment.
 
         Args:
             risk: Risk object to create artifact for
@@ -420,10 +404,9 @@ class RiskService:
         return self._evidence_artifacts.get(artifact_id)
 
     def list_evidence_artifacts(
-        self, decision_id: Optional[str] = None
+        self, decision_id: Optional[str] = None,
     ) -> List["EvidenceArtifact"]:
-        """
-        List evidence artifacts with optional filtering.
+        """List evidence artifacts with optional filtering.
 
         Args:
             decision_id: Filter by decision ID

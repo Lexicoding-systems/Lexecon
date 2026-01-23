@@ -1,5 +1,4 @@
-"""
-Lexecon Compliance Module
+"""Lexecon Compliance Module
 
 EU AI Act enforcement infrastructure for enterprise governance.
 """

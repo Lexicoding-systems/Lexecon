@@ -380,7 +380,7 @@ class TestLoggerAdapter:
             base_logger = logging.getLogger("test")
             adapter = LoggerAdapter(base_logger, {})
 
-            msg, kwargs = adapter.process("Test message", {})
+            _msg, kwargs = adapter.process("Test message", {})
 
             assert "extra" in kwargs
             assert kwargs["extra"]["request_id"] == "req_999"
@@ -397,7 +397,7 @@ class TestLoggerAdapter:
         base_logger = logging.getLogger("test")
         adapter = LoggerAdapter(base_logger, {})
 
-        msg, kwargs = adapter.process("Test message", {})
+        _msg, kwargs = adapter.process("Test message", {})
 
         assert "extra" in kwargs
         assert "request_id" not in kwargs["extra"]
@@ -411,8 +411,8 @@ class TestLoggerAdapter:
             base_logger = logging.getLogger("test")
             adapter = LoggerAdapter(base_logger, {})
 
-            msg, kwargs = adapter.process(
-                "Test message", {"extra": {"custom": "field"}}
+            _msg, kwargs = adapter.process(
+                "Test message", {"extra": {"custom": "field"}},
             )
 
             assert kwargs["extra"]["custom"] == "field"
