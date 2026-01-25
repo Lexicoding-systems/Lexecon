@@ -103,11 +103,24 @@ class AuthService:
         self._init_database()
 
     def _init_database(self) -> None:
-        """Initialize authentication database."""
+        """Initialize authentication database with schema version tracking."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Users table
+        # Schema version table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS schema_version (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            )
+        """)
+
+        # Check current version
+        cursor.execute("SELECT MAX(version) FROM schema_version")
+        result = cursor.fetchone()
+        current_version = result[0] if result[0] else 0
+
+        # Users table with all required columns
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id TEXT PRIMARY KEY,
@@ -118,10 +131,25 @@ class AuthService:
                 role TEXT NOT NULL,
                 full_name TEXT NOT NULL,
                 created_at TEXT NOT NULL,
+                password_changed_at TEXT,
+                password_expires_at TEXT,
+                mfa_enabled INTEGER DEFAULT 0,
+                mfa_secret TEXT,
                 last_login TEXT,
                 is_active INTEGER DEFAULT 1,
                 failed_login_attempts INTEGER DEFAULT 0,
                 locked_until TEXT
+            )
+        """)
+
+        # Password history table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS password_history (
+                history_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                changed_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
             )
         """)
 
@@ -151,6 +179,14 @@ class AuthService:
                 failure_reason TEXT
             )
         """)
+
+        # Record schema version if not already recorded
+        if current_version < 2:
+            from datetime import datetime, timezone
+            cursor.execute(
+                "INSERT INTO schema_version (version, applied_at) VALUES (?, ?)",
+                (2, datetime.now(timezone.utc).isoformat()),
+            )
 
         conn.commit()
         conn.close()
