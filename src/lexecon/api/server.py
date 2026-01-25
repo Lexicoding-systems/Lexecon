@@ -66,6 +66,7 @@ from lexecon.security.audit_service import AuditService, ExportStatus
 
 # Security imports
 from lexecon.security.auth_service import AuthService, Permission, Role
+from lexecon.security.auth_service_async import AsyncAuthService
 from lexecon.security.signature_service import SignatureService
 from lexecon.storage.persistence import LedgerStorage
 
@@ -649,6 +650,7 @@ startup_time: float = time.time()
 
 # Security services
 auth_service: AuthService = AuthService("lexecon_auth.db")
+async_auth_service: AsyncAuthService = AsyncAuthService(auth_service)
 audit_service: AuditService = AuditService("lexecon_export_audit.db")
 signature_service: SignatureService = SignatureService("lexecon_keys")
 
@@ -1637,7 +1639,8 @@ async def login(request: Request, login_req: LoginRequest):
     """Authenticate user and create session."""
     ip_address = request.client.host if request.client else None
 
-    user, error = auth_service.authenticate(
+    # Use async auth service to avoid blocking event loop
+    user, error = await async_auth_service.authenticate(
         login_req.username,
         login_req.password,
         ip_address,
@@ -1646,8 +1649,8 @@ async def login(request: Request, login_req: LoginRequest):
     if not user:
         return LoginResponse(success=False, error=error)
 
-    # Create session
-    session = auth_service.create_session(user, ip_address)
+    # Create session (async)
+    session = await async_auth_service.create_session(user, ip_address)
 
     # Log access
     audit_service.log_access(
@@ -1680,7 +1683,7 @@ async def logout(request: Request):
         session_id = request.headers.get("Authorization", "").replace("Bearer ", "")
 
     if session_id:
-        auth_service.revoke_session(session_id)
+        await async_auth_service.revoke_session(session_id)
 
     return {"success": True, "message": "Logged out successfully"}
 
@@ -1695,11 +1698,11 @@ async def get_current_user_info(request: Request):
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    session, error = auth_service.validate_session(session_id)
+    session, error = await async_auth_service.validate_session(session_id)
     if not session:
         raise HTTPException(status_code=401, detail=error)
 
-    user = auth_service.get_user_by_id(session.user_id)
+    user = await async_auth_service.get_user_by_id(session.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -1720,15 +1723,15 @@ async def create_user(request: Request, user_req: CreateUserRequest):
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    session, error = auth_service.validate_session(session_id)
+    session, error = await async_auth_service.validate_session(session_id)
     if not session:
         raise HTTPException(status_code=401, detail=error)
 
-    if not auth_service.has_permission(session.role, Permission.MANAGE_USERS):
+    if not async_auth_service.has_permission(session.role, Permission.MANAGE_USERS):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     try:
-        user = auth_service.create_user(
+        user = await async_auth_service.create_user(
             username=user_req.username,
             email=user_req.email,
             password=user_req.password,
@@ -1757,14 +1760,14 @@ async def list_users(request: Request):
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    session, error = auth_service.validate_session(session_id)
+    session, error = await async_auth_service.validate_session(session_id)
     if not session:
         raise HTTPException(status_code=401, detail=error)
 
-    if not auth_service.has_permission(session.role, Permission.MANAGE_USERS):
+    if not async_auth_service.has_permission(session.role, Permission.MANAGE_USERS):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
-    users = auth_service.list_users()
+    users = await async_auth_service.list_users()
 
     return {
         "users": [
@@ -1789,12 +1792,12 @@ async def change_password(request: Request, password_req: ChangePasswordRequest)
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    session, error = auth_service.validate_session(session_id)
+    session, error = await async_auth_service.validate_session(session_id)
     if not session:
         raise HTTPException(status_code=401, detail=error)
 
     try:
-        success = auth_service.change_password(
+        success, error = await async_auth_service.change_password(
             user_id=session.user_id,
             old_password=password_req.old_password,
             new_password=password_req.new_password,
@@ -1844,12 +1847,12 @@ async def get_password_status(request: Request):
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    session, error = auth_service.validate_session(session_id)
+    session, error = await async_auth_service.validate_session(session_id)
     if not session:
         raise HTTPException(status_code=401, detail=error)
 
     try:
-        status = auth_service.get_password_status(session.user_id)
+        status = await async_auth_service.get_password_status(session.user_id)
 
         return PasswordStatusResponse(
             password_changed_at=status["password_changed_at"],
