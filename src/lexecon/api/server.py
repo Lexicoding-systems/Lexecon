@@ -19,8 +19,13 @@ from pydantic import BaseModel, Field, field_validator
 from lexecon.api.validation import (
     validate_context,
     validate_data_classes,
+    validate_justification,
+    validate_iso_timestamp,
     validate_output_type,
+    validate_override_scope,
     validate_policy_mode,
+    validate_reason,
+    validate_recommendation_dict,
     validate_risk_level,
     validate_string_field,
     ValidationConfig,
@@ -190,7 +195,7 @@ class PolicyLoadModel(BaseModel):
 
 
 class InterventionModel(BaseModel):
-    """Model for human intervention request."""
+    """Model for human intervention request with comprehensive validation."""
 
     intervention_type: str = Field(..., description="Type of intervention")
     ai_recommendation: Dict[str, Any] = Field(..., description="AI's recommendation (must include 'confidence' key)")
@@ -199,6 +204,44 @@ class InterventionModel(BaseModel):
     reason: str = Field(..., description="Reason for intervention")
     request_context: Optional[Dict[str, Any]] = Field(default=None, description="Additional request context")
     response_time_ms: Optional[int] = Field(default=None, description="Response time in milliseconds")
+
+    @field_validator("intervention_type")
+    @classmethod
+    def validate_intervention_type(cls, v: str) -> str:
+        """Validate intervention type."""
+        return validate_string_field(v, "intervention_type", ValidationConfig.MAX_TOOL_LENGTH)
+
+    @field_validator("ai_recommendation", mode="before")
+    @classmethod
+    def validate_ai_recommendation(cls, v: Any) -> Dict[str, Any]:
+        """Validate AI recommendation dict with confidence check."""
+        return validate_recommendation_dict(v, "ai_recommendation")
+
+    @field_validator("human_decision", mode="before")
+    @classmethod
+    def validate_human_decision(cls, v: Any) -> Dict[str, Any]:
+        """Validate human decision dict."""
+        return validate_recommendation_dict(v, "human_decision")
+
+    @field_validator("human_role")
+    @classmethod
+    def validate_human_role(cls, v: str) -> str:
+        """Validate human role."""
+        return validate_string_field(v, "human_role", ValidationConfig.MAX_ACTOR_LENGTH)
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason_field(cls, v: str) -> str:
+        """Validate reason text."""
+        return validate_reason(v)
+
+    @field_validator("request_context", mode="before")
+    @classmethod
+    def validate_request_context(cls, v: Any) -> Optional[Dict[str, Any]]:
+        """Validate optional request context."""
+        if v is None:
+            return None
+        return validate_context(v)
 
 
 class HealthResponse(BaseModel):
@@ -357,7 +400,7 @@ class EscalationResolveRequest(BaseModel):
 
 # Override Service Models
 class OverrideCreateRequest(BaseModel):
-    """Request to create an override."""
+    """Request to create an override with comprehensive validation."""
     decision_id: str = Field(..., description="Decision ID to override")
     override_type: str = Field(..., description="Type of override")
     authorized_by: str = Field(..., description="Actor ID authorizing override")
@@ -367,6 +410,73 @@ class OverrideCreateRequest(BaseModel):
     expires_at: Optional[str] = Field(default=None, description="Expiration timestamp (ISO 8601)")
     scope: Optional[Dict[str, Any]] = Field(default=None, description="Override scope limitations")
     metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
+
+    @field_validator("decision_id")
+    @classmethod
+    def validate_decision_id(cls, v: str) -> str:
+        """Validate decision ID."""
+        return validate_string_field(v, "decision_id", ValidationConfig.MAX_ACTOR_LENGTH)
+
+    @field_validator("override_type")
+    @classmethod
+    def validate_override_type(cls, v: str) -> str:
+        """Validate override type."""
+        return validate_string_field(v, "override_type", ValidationConfig.MAX_TOOL_LENGTH)
+
+    @field_validator("authorized_by")
+    @classmethod
+    def validate_authorized_by(cls, v: str) -> str:
+        """Validate authorizing actor."""
+        return validate_string_field(
+            v,
+            "authorized_by",
+            ValidationConfig.MAX_ACTOR_LENGTH,
+            ValidationConfig.ACTOR_PATTERN,
+        )
+
+    @field_validator("justification")
+    @classmethod
+    def validate_justification_field(cls, v: str) -> str:
+        """Validate justification text (min 20 chars enforced by Field)."""
+        return validate_justification(v)
+
+    @field_validator("original_outcome")
+    @classmethod
+    def validate_original_outcome(cls, v: Optional[str]) -> Optional[str]:
+        """Validate original outcome."""
+        if v is None:
+            return None
+        return validate_string_field(v, "original_outcome", ValidationConfig.MAX_ACTION_LENGTH)
+
+    @field_validator("new_outcome")
+    @classmethod
+    def validate_new_outcome(cls, v: Optional[str]) -> Optional[str]:
+        """Validate new outcome."""
+        if v is None:
+            return None
+        return validate_string_field(v, "new_outcome", ValidationConfig.MAX_ACTION_LENGTH)
+
+    @field_validator("expires_at", mode="before")
+    @classmethod
+    def validate_expires_at(cls, v: Optional[str]) -> Optional[str]:
+        """Validate expiration timestamp."""
+        return validate_iso_timestamp(v, "expires_at")
+
+    @field_validator("scope", mode="before")
+    @classmethod
+    def validate_scope(cls, v: Any) -> Optional[Dict[str, Any]]:
+        """Validate scope limitations dict."""
+        if v is None:
+            return None
+        return validate_override_scope(v)
+
+    @field_validator("metadata", mode="before")
+    @classmethod
+    def validate_metadata(cls, v: Any) -> Optional[Dict[str, Any]]:
+        """Validate metadata dict."""
+        if v is None:
+            return None
+        return validate_context(v)
 
 
 # Evidence Service Models

@@ -270,3 +270,126 @@ def validate_data_classes(value: List[str]) -> List[str]:
             raise ValueError(f"data_classes[{i}] exceeds maximum length")
 
     return value
+
+
+def validate_recommendation_dict(value: Optional[Dict[str, Any]], field_name: str) -> Optional[Dict[str, Any]]:
+    """Validate AI recommendation or decision dict.
+
+    Ensures 'confidence' key exists for recommendations.
+
+    Args:
+        value: Dict to validate
+        field_name: Field name for error messages
+
+    Returns:
+        Validated dict
+
+    Raises:
+        ValueError: If validation fails
+    """
+    if value is None:
+        return None
+
+    if not isinstance(value, dict):
+        raise ValueError(f"{field_name} must be a dictionary")
+
+    # Validate size and structure
+    validated = validate_context(value)
+
+    # Check for required 'confidence' key in recommendations
+    if field_name == "ai_recommendation":
+        if "confidence" not in validated:
+            raise ValueError(f"{field_name} must include 'confidence' key")
+
+        confidence = validated["confidence"]
+        if not isinstance(confidence, (int, float)):
+            raise ValueError(f"{field_name}['confidence'] must be a number")
+
+        if not (0 <= confidence <= 1):
+            raise ValueError(f"{field_name}['confidence'] must be between 0 and 1")
+
+    return validated
+
+
+def validate_override_scope(value: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Validate override scope limitations dict.
+
+    Args:
+        value: Dict to validate
+
+    Returns:
+        Validated dict
+
+    Raises:
+        ValueError: If validation fails
+    """
+    if value is None:
+        return None
+
+    return validate_context(value)
+
+
+def validate_iso_timestamp(value: Optional[str], field_name: str = "timestamp") -> Optional[str]:
+    """Validate ISO 8601 timestamp string.
+
+    Args:
+        value: Timestamp string to validate
+        field_name: Field name for error messages
+
+    Returns:
+        Validated timestamp
+
+    Raises:
+        ValueError: If validation fails
+    """
+    if value is None:
+        return None
+
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be a string")
+
+    try:
+        # Try to parse as ISO format
+        from datetime import datetime
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return value
+    except (ValueError, AttributeError) as e:
+        raise ValueError(f"{field_name} must be valid ISO 8601 format (e.g., 2024-01-25T10:30:00Z)")
+
+
+def validate_justification(value: str) -> str:
+    """Validate override justification text.
+
+    Args:
+        value: Justification text
+
+    Returns:
+        Validated text
+
+    Raises:
+        ValueError: If validation fails
+    """
+    return validate_string_field(
+        value,
+        "justification",
+        ValidationConfig.MAX_REASON_LENGTH,
+    )
+
+
+def validate_reason(value: str) -> str:
+    """Validate intervention reason text.
+
+    Args:
+        value: Reason text
+
+    Returns:
+        Validated text
+
+    Raises:
+        ValueError: If validation fails
+    """
+    return validate_string_field(
+        value,
+        "reason",
+        ValidationConfig.MAX_REASON_LENGTH,
+    )
