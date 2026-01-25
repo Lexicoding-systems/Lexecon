@@ -95,10 +95,16 @@ class RateLimiter:
     Thread-safe for concurrent requests.
     """
 
-    def __init__(self):
-        """Initialize rate limiter with default configurations."""
+    def __init__(self, max_buckets: int = 100000):
+        """Initialize rate limiter with default configurations.
+
+        Args:
+            max_buckets: Maximum number of buckets before LRU eviction (DoS protection)
+        """
         self.buckets: Dict[str, TokenBucket] = {}
         self.lock = threading.Lock()
+        self.max_buckets = max_buckets
+        self.access_order: Dict[str, float] = {}  # Track access times for LRU
 
         # Rate limit configurations
         # Format: (capacity, window_seconds)
@@ -129,7 +135,7 @@ class RateLimiter:
         self._start_cleanup_thread()
 
     def _get_or_create_bucket(self, key: str, limit_type: str) -> TokenBucket:
-        """Get existing bucket or create new one.
+        """Get existing bucket or create new one with LRU eviction on max buckets.
 
         Args:
             key: Unique identifier (e.g., "ip:192.168.1.1")
@@ -139,16 +145,43 @@ class RateLimiter:
             TokenBucket instance
         """
         bucket_key = f"{limit_type}:{key}"
+        now = time.time()
 
         with self.lock:
             if bucket_key not in self.buckets:
+                # Check if we need to evict (LRU)
+                if len(self.buckets) >= self.max_buckets:
+                    self._evict_lru_bucket()
+
                 capacity, window = self.limits.get(limit_type, (100, 60))
                 refill_rate = capacity / window
 
                 self.buckets[bucket_key] = TokenBucket(capacity, refill_rate)
                 self.bucket_created[bucket_key] = datetime.now()
+                self.access_order[bucket_key] = now
+            else:
+                # Update access time for LRU tracking
+                self.access_order[bucket_key] = now
 
             return self.buckets[bucket_key]
+
+    def _evict_lru_bucket(self) -> None:
+        """Evict the least recently used bucket to prevent memory exhaustion.
+
+        This is called when max_buckets is reached.
+        """
+        if not self.access_order:
+            return
+
+        # Find least recently used
+        lru_key = min(self.access_order, key=self.access_order.get)
+
+        # Remove it
+        if lru_key in self.buckets:
+            del self.buckets[lru_key]
+        if lru_key in self.bucket_created:
+            del self.bucket_created[lru_key]
+        del self.access_order[lru_key]
 
     def check_rate_limit(self, key: str, limit_type: str) -> Tuple[bool, Optional[int]]:
         """Check if request is within rate limit WITHOUT consuming a token.
@@ -244,7 +277,7 @@ class RateLimiter:
             bucket._refill()
             return int(bucket.tokens)
 
-    def cleanup_expired_buckets(self, max_age_hours: int = 24):
+    def cleanup_expired_buckets(self, max_age_hours: int = 1):
         """Remove expired buckets to prevent memory leak.
 
         Args:
@@ -262,16 +295,30 @@ class RateLimiter:
             for key in expired_keys:
                 del self.buckets[key]
                 del self.bucket_created[key]
+                if key in self.access_order:
+                    del self.access_order[key]
 
             if expired_keys:
-                print(f"Rate limiter: Cleaned up {len(expired_keys)} expired buckets")
+                # Log using get_logger if available
+                try:
+                    from lexecon.observability import get_logger
+                    logger = get_logger("rate_limiter")
+                    logger.debug(
+                        f"Rate limiter cleanup: removed {len(expired_keys)} buckets "
+                        f"({len(self.buckets)} remaining)"
+                    )
+                except (ImportError, Exception):
+                    # Fallback to print if logging unavailable
+                    print(
+                        f"Rate limiter: cleaned up {len(expired_keys)} expired buckets"
+                    )
 
     def _start_cleanup_thread(self) -> None:
-        """Start background thread for bucket cleanup."""
+        """Start background thread for aggressive bucket cleanup."""
         def cleanup_loop() -> None:
             while True:
-                time.sleep(3600)  # Run every hour
-                self.cleanup_expired_buckets(max_age_hours=24)
+                time.sleep(300)  # Run every 5 minutes (was 1 hour)
+                self.cleanup_expired_buckets(max_age_hours=1)  # More aggressive (was 24 hours)
 
         thread = threading.Thread(target=cleanup_loop, daemon=True)
         thread.start()
