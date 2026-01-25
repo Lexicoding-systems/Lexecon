@@ -19,6 +19,8 @@ from pydantic import BaseModel, Field, field_validator
 from lexecon.api.validation import (
     validate_context,
     validate_data_classes,
+    validate_export_email,
+    validate_export_formats,
     validate_justification,
     validate_iso_timestamp,
     validate_output_type,
@@ -28,6 +30,7 @@ from lexecon.api.validation import (
     validate_recommendation_dict,
     validate_risk_level,
     validate_string_field,
+    validate_time_window,
     ValidationConfig,
 )
 from lexecon.audit_export.service import AuditExportService, ExportFormat, ExportScope
@@ -339,7 +342,7 @@ class OIDCUnlinkRequest(BaseModel):
 
 
 class ExportRequestModel(BaseModel):
-    """Audit packet export request with attestation."""
+    """Audit packet export request with comprehensive validation."""
     # Step 1: Metadata
     requester_name: str
     requester_email: str
@@ -358,6 +361,58 @@ class ExportRequestModel(BaseModel):
     # Step 3: Legal Attestation
     attestation_accepted: bool
     attestation_text: str
+
+    @field_validator("requester_name")
+    @classmethod
+    def validate_requester_name(cls, v: str) -> str:
+        """Validate requester name."""
+        return validate_string_field(v, "requester_name", ValidationConfig.MAX_ACTOR_LENGTH)
+
+    @field_validator("requester_email")
+    @classmethod
+    def validate_requester_email(cls, v: str) -> str:
+        """Validate requester email."""
+        return validate_export_email(v)
+
+    @field_validator("purpose")
+    @classmethod
+    def validate_purpose(cls, v: str) -> str:
+        """Validate purpose text."""
+        return validate_string_field(v, "purpose", ValidationConfig.MAX_REASON_LENGTH)
+
+    @field_validator("case_id")
+    @classmethod
+    def validate_case_id(cls, v: Optional[str]) -> Optional[str]:
+        """Validate case ID."""
+        if v is None:
+            return None
+        return validate_string_field(v, "case_id", ValidationConfig.MAX_ACTION_LENGTH)
+
+    @field_validator("notes")
+    @classmethod
+    def validate_notes(cls, v: Optional[str]) -> Optional[str]:
+        """Validate notes."""
+        if v is None:
+            return None
+        return validate_string_field(v, "notes", ValidationConfig.MAX_REASON_LENGTH)
+
+    @field_validator("time_window")
+    @classmethod
+    def validate_time_window_field(cls, v: str) -> str:
+        """Validate time window."""
+        return validate_time_window(v)
+
+    @field_validator("formats")
+    @classmethod
+    def validate_formats_field(cls, v: List[str]) -> List[str]:
+        """Validate export formats."""
+        return validate_export_formats(v)
+
+    @field_validator("attestation_text")
+    @classmethod
+    def validate_attestation_text(cls, v: str) -> str:
+        """Validate attestation text."""
+        return validate_string_field(v, "attestation_text", ValidationConfig.MAX_REASON_LENGTH)
 
 
 # ========== Governance API Models (Phase 5) ==========

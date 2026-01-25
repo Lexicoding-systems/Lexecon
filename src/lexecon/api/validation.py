@@ -393,3 +393,98 @@ def validate_reason(value: str) -> str:
         "reason",
         ValidationConfig.MAX_REASON_LENGTH,
     )
+
+
+def validate_time_window(value: str) -> str:
+    """Validate time window for audit export.
+
+    Args:
+        value: Time window value
+
+    Returns:
+        Validated time window
+
+    Raises:
+        ValueError: If validation fails
+    """
+    allowed_windows = {"all", "today", "week", "month", "quarter", "year"}
+
+    if not isinstance(value, str):
+        raise ValueError("time_window must be a string")
+
+    value_lower = value.lower()
+    if value_lower not in allowed_windows:
+        raise ValueError(f"time_window must be one of: {', '.join(allowed_windows)}")
+
+    return value_lower
+
+
+def validate_export_formats(value: List[str]) -> List[str]:
+    """Validate export formats list.
+
+    Args:
+        value: List of formats
+
+    Returns:
+        Validated list
+
+    Raises:
+        ValueError: If validation fails
+    """
+    allowed_formats = {"json", "csv", "markdown", "html"}
+
+    if not isinstance(value, list):
+        raise ValueError("formats must be a list")
+
+    if not value:
+        raise ValueError("formats cannot be empty")
+
+    if len(value) > 10:
+        raise ValueError("formats cannot have more than 10 items")
+
+    validated = []
+    for fmt in value:
+        if not isinstance(fmt, str):
+            raise ValueError("formats items must be strings")
+
+        fmt_lower = fmt.lower()
+        if fmt_lower not in allowed_formats:
+            raise ValueError(f"Invalid format '{fmt}'. Must be one of: {', '.join(allowed_formats)}")
+
+        if fmt_lower not in validated:  # No duplicates
+            validated.append(fmt_lower)
+
+    return validated
+
+
+def validate_export_email(value: str) -> str:
+    """Validate email address for export requester.
+
+    Args:
+        value: Email address
+
+    Returns:
+        Validated email
+
+    Raises:
+        ValueError: If validation fails
+    """
+    if not isinstance(value, str):
+        raise ValueError("Email must be a string")
+
+    value = value.strip()
+
+    if not value:
+        raise ValueError("Email cannot be empty")
+
+    if len(value) > 254:  # RFC 5321
+        raise ValueError("Email exceeds maximum length of 254 characters")
+
+    # Basic email pattern (not comprehensive, good enough for validation)
+    import re
+    email_pattern = r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+
+    if not re.match(email_pattern, value):
+        raise ValueError("Invalid email address format")
+
+    return value
