@@ -14,8 +14,17 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+from lexecon.api.validation import (
+    validate_context,
+    validate_data_classes,
+    validate_output_type,
+    validate_policy_mode,
+    validate_risk_level,
+    validate_string_field,
+    ValidationConfig,
+)
 from lexecon.audit_export.service import AuditExportService, ExportFormat, ExportScope
 
 # Cache imports
@@ -77,7 +86,7 @@ except ImportError:
 
 # Pydantic models for request/response validation
 class DecisionRequestModel(BaseModel):
-    """Model for decision request."""
+    """Model for decision request with comprehensive input validation."""
 
     request_id: Optional[str] = None
     actor: str = Field(..., description="Actor requesting the action")
@@ -89,6 +98,81 @@ class DecisionRequestModel(BaseModel):
     requested_output_type: str = Field(default="tool_action")
     policy_mode: str = Field(default="strict")
     context: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("actor")
+    @classmethod
+    def validate_actor(cls, v: str) -> str:
+        """Validate actor field."""
+        return validate_string_field(
+            v,
+            "actor",
+            ValidationConfig.MAX_ACTOR_LENGTH,
+            ValidationConfig.ACTOR_PATTERN,
+        )
+
+    @field_validator("proposed_action")
+    @classmethod
+    def validate_proposed_action(cls, v: str) -> str:
+        """Validate proposed action field."""
+        return validate_string_field(
+            v,
+            "proposed_action",
+            ValidationConfig.MAX_ACTION_LENGTH,
+            ValidationConfig.ACTION_PATTERN,
+        )
+
+    @field_validator("tool")
+    @classmethod
+    def validate_tool(cls, v: str) -> str:
+        """Validate tool field."""
+        return validate_string_field(
+            v,
+            "tool",
+            ValidationConfig.MAX_TOOL_LENGTH,
+            ValidationConfig.TOOL_PATTERN,
+        )
+
+    @field_validator("user_intent")
+    @classmethod
+    def validate_user_intent(cls, v: str) -> str:
+        """Validate user intent field."""
+        return validate_string_field(
+            v,
+            "user_intent",
+            ValidationConfig.MAX_INTENT_LENGTH,
+        )
+
+    @field_validator("data_classes")
+    @classmethod
+    def validate_data_classes_field(cls, v: List[str]) -> List[str]:
+        """Validate data classes list."""
+        return validate_data_classes(v)
+
+    @field_validator("risk_level")
+    @classmethod
+    def validate_risk_level_field(cls, v: int) -> int:
+        """Validate risk level."""
+        return validate_risk_level(v)
+
+    @field_validator("requested_output_type")
+    @classmethod
+    def validate_output_type_field(cls, v: str) -> str:
+        """Validate output type."""
+        return validate_output_type(v)
+
+    @field_validator("policy_mode")
+    @classmethod
+    def validate_policy_mode_field(cls, v: str) -> str:
+        """Validate policy mode."""
+        return validate_policy_mode(v)
+
+    @field_validator("context", mode="before")
+    @classmethod
+    def validate_context_field(cls, v: Any) -> Dict[str, Any]:
+        """Validate context dictionary."""
+        if v is None:
+            return {}
+        return validate_context(v)
 
 
 class PolicyLoadModel(BaseModel):
