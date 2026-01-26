@@ -1,11 +1,74 @@
-# Multi-Domain Implementation Roadmap
-## Technical Plan to Transform Lexecon into Universal Governance Protocol
+# [ARCHIVED] Multi-Domain Implementation Roadmap
 
-**Objective:** Refactor Lexecon's core architecture to support multiple governance domains while maintaining backward compatibility with current AI governance implementation.
+**Status:** MOVED TO LEXECON V2.0 (SEPARATE REPOSITORY)
+
+**Project Structure:**
+- **Lexecon v1.0** (this repository): Enterprise AI Governance
+  - Focus: Production-ready, SOC 2 certified, GDPR compliant
+  - Timeline: Complete Phases 5-8 (CI/CD, Monitoring, Compliance, Optimization)
+  - Target: Single-domain (AI) governance at enterprise scale
+
+- **Lexecon v2.0** (future separate repository): Universal Governance Protocol
+  - Focus: Multi-domain expansion (Finance, Healthcare, Defense, Supply Chain, Energy)
+  - Architecture: Domain plugin system, DomainRegistry, universal decision service
+  - Roadmap: This document (20 weeks, 7 phases)
+  - Constraints: Built on top of production-ready v1.0 infrastructure
+
+**Why Separate Repositories?**
+1. **Clear scope:** v1.0 is AI governance with enterprise guarantees
+2. **Independent release cycles:** v1.0 doesn't block v2.0 domain expansion
+3. **Architecture isolation:** v2.0 builds new domain layer on proven v1.0 foundation
+4. **Team scalability:** v1.0 team maintains product; v2.0 team builds universal protocol
+
+**Migration Path for v1.0 → v2.0:**
+- v1.0 clients use `GET /health`, `POST /decisions/request` (AI domain hardcoded)
+- v2.0 clients use `GET /api/v1/{domain}/decisions/request` (domain parameter)
+- v1.0 API remains unchanged for backward compatibility during transition
+- Domain="ai" is default for v1.0 clients
+
+---
+
+## Decision
+
+This roadmap is **frozen as reference documentation** for future v2.0 project initiation. All active work redirects to Issue #25: Enterprise Readiness Plan (Lexecon v1.0 completion).
+
+---
+
+## ✅ Completed Foundation Work
+
+**Status:** Core infrastructure hardened and production-ready (Commits: 7d3f961, 6832358, ed9adbd, 38b5bab, 232fc3b, 55afdef)
+
+### Security Hardening
+- ✅ **Extended Input Validation** - All API models (DecisionRequestModel, InterventionModel, OverrideCreateRequest, ExportRequestModel) now have 30+ Pydantic field validators with defense-in-depth pattern
+- ✅ **SQL Injection Prevention** - Whitelist validation on audit export endpoints (time_window enum, formats deduplication, RFC 5321 email validation)
+- ✅ **Rate Limiter DoS Protection** - Token bucket algorithm with LRU eviction, aggressive cleanup, memory-safe cardinality limits
+- ✅ **Auth Schema Alignment** - Password expiration, MFA fields, session validation, proper error handling
+
+### Observability Infrastructure
+- ✅ **Production-Grade Tracing** - W3C Trace Context, OTLP export (Jaeger/Datadog compatible), async-safe context propagation
+- ✅ **Metrics & Cardinality Management** - Prometheus integration with hash-based label aggregation, no memory exhaustion risk
+- ✅ **Error Tracking** - Structured error handling with context enrichment, automatic anomaly detection
+- ✅ **Health Checks** - Comprehensive endpoint health monitoring with dependency checks
+- ✅ **Circuit Breakers** - Failure isolation, exponential backoff, dependency health tracking
+
+### Async/Await Refactoring
+- ✅ **AsyncAuthService** - Non-blocking auth operations using asyncio.to_thread(), 12 async methods, event loop safe
+- ✅ **Concurrent Auth** - 7 endpoints refactored to use async patterns (login, logout, user management, password ops)
+- ✅ **Backward Compatibility** - Parallel sync/async instances, no breaking changes
+
+### Test Coverage
+- ✅ 38+ validation test cases (all passing)
+- ✅ 8 async concurrency tests (all passing)
+- ✅ Integration tests for rate limiting, error propagation, ledger recording
+- ✅ Zero breaking changes to existing APIs
+
+**Impact on Multi-Domain Timeline:** Foundation is 2-3 weeks ahead of original Phase 1 estimate. This enables accelerated domain plugin development and reduces risk of performance/security issues during multi-domain expansion.
 
 ---
 
 ## 🏗️ Phase 1: Core Refactoring (Week 1-4)
+
+**Foundation Status:** Security hardening complete. Phase 1 can focus on domain abstraction without blocking on infrastructure concerns.
 
 ### 1.1: Extract Domain-Agnostic Primitives
 
@@ -14,11 +77,13 @@
 - Decision service is AI-focused ❌
 - Compliance mapping is hardcoded for EU AI Act/GDPR ❌
 - Actor/action types assume AI context ❌
+- Security hardening complete ✅ (validation, rate limiting, async, tracing)
 
 **Target State:**
 - All core services are domain-agnostic
 - Domain-specific logic moved to plugins
 - Actor/action types are configurable
+- Maintain production-grade observability and security across all domains
 
 **Implementation:**
 
@@ -1250,21 +1315,28 @@ lexecon policy validate --domain=healthcare policy.yaml
 
 ## 🎯 Next Immediate Actions
 
-1. **This Week:**
-   - Create `src/lexecon/core/domain.py`
-   - Extract AI-specific logic into `domains/ai/`
-   - Write RFC for domain plugin API
+**Starting Point:** Foundation work complete. Phase 1 begins with domain abstraction.
+
+1. **This Week (Immediate):**
+   - Create `src/lexecon/core/domain.py` with DomainRegistry, GovernanceDomain enum
+   - Create `src/lexecon/core/plugin.py` with DomainPlugin base class
+   - Extract AI-specific types into `src/lexecon/domains/ai/config.py`
+   - Write domain plugin RFC (incorporate feedback from 3 P1 blocker commits)
 
 2. **Next Week:**
-   - Implement `UniversalDecisionService`
-   - Create FinanceDomainPlugin (first non-AI domain)
-   - Update API to accept domain parameter
+   - Implement `UniversalDecisionService` in `src/lexecon/core/decision_service.py`
+   - Create FinanceDomainPlugin (first non-AI domain pilot)
+   - Update `/api/v1/{domain}/decisions/request` endpoint
+   - Verify no regression in existing AI domain functionality
 
 3. **Following Week:**
-   - Add integration tests for multi-domain
-   - Update documentation
+   - Add domain-specific validation hooks (finance order limits, healthcare PHI checks)
+   - Integration tests for multi-domain coexistence
+   - Update documentation with domain plugin examples
    - Prepare v2.0.0-beta release
+
+**Acceleration Opportunity:** With observability, security, and async infrastructure proven in production, domain plugin development can proceed without infrastructure blockers. Estimated Phase 1 completion: 2-3 weeks vs original 4 weeks.
 
 ---
 
-**The path is clear. Let's build the universal governance protocol.** 🚀
+**The foundation is solid. Domain abstraction is next. Let's build the universal governance protocol.** 🚀
