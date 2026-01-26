@@ -9,37 +9,57 @@ on:
         type: string
 
 jobs:
-  deploy:
+  deploy-production:
     runs-on: ubuntu-latest
     environment: production
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           ref: main
 
-      - name: Validate version
+      - name: Validate version format
         run: |
           VERSION="${{ github.event.inputs.version }}"
           if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid version format: $VERSION (expected: X.Y.Z)"
+            echo "❌ Invalid version format: $VERSION (expected: X.Y.Z)"
             exit 1
           fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "✅ Version validated: $VERSION"
 
-      - name: Request Slack Approval
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ secrets.AWS_REGION }} \
+            --name lexecon-production
+
+      - name: Verify kubectl connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Send Slack approval request
         uses: slackapi/slack-github-action@v1
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK }}
           payload: |
             {
-              "text": "🚀 Production Deployment Pending Approval",
+              "text": "🚀 Production deployment pending approval",
               "blocks": [
                 {
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "🚀 Deployment Pending Approval"
+                    "text": "🚀 Production Deployment - Approval Required"
                   }
                 },
                 {
@@ -51,15 +71,15 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
+                      "text": "*Environment:*\nProduction (EKS)"
+                    },
+                    {
+                      "type": "mrkdwn",
                       "text": "*Triggered by:*\n${{ github.actor }}"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Commit:*\n`${{ github.sha }}`"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Branch:*\nmain"
+                      "text": "*Commit:*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
                     }
                   ]
                 },
@@ -67,7 +87,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Review the changes and click below to approve deployment to production."
+                    "text": "⚠️ Review the deployment details and approve in GitHub Actions to proceed."
                   }
                 },
                 {
@@ -77,19 +97,9 @@ jobs:
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": "✅ Approve & Deploy",
-                        "emoji": true
+                        "text": "Approve in GitHub"
                       },
                       "style": "primary",
-                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                    },
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "📋 View Details",
-                        "emoji": true
-                      },
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     }
                   ]
@@ -97,45 +107,73 @@ jobs:
               ]
             }
 
+      - name: Create git tag
+        run: |
+          git config --global user.email "ci@lexecon.io"
+          git config --global user.name "Lexecon CI/CD"
+          git tag -a "v${{ env.VERSION }}" -m "Production release v${{ env.VERSION }}"
+          git push origin "v${{ env.VERSION }}"
+          echo "✅ Created and pushed tag v${{ env.VERSION }}"
+
+      - name: Deploy to Kubernetes
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PRODUCTION }}
+        run: |
+          chmod +x infrastructure/scripts/deploy.sh
+          ./infrastructure/scripts/deploy.sh production ${{ env.VERSION }}
+
+      - name: Wait for rollout to complete
+        run: |
+          kubectl wait --for=condition=available --timeout=10m \
+            deployment/lexecon-prod -n production
+          echo "✅ Deployment rollout complete"
+
+      - name: Verify deployment health
+        run: |
+          echo "Checking pod health..."
+          kubectl get pods -n production -l app.kubernetes.io/name=lexecon
+
+          POD_NAME=$(kubectl get pods -n production -l app.kubernetes.io/name=lexecon -o jsonpath='{.items[0].metadata.name}')
+
+          echo "Running health checks..."
+          kubectl exec -n production $POD_NAME -- curl -sf http://localhost:8000/health/live || exit 1
+          echo "✅ Liveness check passed"
+
+          kubectl exec -n production $POD_NAME -- curl -sf http://localhost:8000/health/ready || exit 1
+          echo "✅ Readiness check passed"
+
+          kubectl exec -n production $POD_NAME -- curl -sf http://localhost:8000/health || exit 1
+          echo "✅ Full health check passed"
+
+      - name: Get deployment info
+        run: |
+          echo "=== Deployment Status ==="
+          kubectl get deployment lexecon-prod -n production -o wide
+          echo ""
+          echo "=== Pods ==="
+          kubectl get pods -n production -l app.kubernetes.io/name=lexecon -o wide
+          echo ""
+          echo "=== Service ==="
+          kubectl get service lexecon-prod -n production
+          echo ""
+          echo "=== HPA Status ==="
+          kubectl get hpa -n production 2>/dev/null || echo "No HPA configured"
+
       - name: Generate deployment summary
         run: |
-          echo "# Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "# 🚀 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Time:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Health Checks" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Liveness probe" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Readiness probe" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Full health endpoint" >> $GITHUB_STEP_SUMMARY
 
-      - name: Deploy to production
-        env:
-          DEPLOY_KEY: ${{ secrets.PROD_DEPLOY_KEY }}
-          DEPLOY_HOST: ${{ secrets.PROD_DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.PROD_DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
-
-          # Deploy script
-          ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST "
-            cd $DEPLOY_PATH && \
-            git pull origin main && \
-            git tag -a v${{ env.VERSION }} -m 'Production release' && \
-            git push origin v${{ env.VERSION }} && \
-            docker-compose pull && \
-            docker-compose up -d && \
-            echo 'Production deployment complete'
-          "
-
-      - name: Verify production health
-        run: |
-          sleep 15
-          curl -f https://api.lexecon.io/health || exit 1
-          curl -f https://api.lexecon.io/health/ready || exit 1
-          echo "Production deployment verified"
-
-      - name: Notify Slack - Deployment Success
+      - name: Notify Slack - Success
         if: success()
         uses: slackapi/slack-github-action@v1
         with:
@@ -148,7 +186,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "✅ Deployment Successful"
+                    "text": "✅ Production Deployed Successfully"
                   }
                 },
                 {
@@ -160,15 +198,15 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Status:*\n✅ Live"
+                      "text": "*Environment:*\nProduction (EKS)"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n✅ Live & Healthy"
                     },
                     {
                       "type": "mrkdwn",
                       "text": "*Deployed by:*\n${{ github.actor }}"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Commit:*\n`${{ github.sha }}`"
                     }
                   ]
                 },
@@ -176,7 +214,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Production deployment completed successfully. All health checks passed."
+                    "text": "All health checks passed. Production deployment complete."
                   }
                 },
                 {
@@ -186,7 +224,7 @@ jobs:
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": "📊 View Workflow"
+                        "text": "View Workflow"
                       },
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     }
@@ -195,7 +233,7 @@ jobs:
               ]
             }
 
-      - name: Notify Slack - Deployment Failure
+      - name: Notify Slack - Failure
         if: failure()
         uses: slackapi/slack-github-action@v1
         with:
@@ -208,7 +246,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "🔴 Deployment Failed"
+                    "text": "🔴 Production Deployment Failed"
                   }
                 },
                 {
@@ -236,7 +274,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Production deployment failed. Review logs and retry."
+                    "text": "🚨 Production deployment failed. Review logs immediately and consider rollback."
                   }
                 },
                 {
@@ -246,7 +284,7 @@ jobs:
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": "📋 View Logs"
+                        "text": "View Logs"
                       },
                       "style": "danger",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -255,3 +293,10 @@ jobs:
                 }
               ]
             }
+
+      - name: Rollback instructions
+        if: failure()
+        run: |
+          echo "⚠️ Deployment failed. To rollback:"
+          echo "kubectl rollback deployment/lexecon-prod -n production"
+          echo "Or run: ./infrastructure/scripts/rollback.sh production"

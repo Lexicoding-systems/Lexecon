@@ -4,61 +4,84 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'src/**'
+      - 'infrastructure/helm/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-staging.yml'
+
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy-staging:
     runs-on: ubuntu-latest
+    environment: staging
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Deploy to staging
-        env:
-          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
-          DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.STAGING_DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.STAGING_DEPLOY_PATH }}
+      - name: Extract version
+        id: version
         run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+          VERSION=$(git describe --tags --always --abbrev=7)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version: $VERSION"
 
-          # Deploy script
-          ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST "
-            cd $DEPLOY_PATH && \
-            git pull origin main && \
-            docker-compose pull && \
-            docker-compose up -d && \
-            echo 'Deployment complete'
-          "
-
-      - name: Verify staging health
-        run: |
-          sleep 10
-          curl -f http://staging.lexecon.local/health || exit 1
-          echo "Staging deployment verified"
-
-      - name: Notify Slack
-        if: failure()
-        uses: slackapi/slack-github-action@v1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
-          payload: |
-            {
-              "text": "⚠️ Staging deployment failed",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Staging deployment failed for ${{ github.ref }}\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  }
-                }
-              ]
-            }
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Notify Slack success
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ secrets.AWS_REGION }} \
+            --name lexecon-staging
+
+      - name: Verify kubectl connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Deploy to Kubernetes
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+        run: |
+          chmod +x infrastructure/scripts/deploy.sh
+          ./infrastructure/scripts/deploy.sh staging ${{ steps.version.outputs.version }}
+
+      - name: Wait for rollout to complete
+        run: |
+          kubectl wait --for=condition=available --timeout=5m \
+            deployment/lexecon-staging -n staging
+          echo "✅ Deployment rollout complete"
+
+      - name: Verify deployment health
+        run: |
+          echo "Checking pod health..."
+          kubectl get pods -n staging -l app.kubernetes.io/name=lexecon
+
+          POD_NAME=$(kubectl get pods -n staging -l app.kubernetes.io/name=lexecon -o jsonpath='{.items[0].metadata.name}')
+
+          echo "Running health checks..."
+          kubectl exec -n staging $POD_NAME -- curl -sf http://localhost:8000/health || exit 1
+          echo "✅ Health check passed"
+
+      - name: Get deployment info
+        run: |
+          echo "=== Deployment Status ==="
+          kubectl get deployment lexecon-staging -n staging -o wide
+          echo ""
+          echo "=== Pods ==="
+          kubectl get pods -n staging -l app.kubernetes.io/name=lexecon
+          echo ""
+          echo "=== Service ==="
+          kubectl get service lexecon-staging -n staging
+
+      - name: Notify Slack - Success
         if: success()
         uses: slackapi/slack-github-action@v1
         with:
@@ -68,11 +91,106 @@ jobs:
               "text": "✅ Staging deployment successful",
               "blocks": [
                 {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ Staging Deployed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Version:*\n${{ steps.version.outputs.version }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Environment:*\nStaging (EKS)"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>'"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Deployed by:*\n${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Workflow"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+
+      - name: Notify Slack - Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "❌ Staging deployment failed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌ Staging Deployment Failed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Version:*\n${{ steps.version.outputs.version }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n❌ Failed"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n`${{ github.sha }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Attempted by:*\n${{ github.actor }}"
+                    }
+                  ]
+                },
+                {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "Staging deployment successful for ${{ github.ref }}\nCommit: ${{ github.sha }}"
+                    "text": "Staging deployment failed. Check logs for details."
                   }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Logs"
+                      },
+                      "style": "danger",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
                 }
               ]
             }

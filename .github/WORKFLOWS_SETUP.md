@@ -1,278 +1,211 @@
-# GitHub Actions Workflows Setup
+# GitHub Actions Workflows Setup (Phase 5.3)
 
-This document explains the CI/CD workflows and how to configure them for your environment.
+**Enterprise-ready CI/CD for Lexecon on AWS EKS + Kubernetes**
+
+This guide covers the automated deployment pipeline that deploys Lexecon to AWS EKS using Kubernetes and Helm.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CI/CD Pipeline Flow                          │
+└─────────────────────────────────────────────────────────────────────┘
+
+Push to main
+     │
+     ├─► test.yml          → Run pytest, linting, coverage
+     │        │
+     │        ├─► PASS → build.yml → Build Docker image → Push to ghcr.io
+     │        │                             │
+     │        │                             └─► deploy-staging.yml
+     │        │                                      │
+     │        │                                      ├─► Update EKS kubeconfig
+     │        │                                      ├─► Run deploy.sh
+     │        │                                      ├─► Wait for rollout
+     │        │                                      ├─► Verify health checks
+     │        │                                      └─► Notify Slack
+     │        │
+     │        └─► FAIL → Block deployment
+     │
+     └─► infrastructure.yml (manual) → Terraform plan/apply
+                                            │
+                                            └─► Create/update EKS, RDS, VPC
+
+Manual trigger: deploy-production.yml
+     │
+     ├─► Require GitHub Environment approval
+     ├─► Send Slack notification
+     ├─► Create git tag
+     ├─► Deploy to EKS production
+     ├─► Verify health checks
+     └─► Notify Slack
+```
 
 ## Workflows
 
-### 1. test.yml - Test & Lint (on push to main/develop, on PR)
+### 1. test.yml - Test & Lint
 
-**Purpose:** Run automated tests and linting on every push and pull request.
+**Triggers:** Push to main/develop, PRs to main/develop
 
-**Triggers:**
-- Push to `main` or `develop` branches
-- Pull requests to `main` or `develop` branches
+**Actions:** pytest (80%+ coverage), Black, isort, flake8, mypy, upload coverage
 
-**Steps:**
-1. Install dependencies (pytest, Black, isort, flake8, mypy)
-2. Run Black linting
-3. Run isort import sorting
-4. Run flake8 style checks
-5. Run mypy type checking (non-blocking)
-6. Run pytest with coverage report
-7. Fail if coverage < 80%
-8. Comment on PR with results
+**Requirements:** None
 
-**Requirements:**
-- Python 3.11+ environment
-- `pyproject.toml` with dependencies defined
-- Tests in `tests/` directory
+### 2. build.yml - Build & Push Docker Image
 
-**No configuration needed.** This workflow runs automatically.
+**Triggers:** Push to main/develop (code changes only)
 
----
+**Actions:** Build Docker image, tag, push to ghcr.io
 
-### 2. build.yml - Build & Push Docker Image (on push to main/develop)
+**Requirements:** GITHUB_TOKEN (automatic)
 
-**Purpose:** Build Docker image and push to GitHub Container Registry after tests pass.
+### 3. deploy-staging.yml - Deploy to Staging
 
-**Triggers:**
-- Push to `main` or `develop` branches
-- Only if `src/`, `Dockerfile`, `pyproject.toml`, `requirements.txt`, or this workflow changes
+**Triggers:** Push to main (automatic), manual
 
-**Steps:**
-1. Set up Docker Buildx
-2. Log in to ghcr.io
-3. Extract image metadata (tags, labels)
-4. Build and push Docker image
-5. Tag with commit SHA, branch name, and `latest`
+**Actions:** Deploy to EKS staging, verify health, notify Slack
 
 **Requirements:**
-- `Dockerfile` in repository root
-- GitHub token (automatic, no config needed)
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_REGION
+- DATABASE_URL_STAGING
+- SLACK_WEBHOOK (optional)
 
-**Image naming:**
-- `ghcr.io/{owner}/{repo}:{tag}`
-- Tags: `main`, `develop`, `main-{sha}`, `develop-{sha}`, `latest` (main only)
+### 4. deploy-production.yml - Deploy to Production
 
-**Example:**
-```
-ghcr.io/lexicoding-systems/lexecon:latest
-ghcr.io/lexicoding-systems/lexecon:main-a1b2c3d
-ghcr.io/lexicoding-systems/lexecon:develop-x9y8z7
-```
+**Triggers:** Manual only (requires version input)
 
-**No configuration needed** beyond having a Dockerfile.
+**Actions:** Deploy to EKS production with approval, create git tag, verify health
 
----
+**Requirements:**
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_REGION
+- DATABASE_URL_PRODUCTION
+- SLACK_WEBHOOK (optional)
 
-### 3. deploy-staging.yml - Deploy to Staging (on push to main)
+### 5. infrastructure.yml - Terraform Management
 
-**Purpose:** Automatically deploy to staging environment after successful build.
+**Triggers:** Manual (plan/apply/destroy), PRs changing terraform files
 
-**Triggers:**
-- Push to `main` branch
-- Only if tests and build succeed
+**Actions:** Run terraform, manage EKS/RDS infrastructure
 
-**Steps:**
-1. Connect via SSH to staging server
-2. Pull latest code from main
-3. Pull Docker images
-4. Run `docker-compose up -d`
-5. Verify `/health` endpoint responds
-6. Notify Slack of success/failure
+**Requirements:**
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_REGION
+- TERRAFORM_STATE_BUCKET
+- TERRAFORM_LOCK_TABLE
+- SLACK_WEBHOOK (optional)
 
-**Configuration Required:**
+## Quick Setup
 
-Add these **secrets** to your GitHub repository (Settings → Secrets and variables → Actions):
+### 1. AWS Prerequisites
 
-```
-STAGING_DEPLOY_KEY         - SSH private key for staging server
-STAGING_DEPLOY_HOST        - Hostname/IP of staging server
-STAGING_DEPLOY_USER        - SSH user on staging server
-STAGING_DEPLOY_PATH        - Path to Lexecon directory on staging server
-SLACK_WEBHOOK              - Slack webhook URL for notifications
-```
+```bash
+# Create S3 bucket for Terraform state
+aws s3api create-bucket --bucket lexecon-terraform-state --region us-east-1
+aws s3api put-bucket-versioning --bucket lexecon-terraform-state --versioning-configuration Status=Enabled
 
-**Example Secret Values:**
-```
-STAGING_DEPLOY_HOST = staging.lexecon.local
-STAGING_DEPLOY_USER = deploybot
-STAGING_DEPLOY_PATH = /opt/lexecon
+# Create DynamoDB table for Terraform locks
+aws dynamodb create-table \
+  --table-name terraform-locks \
+  --attribute-definitions AttributeName=LockID,AttributeType=S \
+  --key-schema AttributeName=LockID,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region us-east-1
 ```
 
-**SSH Key Setup:**
-1. Generate key: `ssh-keygen -t ed25519 -f lexecon_deploy -C "github-actions"`
-2. Add public key to staging server: `~deploybot/.ssh/authorized_keys`
-3. Copy private key to GitHub secret `STAGING_DEPLOY_KEY`
+### 2. GitHub Secrets
 
-**Health Check:**
-- Endpoint: `http://staging.lexecon.local/health`
-- If unhealthy, deployment fails and Slack notification sent
+Add these in **Settings → Secrets and variables → Actions**:
 
----
-
-### 4. deploy-prod.yml - Deploy to Production (manual workflow dispatch)
-
-**Purpose:** Manual, approval-gated production deployment.
-
-**Trigger:**
-- Manual via GitHub Actions UI (`workflow_dispatch`)
-- Requires production environment approval (see below)
-
-**Parameters:**
-- `version` - Version number to deploy (format: X.Y.Z, e.g., 1.0.0)
-
-**Steps:**
-1. Validate version format (X.Y.Z)
-2. Connect via SSH to production server
-3. Pull latest code from main
-4. Create and push git tag
-5. Pull Docker images
-6. Run `docker-compose up -d`
-7. Verify `/health` and `/health/ready` endpoints
-8. Notify Slack of success/failure
-
-**Configuration Required:**
-
-Add these **secrets**:
 ```
-PROD_DEPLOY_KEY         - SSH private key for production server
-PROD_DEPLOY_HOST        - Hostname/IP of production server
-PROD_DEPLOY_USER        - SSH user on production server
-PROD_DEPLOY_PATH        - Path to Lexecon directory on production server
-SLACK_WEBHOOK           - Slack webhook URL for notifications
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_REGION
+TERRAFORM_STATE_BUCKET
+TERRAFORM_LOCK_TABLE
+DATABASE_URL_STAGING
+DATABASE_URL_PRODUCTION
+SLACK_WEBHOOK (optional)
 ```
 
-**Environment Protection:**
+### 3. GitHub Environments
 
-Create a **production environment** with approval rules:
+Create in **Settings → Environments**:
 
-1. Go to Settings → Environments → New environment
-2. Name: `production`
-3. Add **Required reviewers** (e.g., team leads)
-4. Select **Require reviewers to approve** before deploying
+**staging:** No protection rules
 
-This forces manual approval before production deployment runs.
+**production:** Enable "Required reviewers", add yourself
 
-**How to Deploy:**
-1. Go to Actions → Deploy to Production
-2. Click "Run workflow"
-3. Enter version number (e.g., `1.0.1`)
-4. Required reviewers get notification to approve
-5. Deployment runs after approval
-6. Slack notification sent with result
+### 4. Deploy Infrastructure
 
----
+```bash
+# Update infrastructure/terraform/staging.tfvars with your VPC/subnet IDs
 
-## Branch Protection Rules
-
-To enforce that tests must pass before merging, configure branch protection:
-
-**Settings → Branches → Branch protection rules → Add rule**
-
-Configure for `main` branch:
-
-- [x] Require a pull request before merging
-- [x] Dismiss stale pull request approvals when new commits are pushed
-- [x] Require status checks to pass before merging
-  - Status checks: `test` (from test.yml)
-  - Require branches to be up to date before merging
-- [x] Require branches to be up to date before merging
-- [x] Include administrators
-
-This ensures:
-- All PRs require review
-- Tests must pass (test.yml must succeed)
-- No force pushes to main
-- Admins follow same rules
-
----
-
-## Secrets Configuration Checklist
-
-### Staging Deployment
-
-- [ ] `STAGING_DEPLOY_KEY` - SSH private key
-- [ ] `STAGING_DEPLOY_HOST` - Staging server hostname
-- [ ] `STAGING_DEPLOY_USER` - SSH user
-- [ ] `STAGING_DEPLOY_PATH` - Deployment directory
-
-### Production Deployment
-
-- [ ] `PROD_DEPLOY_KEY` - SSH private key
-- [ ] `PROD_DEPLOY_HOST` - Production server hostname
-- [ ] `PROD_DEPLOY_USER` - SSH user
-- [ ] `PROD_DEPLOY_PATH` - Deployment directory
-- [ ] `SLACK_WEBHOOK` - Slack notification URL
-
-### Staging & Production
-
-- [ ] `SLACK_WEBHOOK` - Used by both staging and production deployments
-
----
-
-## Rollback Procedure
-
-### Rollback Staging
-1. SSH to staging server manually
-2. Checkout previous commit: `git checkout HEAD~1`
-3. Redeploy: `docker-compose up -d`
-
-### Rollback Production
-1. Use GitHub Actions UI
-2. Go to Actions → Deploy to Production
-3. Click "Run workflow"
-4. Enter previous version number
-5. Approve deployment
-6. Production rolls back to previous version
-
----
-
-## Monitoring Workflows
-
-View workflow status:
-- Dashboard: Actions tab
-- Status badges: Add to README.md
-
-```markdown
-![Test](https://github.com/lexicoding-systems/lexecon/actions/workflows/test.yml/badge.svg)
-![Build](https://github.com/lexicoding-systems/lexecon/actions/workflows/build.yml/badge.svg)
+# Run via GitHub Actions
+# Go to Actions → Infrastructure Management
+# Select: environment=staging, action=plan
+# Review plan, then run: action=apply
 ```
 
----
+### 5. Configure Database URLs
+
+After infrastructure deploys, get RDS endpoint:
+
+```bash
+cd infrastructure/terraform
+terraform output rds_endpoint
+# Format: postgresql://username:password@endpoint:5432/lexecon
+```
+
+Add to GitHub Secrets as `DATABASE_URL_STAGING` and `DATABASE_URL_PRODUCTION`.
+
+### 6. Test Deployment
+
+Push to main or run "Deploy to Staging" workflow manually.
+
+## Costs
+
+**Staging:** ~$150-200/month (2 t3.medium nodes, db.t3.micro)
+
+**Production:** ~$300-400/month (3 t3.small nodes, db.t3.small multi-AZ)
+
+## Rollback
+
+```bash
+# Application rollback
+./infrastructure/scripts/rollback.sh staging
+
+# Or via kubectl
+kubectl rollout undo deployment/lexecon-staging -n staging
+```
 
 ## Troubleshooting
 
-### Tests fail locally but pass in CI
-- Check Python version: `python --version` (should be 3.11+)
-- Check dependencies: `pip install -e .`
-- Run tests: `pytest tests/ -v --cov`
+**Workflow fails at kubeconfig:**
+- Check AWS credentials in GitHub Secrets
+- Verify EKS cluster exists (run infrastructure workflow first)
 
-### Docker image doesn't push
-- Check permissions: `docker login ghcr.io`
-- GitHub token has `write:packages` permission
+**Pods CrashLoopBackOff:**
+```bash
+kubectl get pods -n staging
+kubectl logs <pod-name> -n staging
+kubectl describe pod <pod-name> -n staging
+```
 
-### Staging deployment fails
-- Check SSH key: `ssh -i ~/.ssh/id_rsa deploybot@staging.lexecon.local`
-- Check `/opt/lexecon/docker-compose.yml` exists
-- Check network connectivity from GitHub runner (may need VPN)
-
-### Production deployment requires approval but nobody sees it
-- Check environment exists: Settings → Environments → production
-- Check reviewers are configured: Environment → Required reviewers
-- Check GitHub notifications are enabled
-
----
+**Terraform lock error:**
+```bash
+aws dynamodb scan --table-name terraform-locks
+terraform force-unlock <lock-id>
+```
 
 ## Next Steps
 
-1. **Create secrets** (see checklist above)
-2. **Create production environment** with required reviewers
-3. **Set up branch protection** for main branch
-4. **Test workflows:**
-   - Push to develop branch → watch test.yml run
-   - Create PR → watch test.yml run and block merge until passing
-   - Merge to main → watch build.yml and deploy-staging.yml run
-   - Manually trigger deploy-prod.yml and approve
+- Phase 5.4: Feature Flags
+- Phase 6: Monitoring & Observability (Prometheus, Grafana)
+- Phase 7: Compliance (SOC 2, GDPR)
+- Phase 8: Optimization
 
-5. **Monitor deployments** in Actions tab
