@@ -59,6 +59,10 @@ docs = [
     "sphinx-rtd-theme>=2.0.0",
 ]
 
+features = [
+    "launchdarkly-server-sdk>=9.0.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/Lexicoding-systems/Lexecon"
 Documentation = "https://lexecon.readthedocs.io"
