@@ -1,0 +1,77 @@
+name: Test & Lint
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov pytest-asyncio
+          pip install black isort flake8 mypy
+
+      - name: Lint with Black
+        run: black --check src/ tests/
+
+      - name: Lint with isort
+        run: isort --check-only src/ tests/
+
+      - name: Lint with flake8
+        run: flake8 src/ tests/ --max-line-length=100 --extend-ignore=E203,W503
+
+      - name: Type check with mypy
+        run: mypy src/lexecon/core/ src/lexecon/api/ src/lexecon/security/ src/lexecon/decision/ --ignore-missing-imports
+        continue-on-error: true
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ -v --cov=src/lexecon --cov-report=term-missing --cov-report=xml
+
+      - name: Check coverage threshold
+        run: |
+          coverage report --fail-under=80 || (echo "Coverage below 80% threshold" && exit 1)
+
+      - name: Upload coverage to artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+      - name: Comment PR with test results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = fs.readFileSync('coverage.xml', 'utf8');
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Tests passed. Coverage report available in artifacts.'
+            });
