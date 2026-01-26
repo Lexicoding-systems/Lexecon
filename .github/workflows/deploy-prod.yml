@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to deploy'
+        description: 'Version to deploy (format: X.Y.Z)'
         required: true
         type: string
 
@@ -26,6 +26,76 @@ jobs:
             exit 1
           fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Request Slack Approval
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "🚀 Production Deployment Pending Approval",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚀 Deployment Pending Approval"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Version:*\nv${{ env.VERSION }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Triggered by:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n`${{ github.sha }}`"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Branch:*\nmain"
+                    }
+                  ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Review the changes and click below to approve deployment to production."
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "✅ Approve & Deploy",
+                        "emoji": true
+                      },
+                      "style": "primary",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    },
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "📋 View Details",
+                        "emoji": true
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
 
       - name: Generate deployment summary
         run: |
@@ -65,26 +135,67 @@ jobs:
           curl -f https://api.lexecon.io/health/ready || exit 1
           echo "Production deployment verified"
 
-      - name: Notify deployment success
+      - name: Notify Slack - Deployment Success
         if: success()
         uses: slackapi/slack-github-action@v1
         with:
           webhook-url: ${{ secrets.SLACK_WEBHOOK }}
           payload: |
             {
-              "text": "🚀 Production deployment successful",
+              "text": "✅ Production deployment successful",
               "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ Deployment Successful"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Version:*\nv${{ env.VERSION }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n✅ Live"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Deployed by:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n`${{ github.sha }}`"
+                    }
+                  ]
+                },
                 {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "✅ Production deployment successful\n*Version:* ${{ env.VERSION }}\n*Deployed by:* ${{ github.actor }}\n*Commit:* ${{ github.sha }}"
+                    "text": "Production deployment completed successfully. All health checks passed."
                   }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "📊 View Workflow"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
                 }
               ]
             }
 
-      - name: Notify deployment failure
+      - name: Notify Slack - Deployment Failure
         if: failure()
         uses: slackapi/slack-github-action@v1
         with:
@@ -94,11 +205,53 @@ jobs:
               "text": "🔴 Production deployment failed",
               "blocks": [
                 {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🔴 Deployment Failed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Version:*\nv${{ env.VERSION }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n❌ Failed"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Attempted by:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Commit:*\n`${{ github.sha }}`"
+                    }
+                  ]
+                },
+                {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "⚠️ Production deployment failed\n*Version:* ${{ env.VERSION }}\n*Attempted by:* ${{ github.actor }}\n*View:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    "text": "Production deployment failed. Review logs and retry."
                   }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "📋 View Logs"
+                      },
+                      "style": "danger",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
                 }
               ]
             }
