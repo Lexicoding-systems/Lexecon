@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lexecon-config
+  labels:
+    {{- include "lexecon.labels" . | nindent 4 }}
+data:
+  env: "{{ .Values.environment | default "staging" }}"
+  log-level: "{{ .Values.logLevel | default "INFO" }}"
+  service-name: "{{ .Values.serviceName | default "lexecon" }}"
+  otel-endpoint: "{{ .Values.otelEndpoint | default "http://localhost:4317" }}"
+  otel-service-name: "{{ .Values.otelServiceName | default "lexecon" }}"
+  lexecon-version: "{{ .Chart.AppVersion }}"

@@ -1,0 +1,21 @@
+apiVersion: v2
+name: lexecon
+description: A Helm chart for Lexecon AI Governance Engine
+type: application
+
+version: 0.9.0
+appVersion: "0.9.0"
+
+keywords:
+  - governance
+  - decision-engine
+  - ai
+  - compliance
+
+maintainers:
+  - name: Lexecon Team
+    email: team@lexecon.io
+
+home: https://github.com/lexicoding-systems/lexecon
+sources:
+  - https://github.com/lexicoding-systems/lexecon
