@@ -8,6 +8,18 @@ Provides multi-layer caching:
 """
 
 from lexecon.cache.memory_cache import MemoryCache, cached
-from lexecon.cache.redis_cache import cache_api_response
+from lexecon.cache.redis_cache import (
+    cache_api_response,
+    cache_compliance_mapping,
+    cache_decision,
+    cache_policy_eval,
+)
 
-__all__ = ["MemoryCache", "cached", "cache_api_response"]
+__all__ = [
+    "MemoryCache",
+    "cached",
+    "cache_api_response",
+    "cache_compliance_mapping",
+    "cache_decision",
+    "cache_policy_eval",
+]
