@@ -12,8 +12,18 @@ Security Features:
 
 import threading
 import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
+
+
+@dataclass
+class RateLimitConfig:
+    """Configuration for rate limiting."""
+
+    requests_per_minute: int = 60
+    requests_per_hour: int = 1000
+    burst_size: int = 10
 
 
 class TokenBucket:
@@ -82,6 +92,16 @@ class TokenBucket:
             seconds_needed = tokens_needed / self.refill_rate
             return int(seconds_needed) + 1
 
+    def get_tokens(self) -> float:
+        """Get current number of tokens in bucket.
+
+        Returns:
+            Current token count
+        """
+        with self.lock:
+            self._refill()
+            return self.tokens
+
 
 class RateLimiter:
     """In-memory rate limiter with token bucket algorithm.
@@ -95,12 +115,14 @@ class RateLimiter:
     Thread-safe for concurrent requests.
     """
 
-    def __init__(self, max_buckets: int = 100000):
+    def __init__(self, config: Optional[RateLimitConfig] = None, max_buckets: int = 100000):
         """Initialize rate limiter with default configurations.
 
         Args:
+            config: Rate limit configuration (optional)
             max_buckets: Maximum number of buckets before LRU eviction (DoS protection)
         """
+        self.config = config or RateLimitConfig()
         self.buckets: Dict[str, TokenBucket] = {}
         self.lock = threading.Lock()
         self.max_buckets = max_buckets
