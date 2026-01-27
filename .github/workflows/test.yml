@@ -52,7 +52,7 @@ jobs:
 
       - name: Check coverage threshold
         run: |
-          coverage report --fail-under=80 || (echo "Coverage below 80% threshold" && exit 1)
+          coverage report --fail-under=82 || (echo "Coverage below 82% threshold" && exit 1)
 
       - name: Upload coverage to artifacts
         uses: actions/upload-artifact@v3
