@@ -18,7 +18,6 @@ from lexecon.observability.metrics_v2 import (
     ledger_integrity_checks_total,
     ledger_verification_duration_seconds,
     metrics,
-    node_info,
     node_uptime_seconds,
     policies_loaded_total,
     policy_evaluation_errors_total,
@@ -27,6 +26,7 @@ from lexecon.observability.metrics_v2 import (
     tokens_issued_total,
     tokens_verified_total,
 )
+from lexecon.observability.metrics_v2 import node_info_metric as node_info
 
 __all__ = [
     # Metric objects
