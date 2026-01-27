@@ -1,5 +1,12 @@
-"""Redis Caching Service for Lexecon."""
+"""
+Caching module for Lexecon (Phase 8).
 
-from .redis_cache import get_redis_cache, redis_cache
+Provides multi-layer caching:
+- In-memory LRU cache (L1)
+- Redis distributed cache (L2)
+- Cache decorators for easy use
+"""
 
-__all__ = ["get_redis_cache", "redis_cache"]
+from lexecon.cache.memory_cache import MemoryCache, cached
+
+__all__ = ["MemoryCache", "cached"]

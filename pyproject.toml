@@ -72,6 +72,12 @@ observability = [
     "prometheus-client>=0.19.0",
 ]
 
+performance = [
+    "locust>=2.20.0",  # Load testing
+    "orjson>=3.9.0",  # Fast JSON serialization
+    "redis>=5.0.0",  # Redis client for distributed caching (optional)
+]
+
 [project.urls]
 Homepage = "https://github.com/Lexicoding-systems/Lexecon"
 Documentation = "https://lexecon.readthedocs.io"
