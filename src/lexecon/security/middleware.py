@@ -7,6 +7,7 @@ from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from lexecon.security.auth_service import AuthService, Permission, Session
+from lexecon.security.security_headers import SecurityHeadersMiddleware
 
 
 class AuthMiddleware:
