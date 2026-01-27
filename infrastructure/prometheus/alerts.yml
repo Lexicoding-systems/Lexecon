@@ -1,0 +1,231 @@
+groups:
+  - name: lexecon_availability
+    interval: 30s
+    rules:
+      - alert: LexeconServiceDown
+        expr: up{job="lexecon"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Lexecon service is down"
+          description: "Lexecon service {{ $labels.instance }} has been down for more than 1 minute."
+
+      - alert: LexeconHighErrorRate
+        expr: rate(lexecon_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High error rate detected"
+          description: "Lexecon is experiencing {{ $value }} errors per second ({{ $labels.error_type }})."
+
+      - alert: LexeconCriticalErrorRate
+        expr: rate(lexecon_errors_total{severity="critical"}[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Critical errors detected"
+          description: "Lexecon is experiencing {{ $value }} critical errors per second."
+
+  - name: lexecon_performance
+    interval: 30s
+    rules:
+      - alert: LexeconHighLatency
+        expr: histogram_quantile(0.95, rate(lexecon_http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile latency is {{ $value }}s for {{ $labels.endpoint }}."
+
+      - alert: LexeconVeryHighLatency
+        expr: histogram_quantile(0.95, rate(lexecon_http_request_duration_seconds_bucket[5m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "Very high API latency detected"
+          description: "95th percentile latency is {{ $value }}s for {{ $labels.endpoint }}."
+
+      - alert: LexeconSlowDecisions
+        expr: histogram_quantile(0.95, rate(lexecon_decision_evaluation_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: decision_engine
+        annotations:
+          summary: "Slow decision evaluation"
+          description: "Decision evaluation 95th percentile is {{ $value }}s."
+
+  - name: lexecon_database
+    interval: 30s
+    rules:
+      - alert: LexeconDatabaseConnectionsHigh
+        expr: lexecon_db_connections_active > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database connection count"
+          description: "Database has {{ $value }} active connections."
+
+      - alert: LexeconDatabaseErrors
+        expr: rate(lexecon_db_errors_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "High database error rate"
+          description: "Database is experiencing {{ $value }} errors per second ({{ $labels.error_type }})."
+
+      - alert: LexeconSlowQueries
+        expr: histogram_quantile(0.95, rate(lexecon_db_query_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query duration is {{ $value }}s for {{ $labels.table }}."
+
+  - name: lexecon_cache
+    interval: 30s
+    rules:
+      - alert: LexeconLowCacheHitRate
+        expr: rate(lexecon_cache_hits_total[5m]) / (rate(lexecon_cache_hits_total[5m]) + rate(lexecon_cache_misses_total[5m])) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache {{ $labels.cache_name }} hit rate is {{ $value | humanizePercentage }}."
+
+      - alert: LexeconHighCacheEvictionRate
+        expr: rate(lexecon_cache_evictions_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "High cache eviction rate"
+          description: "Cache {{ $labels.cache_name }} is evicting {{ $value }} items per second."
+
+  - name: lexecon_security
+    interval: 30s
+    rules:
+      - alert: LexeconHighAuthFailureRate
+        expr: rate(lexecon_auth_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} authentication failures per second ({{ $labels.reason }})."
+
+      - alert: LexeconRateLimitingTriggered
+        expr: rate(lexecon_rate_limit_hits_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+          component: rate_limiter
+        annotations:
+          summary: "High rate limit trigger rate"
+          description: "Rate limiting is blocking {{ $value }} requests per second for {{ $labels.user_id }}."
+
+      - alert: LexeconComplianceViolations
+        expr: rate(lexecon_compliance_violations_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+          component: compliance
+        annotations:
+          summary: "Compliance violations detected"
+          description: "{{ $value }} compliance violations per second ({{ $labels.violation_type }})."
+
+      - alert: LexeconMFAFailures
+        expr: rate(lexecon_mfa_verifications_total{result="failure"}[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: "High MFA failure rate"
+          description: "{{ $value }} MFA verification failures per second."
+
+  - name: lexecon_business
+    interval: 30s
+    rules:
+      - alert: LexeconHighDecisionDenialRate
+        expr: rate(lexecon_decisions_denied_total[5m]) / rate(lexecon_decisions_total[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: decision_engine
+        annotations:
+          summary: "High decision denial rate"
+          description: "{{ $value | humanizePercentage }} of decisions are being denied."
+
+      - alert: LexeconLedgerVerificationFailure
+        expr: rate(lexecon_ledger_integrity_checks_total{result="failure"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: ledger
+        annotations:
+          summary: "Ledger integrity check failed"
+          description: "Ledger integrity verification has failed."
+
+      - alert: LexeconNoDecisions
+        expr: rate(lexecon_decisions_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+          component: decision_engine
+        annotations:
+          summary: "No decisions being made"
+          description: "No governance decisions have been made in the last 10 minutes."
+
+  - name: lexecon_resources
+    interval: 30s
+    rules:
+      - alert: LexeconHighConcurrentRequests
+        expr: lexecon_concurrent_requests > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High concurrent request count"
+          description: "{{ $value }} concurrent requests are being processed."
+
+      - alert: LexeconHighMemoryUsage
+        expr: process_resident_memory_bytes{job="lexecon"} > 2000000000
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage"
+          description: "Lexecon is using {{ $value | humanize }}B of memory."
+
+      - alert: LexeconCPUThrottling
+        expr: rate(process_cpu_seconds_total{job="lexecon"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage"
+          description: "Lexecon is using {{ $value | humanizePercentage }} CPU."
