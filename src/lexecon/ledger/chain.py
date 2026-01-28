@@ -128,6 +128,7 @@ class LedgerChain:
                 "valid": False,
                 "error": "Empty ledger",
                 "entries_checked": 0,
+                "entries_verified": 0,
                 "chain_intact": False,
             }
 
@@ -140,6 +141,7 @@ class LedgerChain:
                     "error": f"Hash mismatch at entry {i}",
                     "entry_id": entry.entry_id,
                     "entries_checked": i + 1,
+                    "entries_verified": i,
                     "chain_intact": False,
                 }
 
@@ -152,6 +154,7 @@ class LedgerChain:
                         "error": f"Chain break at entry {i}",
                         "entry_id": entry.entry_id,
                         "entries_checked": i + 1,
+                        "entries_verified": i,
                         "chain_intact": False,
                     }
 
