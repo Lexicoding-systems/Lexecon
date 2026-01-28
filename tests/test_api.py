@@ -264,9 +264,9 @@ class TestLedgerEndpoints:
 
         data = response.json()
         assert "valid" in data
-        assert "entries_verified" in data
-        assert isinstance(data["entries_verified"], int)
-        assert data["entries_verified"] >= 1  # At least genesis
+        assert "entries_checked" in data
+        assert isinstance(data["entries_checked"], int)
+        assert data["entries_checked"] >= 1  # At least genesis
 
     def test_get_audit_report(self, client):
         """Test audit report generation."""

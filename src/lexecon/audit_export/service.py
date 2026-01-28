@@ -455,7 +455,8 @@ class AuditExportService:
                 entry_time = datetime.fromisoformat(entry.timestamp.replace("Z", "+00:00"))
                 if entry_time.tzinfo is None:
                     entry_time = entry_time.replace(tzinfo=timezone.utc)
-            except:
+            except (ValueError, AttributeError):
+                # Skip entries with malformed timestamps
                 continue
 
             # Filter by date

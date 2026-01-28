@@ -334,7 +334,7 @@ class TestVerifyLedgerCommand:
             return {
                 "valid": False,
                 "error": "Simulated verification failure",
-                "entries_verified": 0,
+                "entries_checked": 0,
             }
 
         monkeypatch.setattr(LedgerChain, "verify_integrity", mock_verify)

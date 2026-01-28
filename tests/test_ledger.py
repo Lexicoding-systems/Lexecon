@@ -91,7 +91,7 @@ class TestLedgerChain:
 
         result = ledger.verify_integrity()
         assert result["valid"] is True
-        assert result["entries_verified"] == 3  # Genesis + 2 entries
+        assert result["entries_checked"] == 3  # Genesis + 2 entries
 
     def test_verify_integrity_tampered(self):
         """Test integrity verification detects tampering."""

@@ -145,7 +145,7 @@ def cached(
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Generate cache key from function name and arguments
             args_str = json.dumps([args, kwargs], sort_keys=True, default=str)
-            cache_key_hash = hashlib.md5(args_str.encode()).hexdigest()
+            cache_key_hash = hashlib.sha256(args_str.encode()).hexdigest()[:32]
             cache_key = f"{key_prefix}{func.__name__}:{cache_key_hash}"
 
             # Try cache first
