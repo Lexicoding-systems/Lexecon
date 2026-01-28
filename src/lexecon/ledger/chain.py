@@ -124,7 +124,12 @@ class LedgerChain:
         Returns verification result with details of any corruption.
         """
         if not self.entries:
-            return {"valid": False, "error": "Empty ledger"}
+            return {
+                "valid": False,
+                "error": "Empty ledger",
+                "entries_checked": 0,
+                "chain_intact": False,
+            }
 
         for i, entry in enumerate(self.entries):
             # Verify entry hash
@@ -134,6 +139,8 @@ class LedgerChain:
                     "valid": False,
                     "error": f"Hash mismatch at entry {i}",
                     "entry_id": entry.entry_id,
+                    "entries_checked": i + 1,
+                    "chain_intact": False,
                 }
 
             # Verify chain linkage (skip genesis)
@@ -144,6 +151,8 @@ class LedgerChain:
                         "valid": False,
                         "error": f"Chain break at entry {i}",
                         "entry_id": entry.entry_id,
+                        "entries_checked": i + 1,
+                        "chain_intact": False,
                     }
 
         return {
