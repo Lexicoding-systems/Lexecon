@@ -215,12 +215,11 @@ class ResponsibilityStorage:
             return False
 
         values.append(record_id)
-        # nosec B608: update_fields built from VALID_UPDATE_FIELDS whitelist above
         query = f"""
             UPDATE responsibility_records
             SET {', '.join(update_fields)}
             WHERE record_id = ?
-        """
+        """  # nosec
 
         cursor.execute(query, values)
         success = cursor.rowcount > 0

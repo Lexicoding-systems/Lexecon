@@ -58,7 +58,7 @@ def init(node_id: str, data_dir: str):
 @cli.command()
 @click.option("--node-id", help="Node identifier")
 @click.option("--port", default=8000, help="Port to listen on")
-@click.option("--host", default="0.0.0.0", help="Host to bind to")
+@click.option("--host", default="0.0.0.0", help="Host to bind to")  # nosec B104: intentional server binding
 def server(node_id: Optional[str], port: int, host: str):
     """Start the API server."""
     click.echo(f"Starting Lexecon API server on {host}:{port}")
