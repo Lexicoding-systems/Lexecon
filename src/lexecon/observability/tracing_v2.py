@@ -237,7 +237,7 @@ class TracingManager:
         """
         # Determine if we should sample this trace
         import random
-        should_sample = random.random() < self.sampling_rate
+        should_sample = random.random() < self.sampling_rate  # nosec
 
         # Create observability context
         ctx = create_context(

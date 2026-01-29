@@ -23,7 +23,7 @@ class FeatureFlag(str, Enum):
     # Security & Authentication
     MFA_REQUIRED = "mfa_required"
     MFA_ENROLLMENT_MANDATORY = "mfa_enrollment_mandatory"
-    PASSWORD_EXPIRATION_ENABLED = "password_expiration_enabled"
+    PASSWORD_EXPIRATION_ENABLED = "password_expiration_enabled"  # nosec B105: feature flag name, not a password
     SESSION_TIMEOUT_STRICT = "session_timeout_strict"
 
     # Rate Limiting

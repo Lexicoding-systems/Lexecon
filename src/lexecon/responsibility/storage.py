@@ -197,12 +197,17 @@ class ResponsibilityStorage:
         cursor = conn.cursor()
 
         # Build UPDATE query from provided fields
+        # Use explicit field mapping to prevent SQL injection
+        VALID_UPDATE_FIELDS = {
+            "reviewed_by": "reviewed_by = ?",
+            "reviewed_at": "reviewed_at = ?",
+        }
         update_fields = []
         values = []
 
         for key, value in updates.items():
-            if key in ["reviewed_by", "reviewed_at"]:
-                update_fields.append(f"{key} = ?")
+            if key in VALID_UPDATE_FIELDS:
+                update_fields.append(VALID_UPDATE_FIELDS[key])
                 values.append(value)
 
         if not update_fields:
@@ -214,7 +219,7 @@ class ResponsibilityStorage:
             UPDATE responsibility_records
             SET {', '.join(update_fields)}
             WHERE record_id = ?
-        """
+        """  # nosec
 
         cursor.execute(query, values)
         success = cursor.rowcount > 0
