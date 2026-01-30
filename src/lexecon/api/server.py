@@ -4,6 +4,7 @@ Provides endpoints for health checks, policy management, decision requests,
 and audit operations.
 """
 
+import io
 import json
 import os
 import time
@@ -13,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
 from lexecon.api.validation import (
@@ -50,6 +51,7 @@ from lexecon.compliance_mapping.service import (
 from lexecon.decision.service import DecisionRequest, DecisionService
 from lexecon.escalation.service import EscalationService
 from lexecon.evidence.service import EvidenceService
+from lexecon.evidence_export.service import EvidenceExportService
 from lexecon.identity.signing import KeyManager
 from lexecon.ledger.chain import LedgerChain
 
@@ -69,6 +71,8 @@ from lexecon.security.auth_service import AuthService, Permission, Role
 from lexecon.security.auth_service_async import AsyncAuthService
 from lexecon.security.signature_service import SignatureService
 from lexecon.storage.persistence import LedgerStorage
+from lexecon.usage.service import UsageService
+from lexecon.tenancy.service import TenancyService
 
 # Import governance models for type hints
 try:
@@ -694,6 +698,15 @@ escalation_service: Optional[EscalationService] = None
 override_service: Optional[OverrideService] = None
 evidence_service: Optional[EvidenceService] = None
 
+# Evidence export service (PR-03)
+evidence_export_service: Optional[EvidenceExportService] = None
+
+# Usage tracking service (PR-05)
+usage_service: Optional[UsageService] = None
+
+# Tenancy service (PR-06)
+tenancy_service: Optional[TenancyService] = None
+
 # Compliance mapping service (Phase 7)
 compliance_mapping_service: Optional[ComplianceMappingService] = None
 
@@ -705,7 +718,7 @@ def initialize_services():
     """Initialize services with default configuration."""
     global policy_engine, decision_service, key_manager, oversight_system, intervention_storage
     global risk_service, escalation_service, override_service, evidence_service, compliance_mapping_service
-    global audit_export_service
+    global audit_export_service, evidence_export_service, usage_service, tenancy_service
 
     if policy_engine is None:
         policy_engine = PolicyEngine(mode=PolicyMode.STRICT)
@@ -741,6 +754,24 @@ def initialize_services():
 
     if evidence_service is None:
         evidence_service = EvidenceService()
+
+    # Initialize evidence export service (PR-03)
+    global evidence_export_service
+    if evidence_export_service is None:
+        evidence_export_service = EvidenceExportService(
+            ledger=ledger,
+            signature_service=signature_service,
+        )
+
+    # Initialize usage tracking service (PR-05)
+    global usage_service
+    if usage_service is None:
+        usage_service = UsageService("lexecon_usage.db")
+
+    # Initialize tenancy service (PR-06)
+    global tenancy_service
+    if tenancy_service is None:
+        tenancy_service = TenancyService("lexecon_auth.db")
 
     # Initialize compliance mapping service (Phase 7)
     if compliance_mapping_service is None:
@@ -895,12 +926,33 @@ async def load_policy(policy_load: PolicyLoadModel):
 
 @app.post("/decide")
 @cache_decision(ttl=300)  # Cache decisions for 5 minutes
-async def make_decision(request_model: DecisionRequestModel):
+async def make_decision(
+    http_request: Request,
+    request_model: DecisionRequestModel,
+):
     """Make a governance decision."""
     initialize_services()
 
     if decision_service is None:
         raise HTTPException(status_code=500, detail="Decision service not initialized")
+
+    # PR-05: Get tenant and check usage limits
+    tenant_id = http_request.headers.get("X-Tenant-ID", "default")
+    
+    if usage_service:
+        can_proceed, limit_info = usage_service.can_create_decision(tenant_id)
+        if not can_proceed:
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "code": limit_info.get("code", "PLAN_LIMIT"),
+                    "message": f"Plan limit exceeded: {limit_info['metric']}",
+                    "metric": limit_info["metric"],
+                    "limit": limit_info["limit"],
+                    "current": limit_info["current"],
+                    "upgrade_url": "mailto:sales@lexecon.ai",
+                },
+            )
 
     # Create decision request
     request = DecisionRequest(
@@ -927,8 +979,13 @@ async def make_decision(request_model: DecisionRequestModel):
             "decision": response.decision,
             "actor": request.actor,
             "action": request.proposed_action,
+            "tenant_id": tenant_id,  # PR-06: Store tenant_id
         },
     )
+
+    # PR-05: Increment usage counter
+    if usage_service:
+        usage_service.increment_decisions(tenant_id)
 
     response.ledger_entry_hash = ledger_entry.entry_hash
 
@@ -999,12 +1056,22 @@ async def get_audit_report():
 
 @app.get("/ledger/entries")
 async def get_ledger_entries(
+    request: Request,
     event_type: Optional[str] = None,
     limit: Optional[int] = None,
     offset: int = 0,
 ):
     """Get ledger entries with optional filtering."""
+    # PR-06: Get tenant from header
+    tenant_id = request.headers.get("X-Tenant-ID", "default")
+    
     entries = ledger.entries
+    
+    # PR-06: Filter by tenant_id (check data.tenant_id field)
+    entries = [
+        e for e in entries 
+        if e.data.get("tenant_id") == tenant_id or e.data.get("tenant_id") is None
+    ]
 
     # Filter by event type if specified
     if event_type:
@@ -1019,6 +1086,7 @@ async def get_ledger_entries(
         "total": total,
         "offset": offset,
         "limit": limit,
+        "tenant_id": tenant_id,
     }
 
 
@@ -1033,6 +1101,185 @@ async def get_storage_statistics():
         "storage_enabled": True,
         **stats,
     }
+
+
+@app.post("/demo/seed")
+async def seed_demo_data(request: Request):
+    """Seed demo data for testing and development.
+    
+    Creates sample decisions, ledger entries, and policy events.
+    """
+    initialize_services()
+    
+    # Check auth (optional - allow anonymous for demo purposes)
+    # But log who did it if authenticated
+    user_id = None
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if session_id:
+        session, _ = await async_auth_service.validate_session(session_id)
+        if session:
+            user_id = session.user_id
+    
+    created = {
+        "decisions": 0,
+        "entries": 0,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    # Create sample decisions in ledger
+    sample_decisions = [
+        {
+            "decision_id": f"dec_{i+1000}",
+            "action": [
+                "Model inference request approved",
+                "High-risk decision escalated to human oversight", 
+                "Request denied - policy violation detected",
+                "Data access approved with constraints",
+                "Override approved by compliance officer"
+            ][i % 5],
+            "actor": [
+                "system@lexecon.ai",
+                "ai-agent-prod-01",
+                "ai-agent-prod-02", 
+                "data-pipeline-service",
+                "jane.smith@company.com"
+            ][i % 5],
+            "decision": ["allow", "escalate", "deny", "allow", "override"][i % 5],
+            "risk_level": ["low", "high", "critical", "medium", "medium"][i % 5],
+        }
+        for i in range(20)
+    ]
+    
+    for decision_data in sample_decisions:
+        ledger.append(
+            "decision",
+            decision_data
+        )
+        created["entries"] += 1
+        created["decisions"] += 1
+    
+    # Log the seed operation
+    ledger.append(
+        "demo_seed",
+        {
+            "created_by": user_id or "anonymous",
+            "decisions_created": created["decisions"],
+            "timestamp": created["timestamp"]
+        }
+    )
+    
+    return {
+        "ok": True,
+        "created": created,
+        "message": f"Created {created['decisions']} demo decisions"
+    }
+
+
+# ============================================================================
+# Evidence Export (PR-03)
+# ============================================================================
+
+class EvidenceExportRequest(BaseModel):
+    """Request body for evidence export."""
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    limit: int = Field(default=1000, ge=1, le=10000)
+    include_verification: bool = True
+    include_policies: bool = True
+
+
+@app.post("/evidence/export")
+async def export_evidence(
+    request: Request,
+    export_req: EvidenceExportRequest,
+):
+    """Generate evidence export bundle as ZIP download.
+    
+    Creates a cryptographically signed bundle containing:
+    - ledger_events.json: All ledger entries with hashes
+    - verification_report.json: Chain integrity verification
+    - policies.json: Policy version references
+    - summary.md: Human-readable summary
+    - manifest.json: Signed manifest with file integrity
+    """
+    initialize_services()
+    
+    if evidence_export_service is None:
+        raise HTTPException(status_code=500, detail="Evidence export service not initialized")
+    
+    # Get tenant ID from header or default
+    tenant_id = request.headers.get("X-Tenant-ID", "default")
+    
+    # PR-05: Check usage limits before export
+    if usage_service:
+        can_export, limit_info = usage_service.can_export(tenant_id)
+        if not can_export:
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "code": limit_info.get("code", "PLAN_LIMIT"),
+                    "message": f"Plan limit exceeded: {limit_info['metric']}",
+                    "metric": limit_info["metric"],
+                    "limit": limit_info["limit"],
+                    "current": limit_info["current"],
+                    "upgrade_url": "mailto:sales@lexecon.ai",
+                },
+            )
+    
+    # Optional: Check auth
+    session_id = request.cookies.get("session_id") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if session_id:
+        session, error = await async_auth_service.validate_session(session_id)
+        if not session:
+            raise HTTPException(status_code=401, detail=error)
+    
+    try:
+        # PR-05: Increment export counter
+        if usage_service:
+            usage_service.increment_exports(tenant_id)
+        
+        # Generate ZIP bundle
+        zip_bytes = evidence_export_service.export(
+            tenant_id=tenant_id,
+            start_time=export_req.start_time,
+            end_time=export_req.end_time,
+            limit=export_req.limit,
+            include_verification=export_req.include_verification,
+        )
+        
+        # Generate filename
+        timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        filename = f"lexecon_evidence_{tenant_id}_{timestamp}.zip"
+        
+        return StreamingResponse(
+            io.BytesIO(zip_bytes),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "X-Export-Timestamp": datetime.utcnow().isoformat(),
+                "X-Tenant-ID": tenant_id,
+            },
+        )
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+@app.get("/usage")
+async def get_usage(request: Request):
+    """Get current usage for the tenant.
+    
+    Returns decisions today and exports this month with limits.
+    """
+    initialize_services()
+    
+    tenant_id = request.headers.get("X-Tenant-ID", "default")
+    
+    if usage_service is None:
+        raise HTTPException(status_code=503, detail="Usage service not initialized")
+    
+    usage = usage_service.get_usage(tenant_id)
+    return usage
 
 
 @app.get("/compliance/eu-ai-act/article-11")
@@ -1693,7 +1940,9 @@ async def get_current_user_info(request: Request):
     """Get current authenticated user info."""
     session_id = request.cookies.get("session_id")
     if not session_id:
-        session_id = request.headers.get("Authorization", "").replace("Bearer ", "")
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            session_id = auth_header[7:].strip()
 
     if not session_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -1707,12 +1956,15 @@ async def get_current_user_info(request: Request):
         raise HTTPException(status_code=404, detail="User not found")
 
     return {
-        "user_id": user.user_id,
-        "username": user.username,
-        "email": user.email,
-        "role": user.role.value,
-        "full_name": user.full_name,
-        "last_login": user.last_login,
+        "user": {
+            "id": user.user_id,
+            "user_id": user.user_id,
+            "username": user.username,
+            "email": user.email,
+            "role": user.role.value,
+            "full_name": user.full_name,
+            "last_login": user.last_login,
+        }
     }
 
 

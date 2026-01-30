@@ -1,18 +1,23 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuditDashboard } from './components/AuditDashboard';
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import AuditDashboard from "./components/AuditDashboard";
+import Login from "./pages/Login";
+import RequireAuth from "./components/RequireAuth";
 
-function App() {
+export default function App() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-gray-50">
-        <Routes>
-          <Route path="/" element={<Navigate to="/audit" replace />} />
-          <Route path="/audit" element={<AuditDashboard />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={<Navigate to="/audit" replace />} />
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/audit"
+        element={
+          <RequireAuth>
+            <AuditDashboard />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/audit" replace />} />
+    </Routes>
   );
 }
-
-export default App;
